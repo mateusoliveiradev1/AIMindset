@@ -4,6 +4,7 @@ import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import { useContacts } from '../hooks/useContacts';
 import { useContactStats } from '../hooks/useContactStats';
+import { sanitizeName, sanitizeEmail, sanitizeMessage, validators, RateLimiter } from '../utils/security';
 
 export const Contact: React.FC = () => {
   const { submitContact, loading } = useContacts();
@@ -23,15 +24,73 @@ export const Contact: React.FC = () => {
     message: ''
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [rateLimitError, setRateLimitError] = useState('');
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    // Validar nome
+    if (!validators.required(formData.name)) {
+      newErrors.name = 'Nome é obrigatório';
+    } else if (!validators.name(formData.name)) {
+      newErrors.name = 'Nome deve ter entre 2 e 100 caracteres e conter apenas letras';
+    }
+
+    // Validar email
+    if (!validators.required(formData.email)) {
+      newErrors.email = 'Email é obrigatório';
+    } else if (!validators.email(formData.email)) {
+      newErrors.email = 'Email inválido';
+    }
+
+    // Validar assunto
+    if (!validators.required(formData.subject)) {
+      newErrors.subject = 'Assunto é obrigatório';
+    }
+
+    // Validar mensagem
+    if (!validators.required(formData.message)) {
+      newErrors.message = 'Mensagem é obrigatória';
+    } else if (!validators.message(formData.message)) {
+      newErrors.message = 'Mensagem deve ter entre 10 e 5000 caracteres';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const success = await submitContact(formData);
+    // Verificar rate limiting
+    if (!RateLimiter.canPerformAction('contact_form', 3, 300000)) { // 3 tentativas por 5 minutos
+      const remainingTime = Math.ceil(RateLimiter.getRemainingTime('contact_form', 300000) / 1000 / 60);
+      setRateLimitError(`Muitas tentativas. Tente novamente em ${remainingTime} minutos.`);
+      return;
+    }
+
+    setRateLimitError('');
+
+    // Validar formulário
+    if (!validateForm()) {
+      return;
+    }
+
+    // Sanitizar dados
+    const sanitizedData = {
+      name: sanitizeName(formData.name),
+      email: sanitizeEmail(formData.email),
+      subject: sanitizeName(formData.subject), // Usar sanitizeName para assunto também
+      message: sanitizeMessage(formData.message)
+    };
+
+    const success = await submitContact(sanitizedData);
     
     if (success) {
       setIsSubmitted(true);
       setFormData({ name: '', email: '', subject: '', message: '' });
+      setErrors({});
       
       // Reset success message after 5 seconds
       setTimeout(() => {
@@ -41,9 +100,16 @@ export const Contact: React.FC = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    
+    // Limpar erro do campo quando usuário começar a digitar
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: value
     }));
   };
 
@@ -342,6 +408,15 @@ export const Contact: React.FC = () => {
                   </div>
                 )}
 
+                {rateLimitError && (
+                  <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg flex items-center space-x-3">
+                    <Shield className="w-5 h-5 text-red-500" />
+                    <p className="text-red-500 font-roboto font-medium">
+                      {rateLimitError}
+                    </p>
+                  </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -355,9 +430,17 @@ export const Contact: React.FC = () => {
                         value={formData.name}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3 bg-primary-dark border border-neon-purple/30 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green focus:ring-2 focus:ring-lime-green/20 transition-all"
+                        maxLength={100}
+                        className={`w-full px-4 py-3 bg-primary-dark border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all ${
+                          errors.name 
+                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
+                            : 'border-neon-purple/30 focus:border-lime-green focus:ring-lime-green/20'
+                        }`}
                         placeholder="Seu nome completo"
                       />
+                      {errors.name && (
+                        <p className="mt-1 text-sm text-red-500">{errors.name}</p>
+                      )}
                     </div>
 
                     <div>
@@ -371,9 +454,17 @@ export const Contact: React.FC = () => {
                         value={formData.email}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3 bg-primary-dark border border-neon-purple/30 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green focus:ring-2 focus:ring-lime-green/20 transition-all"
+                        maxLength={255}
+                        className={`w-full px-4 py-3 bg-primary-dark border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all ${
+                          errors.email 
+                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
+                            : 'border-neon-purple/30 focus:border-lime-green focus:ring-lime-green/20'
+                        }`}
                         placeholder="seu@email.com"
                       />
+                      {errors.email && (
+                        <p className="mt-1 text-sm text-red-500">{errors.email}</p>
+                      )}
                     </div>
                   </div>
 
@@ -387,16 +478,22 @@ export const Contact: React.FC = () => {
                       value={formData.subject}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 bg-primary-dark border border-neon-purple/30 rounded-lg text-white focus:outline-none focus:border-lime-green focus:ring-2 focus:ring-lime-green/20 transition-all"
+                      className={`w-full px-4 py-3 bg-primary-dark border rounded-lg text-white focus:outline-none focus:ring-2 transition-all ${
+                        errors.subject 
+                          ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
+                          : 'border-neon-purple/30 focus:border-lime-green focus:ring-lime-green/20'
+                      }`}
                     >
                       <option value="">Selecione um assunto</option>
-                      <option value="parceria">Parcerias & Colaborações</option>
-                      <option value="suporte">Suporte Técnico</option>
-                      <option value="feedback">Feedback & Sugestões</option>
-                      <option value="privacidade">Questões de Privacidade</option>
-                      <option value="imprensa">Imprensa & Mídia</option>
-                      <option value="outros">Outros</option>
+                      <option value="Parceria">Parceria & Colaboração</option>
+                      <option value="Suporte">Suporte Técnico</option>
+                      <option value="Feedback">Feedback & Sugestões</option>
+                      <option value="Privacidade">Questões de Privacidade</option>
+                      <option value="Geral">Assunto Geral</option>
                     </select>
+                    {errors.subject && (
+                      <p className="mt-1 text-sm text-red-500">{errors.subject}</p>
+                    )}
                   </div>
 
                   <div>
@@ -410,56 +507,45 @@ export const Contact: React.FC = () => {
                       onChange={handleChange}
                       required
                       rows={6}
-                      className="w-full px-4 py-3 bg-primary-dark border border-neon-purple/30 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green focus:ring-2 focus:ring-lime-green/20 resize-none transition-all"
-                      placeholder="Descreva detalhadamente sua solicitação, dúvida ou sugestão..."
+                      maxLength={5000}
+                      className={`w-full px-4 py-3 bg-primary-dark border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all resize-none ${
+                        errors.message 
+                          ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
+                          : 'border-neon-purple/30 focus:border-lime-green focus:ring-lime-green/20'
+                      }`}
+                      placeholder="Descreva sua mensagem detalhadamente..."
                     />
-                    <p className="text-xs text-futuristic-gray mt-1">
-                      Mínimo 10 caracteres. Seja específico para uma resposta mais precisa.
-                    </p>
-                  </div>
-
-                  <div className="bg-primary-dark/50 p-4 rounded-lg border border-lime-green/20">
-                    <div className="flex items-start space-x-3">
-                      <Shield className="w-5 h-5 text-lime-green mt-0.5" />
-                      <div>
-                        <p className="text-sm text-white font-medium mb-1">
-                          Seus dados estão protegidos
+                    <div className="flex justify-between items-center mt-1">
+                      {errors.message ? (
+                        <p className="text-sm text-red-500">{errors.message}</p>
+                      ) : (
+                        <p className="text-sm text-futuristic-gray">
+                          Mínimo 10 caracteres
                         </p>
-                        <p className="text-xs text-futuristic-gray">
-                          Utilizamos criptografia de ponta e seguimos rigorosamente a LGPD. 
-                          Seus dados nunca serão compartilhados com terceiros.
-                        </p>
-                      </div>
+                      )}
+                      <p className="text-sm text-futuristic-gray">
+                        {formData.message.length}/5000
+                      </p>
                     </div>
                   </div>
 
                   <Button
                     type="submit"
-                    variant="primary"
-                    size="lg"
                     disabled={loading}
-                    className="w-full hover-lift group"
+                    className="w-full bg-neon-gradient hover:bg-neon-gradient-hover text-white font-orbitron font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
                     {loading ? (
                       <div className="flex items-center justify-center space-x-2">
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span>Enviando mensagem...</span>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Enviando...</span>
                       </div>
                     ) : (
                       <div className="flex items-center justify-center space-x-2">
                         <Send className="w-5 h-5" />
                         <span>Enviar Mensagem</span>
-                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                       </div>
                     )}
                   </Button>
-
-                  <p className="text-center text-xs text-futuristic-gray">
-                    Ao enviar esta mensagem, você concorda com nossa{' '}
-                    <a href="/politica-privacidade" className="text-lime-green hover:text-lime-green/80 transition-colors">
-                      Política de Privacidade
-                    </a>
-                  </p>
                 </form>
               </div>
             </Card>

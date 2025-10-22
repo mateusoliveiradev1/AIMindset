@@ -25,8 +25,16 @@ import {
   ZoomIn,
   ZoomOut,
   Move,
-  Crop
+  Crop,
+  Shield
 } from 'lucide-react';
+import { 
+  sanitizeName, 
+  sanitizeMessage, 
+  sanitizeUrl, 
+  validators, 
+  RateLimiter 
+} from '../utils/security';
 
 interface ArticleData {
   title: string;
@@ -287,20 +295,56 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
   ];
 
   const handleSave = async () => {
-    if (!title.trim() || !content.trim()) {
+    // Verificar rate limiting para salvamento de artigos
+    if (!RateLimiter.canPerformAction('article_save', 10, 60000)) { // 10 salvamentos por minuto
+      alert('Muitas tentativas de salvamento. Aguarde um momento.');
+      return;
+    }
+
+    // Validação básica
+    if (!validators.required(title.trim()) || !validators.required(content.trim())) {
       alert('Por favor, preencha pelo menos o título e o conteúdo.');
       return;
     }
 
+    // Validar comprimento dos campos
+    if (title.trim().length > 200) {
+      alert('O título deve ter no máximo 200 caracteres.');
+      return;
+    }
+
+    if (excerpt.trim().length > 500) {
+      alert('O resumo deve ter no máximo 500 caracteres.');
+      return;
+    }
+
+    if (metaDescription.trim().length > 160) {
+      alert('A meta descrição deve ter no máximo 160 caracteres.');
+      return;
+    }
+
+    // Sanitizar dados
+    const sanitizedTitle = sanitizeName(title.trim());
+    const sanitizedExcerpt = sanitizeMessage(excerpt.trim());
+    const sanitizedMetaDescription = sanitizeMessage(metaDescription.trim());
+    const sanitizedContent = sanitizeMessage(content.trim());
+    const sanitizedTags = sanitizeMessage(tags.trim());
+    const sanitizedFeaturedImage = featuredImage.trim() ? sanitizeUrl(featuredImage.trim()) : '';
+
+    if (!sanitizedTitle || !sanitizedContent) {
+      alert('Dados inválidos detectados. Verifique o conteúdo.');
+      return;
+    }
+
     const articleData: ArticleData = {
-      title: title.trim(),
-      slug: slug.trim() || generateSlug(title.trim()),
-      excerpt: excerpt.trim(),
-      metaDescription: metaDescription.trim(),
-      content: content.trim(),
+      title: sanitizedTitle,
+      slug: slug.trim() || generateSlug(sanitizedTitle),
+      excerpt: sanitizedExcerpt,
+      metaDescription: sanitizedMetaDescription,
+      content: sanitizedContent,
       category: category,
-      tags: tags.trim(),
-      featuredImage: featuredImage.trim(),
+      tags: sanitizedTags,
+      featuredImage: sanitizedFeaturedImage,
       published: isPublished
     };
 

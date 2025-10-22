@@ -4,11 +4,13 @@ import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/UI/Button';
 import Card from '../components/UI/Card';
 import { useToast } from '../hooks/useToast';
+import { sanitizeEmail, validators, RateLimiter, CSRFProtection, secureCleanup } from '../utils/security';
 
 const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [rateLimitError, setRateLimitError] = useState('');
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -18,18 +20,42 @@ const AdminLogin: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setRateLimitError('');
 
-    if (!email || !password) {
+    // Verificar rate limiting para tentativas de login
+    if (!RateLimiter.canPerformAction('admin_login', 5, 900000)) { // 5 tentativas por 15 minutos
+      const remainingTime = Math.ceil(RateLimiter.getRemainingTime('admin_login', 900000) / 1000 / 60);
+      setRateLimitError(`Muitas tentativas de login. Tente novamente em ${remainingTime} minutos.`);
+      return;
+    }
+
+    // Validar campos
+    if (!validators.required(email) || !validators.required(password)) {
       setError('Por favor, preencha todos os campos');
       return;
     }
 
+    if (!validators.email(email)) {
+      setError('Email inválido');
+      return;
+    }
+
+    // Sanitizar email
+    const sanitizedEmail = sanitizeEmail(email);
+    if (!sanitizedEmail) {
+      setError('Email inválido');
+      return;
+    }
+
     try {
-      const success = await login(email, password);
+      const success = await login(sanitizedEmail, password);
       
       if (success) {
         console.log('🎯 LOGIN SUCESSO - FORÇANDO REDIRECIONAMENTO ABSOLUTO...');
         showToast('success', 'Login realizado com sucesso!');
+        
+        // Limpar dados sensíveis do formulário
+        secureCleanup.clearFormData(e.target as HTMLFormElement);
         
         // SOLUÇÃO DEFINITIVA: window.location.replace (força redirecionamento absoluto)
         console.log('🚨 USANDO window.location.replace("/admin") - REDIRECIONAMENTO FORÇADO!');
@@ -38,11 +64,17 @@ const AdminLogin: React.FC = () => {
       } else {
         setError('Credenciais inválidas ou usuário não é administrador');
         showToast('error', 'Acesso negado');
+        
+        // Limpar senha em caso de erro
+        setPassword('');
       }
     } catch (error: any) {
       console.error('Erro no login:', error);
       setError(`Erro no login: ${error.message || 'Erro interno'}`);
       showToast('error', `Erro: ${error.message || 'Erro interno'}`);
+      
+      // Limpar senha em caso de erro
+      setPassword('');
     }
   };
 
@@ -67,6 +99,22 @@ const AdminLogin: React.FC = () => {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
+            {rateLimitError && (
+              <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
+                <p className="text-red-500 text-sm font-medium text-center">
+                  {rateLimitError}
+                </p>
+              </div>
+            )}
+
+            {error && (
+              <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
+                <p className="text-red-500 text-sm font-medium text-center">
+                  {error}
+                </p>
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-white mb-2">
@@ -79,6 +127,8 @@ const AdminLogin: React.FC = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full px-4 py-3 bg-dark-surface/50 border border-neon-purple/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-neon-purple focus:border-transparent transition-all duration-200 text-white placeholder-futuristic-gray"
                   placeholder="admin@exemplo.com"
+                  maxLength={255}
+                  autoComplete="email"
                   required
                 />
               </div>
@@ -93,33 +143,42 @@ const AdminLogin: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 bg-dark-surface/50 border border-neon-purple/30 rounded-lg focus:outline-none focus:ring-2 focus:ring-neon-purple focus:border-transparent transition-all duration-200 text-white placeholder-futuristic-gray"
-                  placeholder="••••••••••"
+                  placeholder="••••••••"
+                  maxLength={128}
+                  autoComplete="current-password"
                   required
                 />
               </div>
             </div>
 
-            {error && (
-              <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-                <p className="text-sm text-red-400">{error}</p>
+            <div className="bg-primary-dark/50 p-4 rounded-lg border border-lime-green/20">
+              <div className="flex items-start space-x-3">
+                <svg className="w-5 h-5 text-lime-green mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.031 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <div>
+                  <p className="text-sm text-white font-medium mb-1">
+                    Acesso Seguro
+                  </p>
+                  <p className="text-xs text-futuristic-gray">
+                    Suas credenciais são protegidas com criptografia de ponta e rate limiting.
+                  </p>
+                </div>
               </div>
-            )}
+            </div>
 
             <Button
               type="submit"
-              className="w-full bg-neon-gradient hover:opacity-90 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] focus:scale-[1.02] shadow-lg hover:shadow-neon-purple/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               disabled={isLoading}
+              className="w-full bg-neon-gradient hover:bg-neon-gradient-hover text-white font-orbitron font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {isLoading ? (
-                <div className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Entrando...
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Verificando...</span>
                 </div>
               ) : (
-                'Entrar no Painel'
+                'Entrar'
               )}
             </Button>
           </form>

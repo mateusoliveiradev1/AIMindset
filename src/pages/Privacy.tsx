@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { Shield, Eye, Lock, Users, FileText, Mail, CheckCircle, AlertTriangle, Globe, Calendar, ArrowRight, Download, Trash2, Edit, UserCheck, Database, Server, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Shield, Lock, Eye, Download, Trash2, Edit, MessageCircle, CheckCircle, AlertTriangle, Info, Settings, Database, Cookie, UserCheck, FileText, Mail, Phone, Clock, MapPin, Globe, Zap, Users, Heart, Star, Award, Target, TrendingUp, BarChart3, Activity, PieChart, Calendar, Filter, Search, RefreshCw, ExternalLink, ArrowRight, ChevronDown, ChevronUp, X, Save, AlertCircle, HelpCircle, BookOpen, Lightbulb, Sparkles, Rocket, Brain, Code, Cpu, Network, Server, CloudLightning, Fingerprint, Key, ShieldCheck } from 'lucide-react';
+import { useUserData } from '../hooks/useUserData';
+import { sanitizeName, sanitizeEmail, sanitizeMessage, validators, RateLimiter, CSRFProtection } from '../utils/security';
 import { Link } from 'react-router-dom';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import CookieModal from '../components/UI/CookieModal';
-import { useUserData } from '../hooks/useUserData';
 
 const Privacy: React.FC = () => {
   const [cookiePreferences, setCookiePreferences] = useState({

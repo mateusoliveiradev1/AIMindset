@@ -1,31 +1,92 @@
 import React, { useState } from 'react';
-import { Mail, CheckCircle, Sparkles, Zap, Brain, Target } from 'lucide-react';
+import { Mail, CheckCircle, Sparkles, Zap, Brain, Target, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import Button from '../components/UI/Button';
 import Card from '../components/UI/Card';
+import { sanitizeName, sanitizeEmail, validators, RateLimiter } from '../utils/security';
 
 const Newsletter: React.FC = () => {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [rateLimitError, setRateLimitError] = useState('');
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    // Validar nome
+    if (!validators.required(name)) {
+      newErrors.name = 'Nome é obrigatório';
+    } else if (!validators.name(name)) {
+      newErrors.name = 'Nome deve ter entre 2 e 100 caracteres e conter apenas letras';
+    }
+
+    // Validar email
+    if (!validators.required(email)) {
+      newErrors.email = 'Email é obrigatório';
+    } else if (!validators.email(email)) {
+      newErrors.email = 'Email inválido';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !name) {
-      toast.error('Por favor, preencha todos os campos');
+    // Verificar rate limiting
+    if (!RateLimiter.canPerformAction('newsletter_signup', 3, 300000)) { // 3 tentativas por 5 minutos
+      const remainingTime = Math.ceil(RateLimiter.getRemainingTime('newsletter_signup', 300000) / 1000 / 60);
+      setRateLimitError(`Muitas tentativas. Tente novamente em ${remainingTime} minutos.`);
+      return;
+    }
+
+    setRateLimitError('');
+
+    // Validar formulário
+    if (!validateForm()) {
+      return;
+    }
+
+    // Sanitizar dados
+    const sanitizedName = sanitizeName(name);
+    const sanitizedEmail = sanitizeEmail(email);
+
+    if (!sanitizedName || !sanitizedEmail) {
+      toast.error('Dados inválidos. Verifique os campos.');
       return;
     }
 
     setIsLoading(true);
     
-    // Simular envio
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setIsSubscribed(true);
-    setIsLoading(false);
-    toast.success('Inscrição realizada com sucesso!');
+    try {
+      // Simular envio com dados sanitizados
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      setIsSubscribed(true);
+      setErrors({});
+      toast.success('Inscrição realizada com sucesso!');
+    } catch (error) {
+      toast.error('Erro ao processar inscrição. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    // Limpar erro do campo quando usuário começar a digitar
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+
+    if (field === 'name') {
+      setName(value);
+    } else if (field === 'email') {
+      setEmail(value);
+    }
   };
 
   const benefits = [
@@ -129,6 +190,13 @@ const Newsletter: React.FC = () => {
               </p>
             </div>
 
+            {/* Rate Limit Error */}
+            {rateLimitError && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                <p className="text-red-400 text-sm font-montserrat">{rateLimitError}</p>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label htmlFor="name" className="block text-sm font-montserrat font-medium text-futuristic-gray mb-2">
@@ -138,11 +206,19 @@ const Newsletter: React.FC = () => {
                   type="text"
                   id="name"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
                   placeholder="Seu nome"
-                  className="w-full px-4 py-3 bg-dark-surface border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green focus:ring-2 focus:ring-lime-green/20 transition-all duration-300"
+                  maxLength={100}
+                  className={`w-full px-4 py-3 bg-dark-surface border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all duration-300 ${
+                    errors.name 
+                      ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
+                      : 'border-neon-purple/20 focus:border-lime-green focus:ring-lime-green/20'
+                  }`}
                   required
                 />
+                {errors.name && (
+                  <p className="mt-1 text-red-400 text-sm font-montserrat">{errors.name}</p>
+                )}
               </div>
 
               <div>
@@ -153,11 +229,19 @@ const Newsletter: React.FC = () => {
                   type="email"
                   id="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
                   placeholder="seu@email.com"
-                  className="w-full px-4 py-3 bg-dark-surface border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green focus:ring-2 focus:ring-lime-green/20 transition-all duration-300"
+                  maxLength={254}
+                  className={`w-full px-4 py-3 bg-dark-surface border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all duration-300 ${
+                    errors.email 
+                      ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
+                      : 'border-neon-purple/20 focus:border-lime-green focus:ring-lime-green/20'
+                  }`}
                   required
                 />
+                {errors.email && (
+                  <p className="mt-1 text-red-400 text-sm font-montserrat">{errors.email}</p>
+                )}
               </div>
 
               <Button 

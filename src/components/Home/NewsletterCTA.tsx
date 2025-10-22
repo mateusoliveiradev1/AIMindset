@@ -1,38 +1,79 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Sparkles, CheckCircle } from 'lucide-react';
+import { Mail, Sparkles, CheckCircle, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import Button from '../UI/Button';
 import Card from '../UI/Card';
 import { useNewsletter } from '../../hooks/useNewsletter';
+import { sanitizeEmail, validators, RateLimiter } from '../../utils/security';
 
 const NewsletterCTA: React.FC = () => {
   const [email, setEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [rateLimitError, setRateLimitError] = useState('');
   const { subscribe, error } = useNewsletter();
+
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!validators.required(email)) {
+      newErrors.email = 'Email é obrigatório';
+    } else if (!validators.email(email)) {
+      newErrors.email = 'Email inválido';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email) {
-      toast.error('Por favor, insira seu email');
+    // Verificar rate limiting
+    if (!RateLimiter.canPerformAction('newsletter_cta', 3, 300000)) { // 3 tentativas por 5 minutos
+      const remainingTime = Math.ceil(RateLimiter.getRemainingTime('newsletter_cta', 300000) / 1000 / 60);
+      setRateLimitError(`Muitas tentativas. Tente novamente em ${remainingTime} minutos.`);
+      return;
+    }
+
+    setRateLimitError('');
+
+    // Validar formulário
+    if (!validateForm()) {
+      return;
+    }
+
+    // Sanitizar email
+    const sanitizedEmail = sanitizeEmail(email);
+    if (!sanitizedEmail) {
+      toast.error('Email inválido. Verifique o formato.');
       return;
     }
 
     setIsLoading(true);
     
-    const success = await subscribe(email);
+    const success = await subscribe(sanitizedEmail);
     
     if (success) {
       setIsSubscribed(true);
       setEmail('');
+      setErrors({});
       toast.success('Obrigado! Você foi inscrito na nossa newsletter.');
     } else {
       toast.error(error || 'Erro ao inscrever na newsletter. Tente novamente.');
     }
     
     setIsLoading(false);
+  };
+
+  const handleInputChange = (value: string) => {
+    // Limpar erro quando usuário começar a digitar
+    if (errors.email) {
+      setErrors(prev => ({ ...prev, email: '' }));
+    }
+    setEmail(value);
   };
 
   return (
@@ -61,30 +102,49 @@ const NewsletterCTA: React.FC = () => {
             </p>
 
             {!isSubscribed ? (
-              <form onSubmit={handleSubmit} className="max-w-md mx-auto mb-8">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Seu melhor email"
-                    className="flex-1 px-4 py-3 bg-dark-surface border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green focus:ring-2 focus:ring-lime-green/20 transition-all duration-300"
-                  />
-                  <Button type="submit" size="lg" className="sm:w-auto" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Inscrevendo...
-                      </>
-                    ) : (
-                      <>
-                        <Mail className="h-4 w-4 mr-2" />
-                        Assinar
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </form>
+              <>
+                {/* Rate Limit Error */}
+                {rateLimitError && (
+                  <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg max-w-md mx-auto">
+                    <p className="text-red-400 text-sm font-montserrat">{rateLimitError}</p>
+                  </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="max-w-md mx-auto mb-8">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex-1">
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => handleInputChange(e.target.value)}
+                        placeholder="Seu melhor email"
+                        maxLength={254}
+                        className={`w-full px-4 py-3 bg-dark-surface border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all duration-300 ${
+                          errors.email 
+                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
+                            : 'border-neon-purple/20 focus:border-lime-green focus:ring-lime-green/20'
+                        }`}
+                      />
+                      {errors.email && (
+                        <p className="mt-1 text-red-400 text-sm font-montserrat text-left">{errors.email}</p>
+                      )}
+                    </div>
+                    <Button type="submit" size="lg" className="sm:w-auto" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Inscrevendo...
+                        </>
+                      ) : (
+                        <>
+                          <Mail className="h-4 w-4 mr-2" />
+                          Assinar
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </>
             ) : (
               <div className="flex items-center justify-center space-x-2 text-lime-green mb-8">
                 <CheckCircle className="h-6 w-6" />
