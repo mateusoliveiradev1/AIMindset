@@ -33,8 +33,14 @@ import {
   sanitizeMessage, 
   sanitizeUrl, 
   validators, 
-  RateLimiter 
+  RateLimiter,
+  sanitizeInput,
+  sanitizeEmail,
+  validateCSRFToken,
+  generateCSRFToken,
+  validateOrigin
 } from '../utils/security';
+import { SecurityHeaders } from '../utils/securityHeaders';
 
 interface ArticleData {
   title: string;
@@ -329,7 +335,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
     const sanitizedMetaDescription = sanitizeMessage(metaDescription.trim());
     const sanitizedContent = sanitizeMessage(content.trim());
     const sanitizedTags = sanitizeMessage(tags.trim());
-    const sanitizedFeaturedImage = featuredImage.trim() ? sanitizeUrl(featuredImage.trim()) : '';
+    const sanitizedFeaturedImage = featuredImage.trim() ? SecurityHeaders.sanitizeUrl(featuredImage.trim()) : '';
 
     if (!sanitizedTitle || !sanitizedContent) {
       alert('Dados inválidos detectados. Verifique o conteúdo.');
