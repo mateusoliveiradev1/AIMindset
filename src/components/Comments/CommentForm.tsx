@@ -62,15 +62,15 @@ export const CommentForm: React.FC<CommentFormProps> = ({ onSubmit, submitting }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-lg p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+    <form onSubmit={handleSubmit} className="bg-darker-surface/30 backdrop-blur-sm border border-neon-purple/20 hover:border-neon-purple/40 transition-all duration-300 hover:shadow-lg hover:shadow-neon-purple/10 rounded-lg p-6">
+      <h3 className="text-lg font-semibold font-orbitron text-white mb-4 bg-gradient-to-r from-neon-purple to-lime-green bg-clip-text text-transparent">
         Deixe seu comentário
       </h3>
       
       <div className="space-y-4">
         {/* Campo Nome */}
         <div>
-          <label htmlFor="user_name" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="user_name" className="block text-sm font-medium text-futuristic-gray mb-1">
             Nome *
           </label>
           <input
@@ -80,25 +80,26 @@ export const CommentForm: React.FC<CommentFormProps> = ({ onSubmit, submitting }
             onChange={(e) => handleInputChange('user_name', e.target.value)}
             disabled={submitting}
             className={`
-              w-full px-3 py-2 border rounded-md shadow-sm text-sm
-              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-              disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed
+              w-full px-3 py-2 border rounded-md shadow-sm text-sm bg-darker-surface/50 text-white placeholder-futuristic-gray/60
+              focus:outline-none focus:ring-2 focus:ring-neon-purple focus:border-neon-purple
+              disabled:bg-darker-surface/20 disabled:text-futuristic-gray/50 disabled:cursor-not-allowed
+              transition-all duration-300
               ${errors.user_name 
-                ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                : 'border-gray-300'
+                ? 'border-red-400/50 focus:ring-red-400 focus:border-red-400' 
+                : 'border-neon-purple/30 hover:border-neon-purple/50'
               }
             `}
             placeholder="Seu nome"
             maxLength={50}
           />
           {errors.user_name && (
-            <p className="mt-1 text-xs text-red-600">{errors.user_name}</p>
+            <p className="mt-1 text-xs text-red-400">{errors.user_name}</p>
           )}
         </div>
 
         {/* Campo Comentário */}
         <div>
-          <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="content" className="block text-sm font-medium text-futuristic-gray mb-1">
             Comentário *
           </label>
           <textarea
@@ -108,12 +109,13 @@ export const CommentForm: React.FC<CommentFormProps> = ({ onSubmit, submitting }
             disabled={submitting}
             rows={4}
             className={`
-              w-full px-3 py-2 border rounded-md shadow-sm text-sm resize-vertical
-              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-              disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed
+              w-full px-3 py-2 border rounded-md shadow-sm text-sm resize-vertical bg-darker-surface/50 text-white placeholder-futuristic-gray/60
+              focus:outline-none focus:ring-2 focus:ring-neon-purple focus:border-neon-purple
+              disabled:bg-darker-surface/20 disabled:text-futuristic-gray/50 disabled:cursor-not-allowed
+              transition-all duration-300
               ${errors.content 
-                ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
-                : 'border-gray-300'
+                ? 'border-red-400/50 focus:ring-red-400 focus:border-red-400' 
+                : 'border-neon-purple/30 hover:border-neon-purple/50'
               }
             `}
             placeholder="Compartilhe sua opinião sobre este artigo..."
@@ -121,11 +123,11 @@ export const CommentForm: React.FC<CommentFormProps> = ({ onSubmit, submitting }
           />
           <div className="flex justify-between items-center mt-1">
             {errors.content ? (
-              <p className="text-xs text-red-600">{errors.content}</p>
+              <p className="text-xs text-red-400">{errors.content}</p>
             ) : (
               <div />
             )}
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-futuristic-gray">
               {formData.content.length}/500
             </span>
           </div>
@@ -138,10 +140,10 @@ export const CommentForm: React.FC<CommentFormProps> = ({ onSubmit, submitting }
             disabled={submitting || !formData.user_name.trim() || !formData.content.trim()}
             className={`
               flex items-center gap-2 px-6 py-2 rounded-md font-medium text-sm
-              transition-all duration-200
+              transition-all duration-300 transform
               ${submitting || !formData.user_name.trim() || !formData.content.trim()
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105 active:scale-95'
+                ? 'bg-darker-surface/50 text-futuristic-gray/50 cursor-not-allowed border border-futuristic-gray/20'
+                : 'bg-gradient-to-r from-neon-purple to-lime-green text-white hover:from-neon-purple/80 hover:to-lime-green/80 hover:scale-105 active:scale-95 hover:shadow-lg hover:shadow-neon-purple/20'
               }
             `}
           >

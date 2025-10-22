@@ -6,12 +6,34 @@ interface TableOfContentsProps {
   className?: string;
 }
 
+// Utility function for throttling scroll events
+const throttle = (func: Function, delay: number) => {
+  let timeoutId: NodeJS.Timeout | null = null;
+  let lastExecTime = 0;
+  
+  return (...args: any[]) => {
+    const currentTime = Date.now();
+    
+    if (currentTime - lastExecTime > delay) {
+      func(...args);
+      lastExecTime = currentTime;
+    } else {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        func(...args);
+        lastExecTime = Date.now();
+      }, delay - (currentTime - lastExecTime));
+    }
+  };
+};
+
 export const TableOfContents: React.FC<TableOfContentsProps> = ({ 
   className = '' 
 }) => {
   const { toc, activeId, scrollToHeading } = useTableOfContents('[data-article-content]');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [isVisible, setIsVisible] = useState(true); // Estado de visibilidade
 
   // Detectar tamanho da tela
   useEffect(() => {
@@ -22,6 +44,32 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
     checkScreenSize();
     window.addEventListener('resize', checkScreenSize);
     return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  // Lógica de detecção de scroll para esconder/mostrar o índice
+  useEffect(() => {
+    const handleScroll = throttle(() => {
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      
+      // Calcular porcentagem de scroll
+      const scrollPercentage = (scrollTop + windowHeight) / documentHeight;
+      
+      // Esconder índice quando próximo ao final (90% da página foi rolada)
+      const shouldHide = scrollPercentage >= 0.9;
+      
+      setIsVisible(!shouldHide);
+    }, 100);
+
+    window.addEventListener('scroll', handleScroll);
+    
+    // Verificar posição inicial
+    handleScroll();
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   // Impedir scroll do body quando modal estiver aberto
@@ -48,7 +96,9 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
       {!isDesktop && (
         <button
           onClick={() => setIsModalOpen(true)}
-          className="fixed bottom-6 right-6 z-[9999] bg-neon-purple hover:bg-neon-purple/80 text-white p-3 rounded-full shadow-lg transition-all duration-300 hover:scale-110 backdrop-blur-sm"
+          className={`fixed bottom-6 right-6 z-[9999] bg-neon-purple hover:bg-neon-purple/80 text-white p-3 rounded-full shadow-lg transition-all duration-500 hover:scale-110 backdrop-blur-sm ${
+            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
+          }`}
           title="Índice do artigo"
           style={{
             position: 'fixed',
@@ -131,7 +181,9 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
       {/* Sidebar FIXA para desktop - EFEITO PARALLAX REAL */}
       {isDesktop && (
         <div 
-          className="fixed top-20 left-6 w-80 max-h-[calc(100vh-120px)] z-[9998] bg-darker-surface/90 backdrop-blur-md border border-futuristic-gray/20 rounded-lg shadow-2xl"
+          className={`fixed top-20 left-6 w-80 max-h-[calc(100vh-120px)] z-[9998] bg-darker-surface/90 backdrop-blur-md border border-futuristic-gray/20 rounded-lg shadow-2xl transition-all duration-500 ${
+            isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8 pointer-events-none'
+          }`}
           style={{
             position: 'fixed',
             top: '80px',
