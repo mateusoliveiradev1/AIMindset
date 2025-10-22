@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Phone, MapPin, Send, CheckCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, CheckCircle, MessageCircle, Clock, Users, Zap, Globe, Heart, ArrowRight, Headphones, Shield, Star } from 'lucide-react';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import { useContacts } from '../hooks/useContacts';
@@ -37,113 +37,277 @@ export const Contact: React.FC = () => {
     }));
   };
 
+  const contactMethods = [
+    {
+      icon: Mail,
+      title: 'Email Direto',
+      description: 'Resposta em até 24 horas',
+      contact: 'contato@aimindset.com',
+      color: 'neon-purple',
+      bgColor: 'neon-purple/20'
+    },
+    {
+      icon: MessageCircle,
+      title: 'Chat Online',
+      description: 'Suporte em tempo real',
+      contact: 'Segunda a Sexta, 9h-18h',
+      color: 'lime-green',
+      bgColor: 'lime-green/20'
+    },
+    {
+      icon: Phone,
+      title: 'Telefone',
+      description: 'Atendimento personalizado',
+      contact: '+55 (11) 9999-9999',
+      color: 'electric-blue',
+      bgColor: 'electric-blue/20'
+    }
+  ];
+
+  const supportTopics = [
+    {
+      icon: Users,
+      title: 'Parcerias & Colaborações',
+      description: 'Oportunidades de parceria e colaboração em projetos de IA'
+    },
+    {
+      icon: Headphones,
+      title: 'Suporte Técnico',
+      description: 'Ajuda com implementação de soluções e ferramentas de IA'
+    },
+    {
+      icon: Star,
+      title: 'Feedback & Sugestões',
+      description: 'Compartilhe suas ideias para melhorar nosso conteúdo'
+    },
+    {
+      icon: Shield,
+      title: 'Questões de Privacidade',
+      description: 'Dúvidas sobre proteção de dados e políticas de privacidade'
+    }
+  ];
+
+  const stats = [
+    { number: '< 24h', label: 'Tempo de Resposta', icon: Clock },
+    { number: '98%', label: 'Satisfação', icon: Heart },
+    { number: '15+', label: 'Idiomas', icon: Globe },
+    { number: '24/7', label: 'Disponibilidade', icon: Zap }
+  ];
+
   return (
-    <div className="min-h-screen bg-dark-surface">
-      {/* Header */}
-      <div className="bg-darker-surface border-b border-neon-purple/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-5xl font-orbitron font-bold text-white mb-4">
-              Entre em <span className="gradient-text">Contato</span>
-            </h1>
-            <p className="text-xl text-futuristic-gray font-roboto max-w-3xl mx-auto">
-              Tem alguma dúvida ou sugestão? Estamos aqui para ajudar você a navegar 
-              pelo futuro da inteligência artificial.
-            </p>
+    <div className="min-h-screen bg-primary-dark text-white">
+      {/* Hero Section */}
+      <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-neon-purple/10 to-lime-green/10"></div>
+        <div className="relative max-w-4xl mx-auto text-center">
+          <div className="flex justify-center mb-6">
+            <div className="p-4 bg-neon-gradient rounded-full animate-pulse">
+              <MessageCircle className="w-12 h-12 text-white" />
+            </div>
+          </div>
+          <h1 className="text-4xl md:text-6xl font-orbitron font-bold mb-6 gradient-text">
+            Entre em Contato
+          </h1>
+          <p className="text-xl md:text-2xl text-futuristic-gray font-roboto leading-relaxed mb-8">
+            Conecte-se conosco e faça parte da revolução da inteligência artificial
+          </p>
+          <div className="flex justify-center space-x-4">
+            <div className="px-4 py-2 bg-lime-green/20 rounded-full text-lime-green text-sm font-medium">
+              💬 Suporte 24/7
+            </div>
+            <div className="px-4 py-2 bg-neon-purple/20 rounded-full text-neon-purple text-sm font-medium">
+              🚀 Resposta Rápida
+            </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {stats.map((stat, index) => (
+              <Card key={index} className="p-6 text-center hover-lift glass-effect">
+                <div className="flex justify-center mb-3">
+                  <stat.icon className="w-8 h-8 text-lime-green" />
+                </div>
+                <div className="text-2xl md:text-3xl font-orbitron font-bold text-white mb-1">
+                  {stat.number}
+                </div>
+                <div className="text-sm text-futuristic-gray font-roboto">
+                  {stat.label}
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Methods */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-3xl md:text-4xl font-orbitron font-bold text-center mb-12 text-white">
+            Como Podemos <span className="gradient-text">Ajudar</span>
+          </h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            {contactMethods.map((method, index) => (
+              <Card key={index} className="p-6 text-center hover-lift glass-effect group">
+                <div className="flex justify-center mb-4">
+                  <div className={`p-3 bg-${method.bgColor} rounded-full group-hover:scale-110 transition-transform`}>
+                    <method.icon className={`w-8 h-8 text-${method.color}`} />
+                  </div>
+                </div>
+                <h3 className="text-xl font-orbitron font-semibold mb-2 text-white">
+                  {method.title}
+                </h3>
+                <p className="text-futuristic-gray font-roboto mb-3 text-sm">
+                  {method.description}
+                </p>
+                <p className={`text-${method.color} font-medium`}>
+                  {method.contact}
+                </p>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Informações de contato */}
+          {/* Contact Information & Support Topics */}
           <div className="space-y-8">
+            {/* Contact Info */}
             <Card className="glass-effect">
               <div className="p-8">
-                <h2 className="text-2xl font-orbitron font-bold text-white mb-6">
+                <h2 className="text-2xl font-orbitron font-bold text-white mb-6 flex items-center">
+                  <MapPin className="w-6 h-6 mr-2 text-lime-green" />
                   Informações de Contato
                 </h2>
                 
                 <div className="space-y-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-neon-purple/20 rounded-lg flex items-center justify-center">
+                  <div className="flex items-center space-x-4 group">
+                    <div className="w-12 h-12 bg-neon-purple/20 rounded-lg flex items-center justify-center group-hover:bg-neon-purple/30 transition-colors">
                       <Mail className="w-6 h-6 text-neon-purple" />
                     </div>
                     <div>
-                      <h3 className="font-montserrat font-semibold text-white">Email</h3>
+                      <h3 className="font-orbitron font-semibold text-white">Email Principal</h3>
                       <p className="text-futuristic-gray font-roboto">contato@aimindset.com</p>
+                      <p className="text-xs text-lime-green">Resposta garantida em 24h</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-lime-green/20 rounded-lg flex items-center justify-center">
+                  <div className="flex items-center space-x-4 group">
+                    <div className="w-12 h-12 bg-lime-green/20 rounded-lg flex items-center justify-center group-hover:bg-lime-green/30 transition-colors">
                       <Phone className="w-6 h-6 text-lime-green" />
                     </div>
                     <div>
-                      <h3 className="font-montserrat font-semibold text-white">Telefone</h3>
+                      <h3 className="font-orbitron font-semibold text-white">Telefone & WhatsApp</h3>
                       <p className="text-futuristic-gray font-roboto">+55 (11) 9999-9999</p>
+                      <p className="text-xs text-neon-purple">Atendimento personalizado</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-electric-blue/20 rounded-lg flex items-center justify-center">
-                      <MapPin className="w-6 h-6 text-electric-blue" />
+                  <div className="flex items-center space-x-4 group">
+                    <div className="w-12 h-12 bg-electric-blue/20 rounded-lg flex items-center justify-center group-hover:bg-electric-blue/30 transition-colors">
+                      <Globe className="w-6 h-6 text-electric-blue" />
                     </div>
                     <div>
-                      <h3 className="font-montserrat font-semibold text-white">Localização</h3>
+                      <h3 className="font-orbitron font-semibold text-white">Localização</h3>
                       <p className="text-futuristic-gray font-roboto">São Paulo, Brasil</p>
+                      <p className="text-xs text-lime-green">Atendimento global online</p>
                     </div>
                   </div>
                 </div>
               </div>
             </Card>
 
+            {/* Support Topics */}
             <Card className="glass-effect">
               <div className="p-8">
-                <h2 className="text-2xl font-orbitron font-bold text-white mb-6">
+                <h2 className="text-2xl font-orbitron font-bold text-white mb-6 flex items-center">
+                  <Headphones className="w-6 h-6 mr-2 text-neon-purple" />
+                  Como Podemos Ajudar
+                </h2>
+                
+                <div className="space-y-4">
+                  {supportTopics.map((topic, index) => (
+                    <div key={index} className="flex items-start space-x-4 p-4 rounded-lg hover:bg-primary-dark/50 transition-colors group">
+                      <div className="flex-shrink-0 w-10 h-10 bg-lime-green/20 rounded-lg flex items-center justify-center group-hover:bg-lime-green/30 transition-colors">
+                        <topic.icon className="w-5 h-5 text-lime-green" />
+                      </div>
+                      <div>
+                        <h3 className="font-orbitron font-semibold text-white mb-1">
+                          {topic.title}
+                        </h3>
+                        <p className="text-futuristic-gray font-roboto text-sm leading-relaxed">
+                          {topic.description}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+
+            {/* Business Hours */}
+            <Card className="glass-effect">
+              <div className="p-8">
+                <h2 className="text-2xl font-orbitron font-bold text-white mb-6 flex items-center">
+                  <Clock className="w-6 h-6 mr-2 text-electric-blue" />
                   Horário de Atendimento
                 </h2>
                 
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="font-montserrat text-white">Segunda - Sexta</span>
-                    <span className="text-futuristic-gray font-roboto">9:00 - 18:00</span>
+                  <div className="flex justify-between items-center p-3 rounded-lg bg-lime-green/10">
+                    <span className="font-orbitron text-white">Segunda - Sexta</span>
+                    <span className="text-lime-green font-roboto font-medium">9:00 - 18:00</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="font-montserrat text-white">Sábado</span>
-                    <span className="text-futuristic-gray font-roboto">9:00 - 14:00</span>
+                  <div className="flex justify-between items-center p-3 rounded-lg bg-neon-purple/10">
+                    <span className="font-orbitron text-white">Sábado</span>
+                    <span className="text-neon-purple font-roboto font-medium">9:00 - 14:00</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="font-montserrat text-white">Domingo</span>
+                  <div className="flex justify-between items-center p-3 rounded-lg bg-futuristic-gray/10">
+                    <span className="font-orbitron text-white">Domingo</span>
                     <span className="text-futuristic-gray font-roboto">Fechado</span>
+                  </div>
+                  <div className="mt-4 p-3 bg-electric-blue/10 rounded-lg">
+                    <p className="text-electric-blue text-sm font-roboto text-center">
+                      💡 Email e chat online disponíveis 24/7 com resposta automática
+                    </p>
                   </div>
                 </div>
               </div>
             </Card>
           </div>
 
-          {/* Formulário de contato */}
+          {/* Contact Form */}
           <div>
             <Card className="glass-effect">
               <div className="p-8">
-                <h2 className="text-2xl font-orbitron font-bold text-white mb-6">
+                <h2 className="text-2xl font-orbitron font-bold text-white mb-6 flex items-center">
+                  <Send className="w-6 h-6 mr-2 text-lime-green" />
                   Envie sua Mensagem
                 </h2>
 
                 {isSubmitted && (
-                  <div className="mb-6 p-4 bg-lime-green/20 border border-lime-green/30 rounded-lg flex items-center space-x-3">
+                  <div className="mb-6 p-4 bg-lime-green/20 border border-lime-green/30 rounded-lg flex items-center space-x-3 animate-pulse">
                     <CheckCircle className="w-5 h-5 text-lime-green" />
-                    <p className="text-lime-green font-roboto">
-                      Mensagem enviada com sucesso! Entraremos em contato em breve.
-                    </p>
+                    <div>
+                      <p className="text-lime-green font-roboto font-medium">
+                        Mensagem enviada com sucesso!
+                      </p>
+                      <p className="text-lime-green/80 text-sm">
+                        Entraremos em contato em até 24 horas.
+                      </p>
+                    </div>
                   </div>
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label htmlFor="name" className="block text-sm font-montserrat font-medium text-white mb-2">
-                        Nome *
+                      <label htmlFor="name" className="block text-sm font-orbitron font-medium text-white mb-2">
+                        Nome Completo *
                       </label>
                       <input
                         type="text"
@@ -152,13 +316,13 @@ export const Contact: React.FC = () => {
                         value={formData.name}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3 bg-darker-surface border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple focus:ring-2 focus:ring-neon-purple/20"
+                        className="w-full px-4 py-3 bg-primary-dark border border-neon-purple/30 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green focus:ring-2 focus:ring-lime-green/20 transition-all"
                         placeholder="Seu nome completo"
                       />
                     </div>
 
                     <div>
-                      <label htmlFor="email" className="block text-sm font-montserrat font-medium text-white mb-2">
+                      <label htmlFor="email" className="block text-sm font-orbitron font-medium text-white mb-2">
                         Email *
                       </label>
                       <input
@@ -168,30 +332,36 @@ export const Contact: React.FC = () => {
                         value={formData.email}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3 bg-darker-surface border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple focus:ring-2 focus:ring-neon-purple/20"
+                        className="w-full px-4 py-3 bg-primary-dark border border-neon-purple/30 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green focus:ring-2 focus:ring-lime-green/20 transition-all"
                         placeholder="seu@email.com"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label htmlFor="subject" className="block text-sm font-montserrat font-medium text-white mb-2">
+                    <label htmlFor="subject" className="block text-sm font-orbitron font-medium text-white mb-2">
                       Assunto *
                     </label>
-                    <input
-                      type="text"
+                    <select
                       id="subject"
                       name="subject"
                       value={formData.subject}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 bg-darker-surface border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple focus:ring-2 focus:ring-neon-purple/20"
-                      placeholder="Qual o assunto da sua mensagem?"
-                    />
+                      className="w-full px-4 py-3 bg-primary-dark border border-neon-purple/30 rounded-lg text-white focus:outline-none focus:border-lime-green focus:ring-2 focus:ring-lime-green/20 transition-all"
+                    >
+                      <option value="">Selecione um assunto</option>
+                      <option value="parceria">Parcerias & Colaborações</option>
+                      <option value="suporte">Suporte Técnico</option>
+                      <option value="feedback">Feedback & Sugestões</option>
+                      <option value="privacidade">Questões de Privacidade</option>
+                      <option value="imprensa">Imprensa & Mídia</option>
+                      <option value="outros">Outros</option>
+                    </select>
                   </div>
 
                   <div>
-                    <label htmlFor="message" className="block text-sm font-montserrat font-medium text-white mb-2">
+                    <label htmlFor="message" className="block text-sm font-orbitron font-medium text-white mb-2">
                       Mensagem *
                     </label>
                     <textarea
@@ -201,9 +371,27 @@ export const Contact: React.FC = () => {
                       onChange={handleChange}
                       required
                       rows={6}
-                      className="w-full px-4 py-3 bg-darker-surface border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple focus:ring-2 focus:ring-neon-purple/20 resize-none"
-                      placeholder="Escreva sua mensagem aqui..."
+                      className="w-full px-4 py-3 bg-primary-dark border border-neon-purple/30 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green focus:ring-2 focus:ring-lime-green/20 resize-none transition-all"
+                      placeholder="Descreva detalhadamente sua solicitação, dúvida ou sugestão..."
                     />
+                    <p className="text-xs text-futuristic-gray mt-1">
+                      Mínimo 10 caracteres. Seja específico para uma resposta mais precisa.
+                    </p>
+                  </div>
+
+                  <div className="bg-primary-dark/50 p-4 rounded-lg border border-lime-green/20">
+                    <div className="flex items-start space-x-3">
+                      <Shield className="w-5 h-5 text-lime-green mt-0.5" />
+                      <div>
+                        <p className="text-sm text-white font-medium mb-1">
+                          Seus dados estão protegidos
+                        </p>
+                        <p className="text-xs text-futuristic-gray">
+                          Utilizamos criptografia de ponta e seguimos rigorosamente a LGPD. 
+                          Seus dados nunca serão compartilhados com terceiros.
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
                   <Button
@@ -211,26 +399,74 @@ export const Contact: React.FC = () => {
                     variant="primary"
                     size="lg"
                     disabled={loading}
-                    className="w-full neon-glow"
+                    className="w-full hover-lift group"
                   >
                     {loading ? (
                       <div className="flex items-center justify-center space-x-2">
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span>Enviando...</span>
+                        <span>Enviando mensagem...</span>
                       </div>
                     ) : (
                       <div className="flex items-center justify-center space-x-2">
                         <Send className="w-5 h-5" />
                         <span>Enviar Mensagem</span>
+                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                       </div>
                     )}
                   </Button>
+
+                  <p className="text-center text-xs text-futuristic-gray">
+                    Ao enviar esta mensagem, você concorda com nossa{' '}
+                    <a href="/privacy" className="text-lime-green hover:text-lime-green/80 transition-colors">
+                      Política de Privacidade
+                    </a>
+                  </p>
                 </form>
               </div>
             </Card>
           </div>
         </div>
       </div>
+
+      {/* FAQ Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          <Card className="p-8 md:p-12 glass-effect">
+            <h2 className="text-3xl md:text-4xl font-orbitron font-bold text-center mb-8 text-white">
+              Perguntas <span className="gradient-text">Frequentes</span>
+            </h2>
+            <div className="space-y-6">
+              <div className="border-b border-neon-purple/20 pb-6">
+                <h3 className="text-lg font-orbitron font-semibold text-lime-green mb-2">
+                  Quanto tempo leva para receber uma resposta?
+                </h3>
+                <p className="text-futuristic-gray font-roboto">
+                  Garantimos resposta em até 24 horas para emails. Para questões urgentes, 
+                  utilize nosso chat online ou WhatsApp durante o horário comercial.
+                </p>
+              </div>
+              <div className="border-b border-neon-purple/20 pb-6">
+                <h3 className="text-lg font-orbitron font-semibold text-lime-green mb-2">
+                  Vocês oferecem consultoria personalizada?
+                </h3>
+                <p className="text-futuristic-gray font-roboto">
+                  Sim! Oferecemos consultoria especializada em IA para empresas e profissionais. 
+                  Entre em contato para discutir suas necessidades específicas.
+                </p>
+              </div>
+              <div>
+                <h3 className="text-lg font-orbitron font-semibold text-lime-green mb-2">
+                  Como posso colaborar com o AIMindset?
+                </h3>
+                <p className="text-futuristic-gray font-roboto">
+                  Estamos sempre abertos a parcerias! Seja para guest posts, colaborações técnicas 
+                  ou projetos conjuntos, envie sua proposta detalhada através do formulário.
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </section>
     </div>
   );
 };
