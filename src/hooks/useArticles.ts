@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase, supabaseServiceClient } from '../lib/supabase';
 import type { Article, Category } from '../lib/supabase';
 
+export type { Article, Category };
+
 // Função para gerar slug a partir do título
 const generateSlug = (title: string): string => {
   return title
@@ -64,7 +66,7 @@ export interface UseArticlesReturn {
   error: string | null;
   createArticle: (article: Omit<Article, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
   updateArticle: (id: string, article: Partial<Article>) => Promise<boolean>;
-  deleteArticle: (id: string) => Promise<boolean>;
+  deleteArticle: (id: number) => Promise<boolean>;
   createCategory: (category: Omit<Category, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
   updateCategory: (id: string, category: Partial<Category>) => Promise<boolean>;
   deleteCategory: (id: string) => Promise<boolean>;
@@ -362,7 +364,7 @@ export const useArticles = (): UseArticlesReturn => {
     }
   };
 
-  const deleteArticle = async (id: string): Promise<boolean> => {
+  const deleteArticle = async (id: number): Promise<boolean> => {
     try {
       setError(null);
       

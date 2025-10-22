@@ -29,13 +29,15 @@ import {
   Search,
   Filter,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  MessageSquare
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import ArticleEditor from '../components/ArticleEditor';
+import { FeedbackDashboard } from '../components/Admin/FeedbackDashboard';
 
 export const Admin: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'articles' | 'categories' | 'editor' | 'newsletter' | 'users'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'articles' | 'categories' | 'editor' | 'newsletter' | 'users' | 'feedback'>('dashboard');
   const { logout, user } = useAuth();
   const { articles, categories, loading: loadingArticles, refreshArticles, createArticle, createCategory, updateCategory, deleteCategory, updateArticle, deleteArticle } = useArticles();
   const { subscribers, loading: loadingSubscribers, refreshData: refreshNewsletter } = useNewsletter();
@@ -58,7 +60,7 @@ export const Admin: React.FC = () => {
     setActiveTab('editor');
   };
 
-  const handleDeleteArticle = async (articleId: string) => {
+  const handleDeleteArticle = async (articleId: number) => {
     if (window.confirm('Tem certeza que deseja excluir este artigo? Esta ação não pode ser desfeita.')) {
       try {
         const success = await deleteArticle(articleId);
@@ -506,7 +508,8 @@ export const Admin: React.FC = () => {
             { id: 'editor', label: 'Novo Artigo', icon: PlusCircle },
             { id: 'newsletter', label: 'Newsletter', icon: Mail },
             { id: 'users', label: 'Usuários', icon: Users },
-            { id: 'categories', label: 'Categorias', icon: TrendingUp }
+            { id: 'categories', label: 'Categorias', icon: TrendingUp },
+            { id: 'feedback', label: 'Feedback', icon: MessageSquare }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -1206,6 +1209,13 @@ export const Admin: React.FC = () => {
                 )}
               </div>
             </Card>
+          </div>
+        )}
+
+        {/* Feedback Tab */}
+        {activeTab === 'feedback' && (
+          <div>
+            <FeedbackDashboard />
           </div>
         )}
 

@@ -12,10 +12,19 @@ import Button from '../components/UI/Button';
 import { ReadingProgressBar } from '../components/ReadingProgressBar';
 import { TableOfContents } from '../components/TableOfContents';
 import { ArticleNavigation } from '../components/ArticleNavigation';
+import { FeedbackSection } from '../components/Feedback/FeedbackSection';
+import { CommentSection } from '../components/Comments/CommentSection';
 
 const Article: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
-  const { articles, categories, loading, refreshArticles } = useArticles();
+  const { articles, categories, loading, error, refreshArticles } = useArticles();
+  
+  // Debug logs para investigar o problema
+  console.log('🔍 Article.tsx - Renderizando página do artigo');
+  console.log('🔍 Article.tsx - Slug recebido:', slug);
+  console.log('🔍 Article.tsx - Artigos carregados:', articles?.length || 0);
+  console.log('🔍 Article.tsx - Loading:', loading);
+  console.log('🔍 Article.tsx - Error:', error);
   
   useEffect(() => {
     refreshArticles();
@@ -23,6 +32,8 @@ const Article: React.FC = () => {
   
   const article = (articles || []).find(art => art?.slug === slug && art.published);
   const articleCategory = categories.find(cat => cat.id === article?.category_id);
+  
+  console.log('🔍 Article.tsx - Artigo encontrado:', article ? `ID: ${article.id}, Título: ${article.title}` : 'NENHUM ARTIGO ENCONTRADO');
   
   // Calculate dynamic reading time
   const dynamicReadingTime = useReadingTime(article?.content || '');
@@ -37,6 +48,7 @@ const Article: React.FC = () => {
     .slice(0, 3);
 
   if (loading) {
+    console.log('🔍 Article.tsx - Mostrando loading...');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -47,18 +59,38 @@ const Article: React.FC = () => {
     );
   }
 
-  if (!article) {
+  if (error) {
+    console.log('🔍 Article.tsx - Mostrando erro:', error);
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="font-orbitron font-bold text-2xl text-white mb-4">Artigo não encontrado</h1>
-          <Link to="/">
-            <Button>Voltar ao início</Button>
+          <h1 className="text-2xl font-bold text-white mb-4">Erro ao carregar artigo</h1>
+          <p className="text-futuristic-gray">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!article) {
+    console.log('🔍 Article.tsx - Artigo não encontrado, mostrando 404');
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-4">Artigo não encontrado</h1>
+          <p className="text-futuristic-gray mb-6">O artigo que você está procurando não existe ou foi removido.</p>
+          <Link 
+            to="/" 
+            className="inline-flex items-center px-6 py-3 bg-lime-green text-dark-surface font-medium rounded-lg hover:bg-lime-green/90 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Voltar ao início
           </Link>
         </div>
       </div>
     );
   }
+
+  console.log('🔍 Article.tsx - Renderizando artigo completo, incluindo CommentSection');
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Data não disponível';
@@ -109,9 +141,16 @@ const Article: React.FC = () => {
       
       <div className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto">
-             {/* Main Content */}
-             <div className="flex-1 lg:max-w-4xl">
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Sidebar - Table of Contents */}
+            <aside className="lg:w-64 order-2 lg:order-1">
+              <div className="lg:sticky lg:top-20 lg:h-screen lg:overflow-y-auto lg:pb-20">
+                <TableOfContents />
+              </div>
+            </aside>
+
+            {/* Main Content */}
+            <div className="flex-1 lg:max-w-4xl order-1 lg:order-2">
               {/* Back Button */}
               <div className="mb-8">
                 <Link
@@ -320,28 +359,11 @@ const Article: React.FC = () => {
                  className="mb-12"
                />
      
-               {/* Newsletter CTA */}
-               <Card variant="glass" className="p-8 text-center">
-                 <h3 className="font-montserrat font-semibold text-xl text-white mb-4">
-                   Gostou deste artigo?
-                 </h3>
-                 <p className="text-futuristic-gray mb-6">
-                   Receba mais conteúdos como este diretamente no seu email
-                 </p>
-                 <Link to="/newsletter">
-                   <Button size="lg">
-                     Assinar Newsletter Gratuita
-                   </Button>
-                 </Link>
-               </Card>
-             </div>
-             
-             {/* Sidebar */}
-             <div className="lg:w-80 lg:min-w-80 lg:sticky lg:top-24 lg:self-start">
-               <TableOfContents 
-                 content={article.content || ''} 
-                 className="mb-6"
-               />
+               {/* Feedback Section */}
+               <FeedbackSection articleId={article.id} />
+
+               {/* Comments Section */}
+               <CommentSection articleId={article.id} />
              </div>
            </div>
          </div>

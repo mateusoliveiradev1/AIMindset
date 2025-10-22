@@ -15,7 +15,7 @@ export interface Tag {
 }
 
 export interface Article {
-  id: string;
+  id: number;
   title: string;
   slug: string;
   content: string;

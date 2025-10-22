@@ -38,10 +38,21 @@
 }
 
 @layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-[#0D1B2A] text-[#B0B0B0] font-roboto;
     background: linear-gradient(135deg, #0D1B2A 0%, #1A1A1A 100%);
     min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -86,23 +97,36 @@
     transform: translateY(-5px);
     box-shadow: 0 10px 25px rgba(106, 13, 173, 0.2);
   }
-  
-  /* Scrollbar customization */
+
+  /* Scrollbar customization - Melhorada */
   ::-webkit-scrollbar {
     width: 8px;
+    height: 8px;
   }
   
   ::-webkit-scrollbar-track {
     background: #0D1B2A;
+    border-radius: 4px;
   }
   
   ::-webkit-scrollbar-thumb {
     background: linear-gradient(135deg, #6A0DAD, #32CD32);
     border-radius: 4px;
+    border: 1px solid rgba(13, 27, 42, 0.3);
   }
   
   ::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(135deg, #8A2DC7, #4AE54A);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: #0D1B2A;
+  }
+
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #6A0DAD #0D1B2A;
   }
 
   /* Import newsletter animations */
@@ -124,24 +148,30 @@
     animation: slide-up 0.3s ease-out;
   }
 
-  /* Scrollbar customizada para tablets */
+  /* Scrollbar customizada para tablets - Melhorada */
   .scrollbar-thin {
     scrollbar-width: thin;
-  }
-
-  .scrollbar-thumb-lime-400\/20::-webkit-scrollbar-thumb {
-    background-color: rgba(163, 230, 53, 0.2);
-    border-radius: 6px;
-  }
-
-  .scrollbar-track-gray-800\/20::-webkit-scrollbar-track {
-    background-color: rgba(31, 41, 55, 0.2);
-    border-radius: 6px;
+    scrollbar-color: rgba(163, 230, 53, 0.2) rgba(31, 41, 55, 0.2);
   }
 
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
     height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background-color: rgba(31, 41, 55, 0.2);
+    border-radius: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgba(163, 230, 53, 0.2);
+    border-radius: 6px;
+    border: 1px solid rgba(31, 41, 55, 0.1);
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(163, 230, 53, 0.4);
   }
 
   /* Melhorar touch targets para tablets */
@@ -150,5 +180,25 @@
       min-height: 44px;
       min-width: 44px;
     }
+  }
+
+  /* Prevenir overflow horizontal em todos os elementos */
+  * {
+    max-width: 100%;
+  }
+
+  /* Garantir que imagens não quebrem o layout */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Prevenir problemas de z-index */
+  .fixed {
+    z-index: 1000;
+  }
+
+  .fixed[style*="z-index"] {
+    z-index: var(--z-index, 1000) !important;
   }
 }

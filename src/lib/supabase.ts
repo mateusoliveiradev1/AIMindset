@@ -45,7 +45,7 @@ export interface Contact {
 }
 
 export interface Article {
-  id: string;
+  id: number;
   title: string;
   slug: string; // Obrigatório para compatibilidade
   excerpt?: string;

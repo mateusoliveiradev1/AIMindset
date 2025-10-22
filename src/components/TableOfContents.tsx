@@ -3,249 +3,177 @@ import { useTableOfContents } from '../hooks/useTableOfContents';
 import { List, X } from 'lucide-react';
 
 interface TableOfContentsProps {
-  content: string;
   className?: string;
 }
 
 export const TableOfContents: React.FC<TableOfContentsProps> = ({ 
-  content, 
   className = '' 
 }) => {
-  const { toc, activeId } = useTableOfContents('[data-article-content]');
+  const { toc, activeId, scrollToHeading } = useTableOfContents('[data-article-content]');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [screenSize, setScreenSize] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
+  const [isDesktop, setIsDesktop] = useState(false);
 
-  // ✅ TODOS OS HOOKS NO TOPO - ANTES DE QUALQUER RETURN CONDICIONAL
+  // Detectar tamanho da tela
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
 
-  // Função para scroll com fechamento automático
-  const scrollToHeading = useCallback((id: string) => {
-    console.log(`🎯 Clicando no item: ${id}`);
-    
-    const element = document.getElementById(id);
-    if (element) {
-      const offset = 100;
-      const elementPosition = element.offsetTop - offset;
-      window.scrollTo({
-        top: elementPosition,
-        behavior: 'smooth'
-      });
-      
-      // FECHAMENTO AUTOMÁTICO para mobile e tablet
-      if (screenSize === 'mobile' || screenSize === 'tablet') {
-        console.log('✅ Fechando modal automaticamente após clique');
-        setIsModalOpen(false);
-      }
-    }
-  }, [screenSize]);
-
-  // Função para abrir/fechar modal com logs
-  const toggleModal = useCallback(() => {
-    const newState = !isModalOpen;
-    console.log(`🔄 Toggle modal: ${isModalOpen} → ${newState}`);
-    setIsModalOpen(newState);
-  }, [isModalOpen]);
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
 
   // Impedir scroll do body quando modal estiver aberto
   useEffect(() => {
-    if (isModalOpen) {
+    if (isModalOpen && !isDesktop) {
       document.body.style.overflow = 'hidden';
-      document.body.style.paddingRight = '0px';
     } else {
-      document.body.style.overflow = 'unset';
-      document.body.style.paddingRight = '0px';
+      document.body.style.overflow = '';
     }
 
     return () => {
-      document.body.style.overflow = 'unset';
-      document.body.style.paddingRight = '0px';
+      document.body.style.overflow = '';
     };
-  }, [isModalOpen]);
+  }, [isModalOpen, isDesktop]);
 
-  // Detectar tamanho da tela - SIMPLIFICADO
-  useEffect(() => {
-    const updateScreenSize = () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      
-      console.log(`📱 Resolução detectada: ${width}x${height}`);
-      
-      if (width < 768) {
-        setScreenSize('mobile');
-        console.log('📱 Modo: MOBILE - Botão flutuante');
-      } else if (width >= 768 && width < 1024) {
-        setScreenSize('tablet');
-        console.log('📱 Modo: TABLET - Botão flutuante (igual mobile)');
-      } else {
-        setScreenSize('desktop');
-        console.log('📱 Modo: DESKTOP - Sidebar');
-      }
-      
-      // Debug específico para resolução problemática
-      if (width === 838 && height === 830) {
-        console.log('🚨 RESOLUÇÃO PROBLEMÁTICA DETECTADA: 838x830');
-        console.log('🔧 Forçando reset do estado do modal...');
-        setIsModalOpen(false); // Reset forçado
-      }
-    };
-
-    updateScreenSize();
-    window.addEventListener('resize', updateScreenSize);
-    return () => window.removeEventListener('resize', updateScreenSize);
-  }, []);
-
-  // Debug logs do estado
-  useEffect(() => {
-    console.log(`🔍 ESTADO: screenSize=${screenSize}, isModalOpen=${isModalOpen}`);
-    console.log(`🔍 TOC ITEMS: ${toc.length} itens`);
-  }, [screenSize, isModalOpen, toc]);
-
-  // Reset do estado quando muda o tamanho da tela
-  useEffect(() => {
-    setIsModalOpen(false);
-    console.log('🔄 Reset do modal ao mudar tamanho da tela');
-  }, [screenSize]);
-
-  // ✅ EARLY RETURN APÓS TODOS OS HOOKS
-  if (toc.length === 0) {
-    console.warn('❌ Nenhum item no TOC encontrado');
+  // Early return se não há itens - COM VERIFICAÇÃO DE SEGURANÇA
+  if (!toc || !Array.isArray(toc) || toc.length === 0) {
     return null;
   }
 
-  // Renderizar TOC Items - SIMPLIFICADO
-  const renderTOCItems = () => {
-    return (
-      <ul className="space-y-1">
-        {toc.map((item) => (
-          <li key={item.id}>
-            <button
-              onClick={() => scrollToHeading(item.id)}
-              className={`
-                w-full text-left rounded-lg transition-all duration-200 tablet-touch-target
-                hover:bg-lime-400/15 hover:text-lime-400 active:bg-lime-400/25
-                ${activeId === item.id 
-                  ? 'bg-lime-400/25 text-lime-400 border-l-4 border-lime-400 shadow-sm' 
-                  : 'text-gray-300 hover:text-lime-400'
-                }
-                ${item.level === 1 ? 'font-semibold text-base' : 'font-medium text-sm'}
-                px-4 py-3
-              `}
-              style={{
-                paddingLeft: `${(item.level - 1) * 20 + 16}px`
-              }}
-            >
-              <span className="block" title={item.text}>
-                {item.text}
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    );
-  };
-
   return (
     <>
-      {/* Mobile & Tablet (< 1024px) - BOTÃO FLUTUANTE UNIVERSAL */}
-      {(screenSize === 'mobile' || screenSize === 'tablet') && (
-        <div>
-          {/* Floating Button - SEMPRE VISÍVEL E FUNCIONAL */}
-          <button
-            onClick={toggleModal}
-            className={`
-              fixed bottom-6 right-6 z-50 
-              ${screenSize === 'mobile' ? 'w-14 h-14' : 'w-16 h-16'}
-              bg-lime-400 hover:bg-lime-500 text-black rounded-full 
-              shadow-lg hover:shadow-xl transition-all duration-300 
-              flex items-center justify-center group
-              ${isModalOpen ? 'bg-lime-500 scale-110' : ''}
-            `}
-            aria-label={isModalOpen ? 'Fechar índice' : 'Abrir índice'}
-            style={{
-              position: 'fixed',
-              bottom: '24px',
-              right: '24px',
-              zIndex: 9999
-            }}
-          >
-            {isModalOpen ? (
-              <X className={`${screenSize === 'mobile' ? 'w-6 h-6' : 'w-7 h-7'} transition-transform`} />
-            ) : (
-              <List className={`${screenSize === 'mobile' ? 'w-6 h-6' : 'w-7 h-7'} group-hover:scale-110 transition-transform`} />
-            )}
-          </button>
+      {/* Botão flutuante para mobile/tablet - POSIÇÃO FIXA ABSOLUTA */}
+      {!isDesktop && (
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="fixed bottom-6 right-6 z-[9999] bg-neon-purple hover:bg-neon-purple/80 text-white p-3 rounded-full shadow-lg transition-all duration-300 hover:scale-110 backdrop-blur-sm"
+          title="Índice do artigo"
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            zIndex: 9999
+          }}
+        >
+          <List className="h-5 w-5" />
+        </button>
+      )}
 
-          {/* Modal Universal - Mobile e Tablet */}
-          {isModalOpen && (
-            <div 
-              className="fixed inset-0 z-[9998] flex items-center justify-center overflow-hidden"
-              style={{
-                position: 'fixed',
-                top: '0px',
-                left: '0px',
-                right: '0px',
-                bottom: '0px',
-                zIndex: 9998
-              }}
-            >
-              {/* Backdrop */}
-              <div 
-                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-                onClick={toggleModal}
-                style={{ touchAction: 'none' }}
-              />
-              
-              {/* Modal Content */}
-              <div className={`
-                relative mx-4 bg-gray-900/95 backdrop-blur-sm border border-lime-400/20 
-                rounded-2xl shadow-2xl animate-slide-up flex flex-col
-                ${screenSize === 'mobile' 
-                  ? 'w-full max-w-md max-h-[75vh] min-h-[200px]' 
-                  : 'w-full max-w-lg max-h-[80vh] min-h-[300px]'
-                }
-              `}>
-                {/* Header - Fixed */}
-                <div className="flex items-center justify-between p-4 sm:p-6 border-b border-lime-400/20 flex-shrink-0">
-                  <h3 className={`font-semibold text-lime-400 flex items-center gap-3 ${
-                    screenSize === 'mobile' ? 'text-lg' : 'text-xl'
-                  }`}>
-                    <List className={screenSize === 'mobile' ? 'w-5 h-5' : 'w-6 h-6'} />
-                    Índice do Artigo
-                  </h3>
-                  <button
-                    onClick={toggleModal}
-                    className="p-2 text-gray-400 hover:text-lime-400 transition-colors rounded-full hover:bg-lime-400/10"
-                    aria-label="Fechar índice"
-                  >
-                    <X className={screenSize === 'mobile' ? 'w-5 h-5' : 'w-6 h-6'} />
-                  </button>
-                </div>
-
-                {/* TOC Items - Scrollable */}
-                <nav className={`
-                  flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-lime-400/20 scrollbar-track-gray-800/20
-                  ${screenSize === 'mobile' ? 'p-3' : 'p-4 sm:p-6'}
-                `}>
-                  <div className="space-y-1">
-                    {renderTOCItems()}
-                  </div>
-                </nav>
-              </div>
+      {/* Modal para mobile/tablet - POSIÇÃO FIXA ABSOLUTA */}
+      {!isDesktop && isModalOpen && (
+        <div 
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 10000
+          }}
+        >
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setIsModalOpen(false)}
+          />
+          
+          {/* Modal Content */}
+          <div className="relative bg-darker-surface border border-futuristic-gray/20 rounded-lg w-full max-w-md max-h-[80vh] overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-futuristic-gray/20 bg-darker-surface/80 backdrop-blur-sm">
+              <h3 className="font-orbitron font-semibold text-white">Índice</h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-futuristic-gray hover:text-white transition-colors p-1 rounded-md hover:bg-futuristic-gray/10"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
-          )}
+            
+            {/* TOC Items */}
+            <div className="p-4 max-h-[60vh] overflow-y-auto">
+              {toc && toc.length > 0 ? (
+                <nav>
+                  <ul className="space-y-2">
+                    {toc.map((item) => (
+                      <li key={item.id}>
+                        <button
+                          onClick={() => {
+                            scrollToHeading(item.id);
+                            setIsModalOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-300 ${
+                            activeId === item.id
+                              ? 'bg-neon-purple/20 text-neon-purple border-l-2 border-neon-purple'
+                              : 'text-futuristic-gray hover:text-white hover:bg-futuristic-gray/10'
+                          }`}
+                          style={{ paddingLeft: `${(item.level - 1) * 12 + 12}px` }}
+                        >
+                          {item.text}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              ) : (
+                <p className="text-futuristic-gray text-center py-8">
+                  Nenhum cabeçalho encontrado no artigo.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Desktop (≥ 1024px) - Sidebar Tradicional */}
-      {screenSize === 'desktop' && (
-        <div className={`sticky top-8 ${className}`}>
-          <div className="bg-gray-900/50 backdrop-blur-sm border border-lime-400/20 rounded-xl p-6 shadow-lg">
-            <h3 className="text-lg font-semibold text-lime-400 mb-4 flex items-center gap-2">
-              <List className="w-5 h-5" />
-              Índice do Artigo
+      {/* Sidebar FIXA para desktop - EFEITO PARALLAX REAL */}
+      {isDesktop && (
+        <div 
+          className="fixed top-20 left-6 w-80 max-h-[calc(100vh-120px)] z-[9998] bg-darker-surface/90 backdrop-blur-md border border-futuristic-gray/20 rounded-lg shadow-2xl"
+          style={{
+            position: 'fixed',
+            top: '80px',
+            left: '24px',
+            width: '320px',
+            maxHeight: 'calc(100vh - 120px)',
+            zIndex: 9998
+          }}
+        >
+          <div className="p-6">
+            <h3 className="font-orbitron font-semibold text-white mb-4 flex items-center sticky top-0 bg-darker-surface/90 backdrop-blur-sm -mx-6 -mt-6 px-6 pt-6 pb-4 border-b border-futuristic-gray/10">
+              <List className="h-4 w-4 mr-2" />
+              Índice
             </h3>
-            <nav className="max-h-96 overflow-y-auto">
-              {renderTOCItems()}
-            </nav>
+            
+            <div className="max-h-[calc(100vh-240px)] overflow-y-auto pr-2 -mr-2">
+              {toc && toc.length > 0 ? (
+                <nav>
+                  <ul className="space-y-2">
+                    {toc.map((item) => (
+                      <li key={item.id}>
+                        <button
+                          onClick={() => scrollToHeading(item.id)}
+                          className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-300 text-sm ${
+                            activeId === item.id
+                              ? 'bg-neon-purple/20 text-neon-purple border-l-2 border-neon-purple shadow-sm'
+                              : 'text-futuristic-gray hover:text-white hover:bg-futuristic-gray/10'
+                          }`}
+                          style={{ paddingLeft: `${(item.level - 1) * 12 + 12}px` }}
+                        >
+                          {item.text}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              ) : (
+                <p className="text-futuristic-gray text-sm text-center py-8">
+                  Nenhum cabeçalho encontrado no artigo.
+                </p>
+              )}
+            </div>
           </div>
         </div>
       )}

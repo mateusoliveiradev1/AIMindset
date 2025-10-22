@@ -29,7 +29,7 @@ export const mockCategories: Category[] = [
 
 export const mockArticles: Article[] = [
   {
-    id: '1',
+    id: 1,
     title: 'O Futuro da Inteligência Artificial: Tendências para 2024',
     slug: 'futuro-inteligencia-artificial-2024',
     content: `# O Futuro da Inteligência Artificial: Tendências para 2024
@@ -86,7 +86,7 @@ O futuro da IA é promissor, mas requer cuidado e responsabilidade.
     views: 1250
   },
   {
-    id: '2',
+    id: 2,
     title: 'ChatGPT vs Claude: Qual é o Melhor?',
     slug: 'chatgpt-vs-claude-comparacao',
     content: `
@@ -113,7 +113,7 @@ O futuro da IA é promissor, mas requer cuidado e responsabilidade.
     views: 890
   },
   {
-    id: '3',
+    id: 3,
     title: '5 Hacks de IA para Aumentar sua Produtividade',
     slug: '5-hacks-ia-produtividade',
     content: `
@@ -139,7 +139,7 @@ O futuro da IA é promissor, mas requer cuidado e responsabilidade.
     views: 2100
   },
   {
-    id: '4',
+    id: 4,
     title: 'GPT-4 Turbo: Tudo o que Você Precisa Saber',
     slug: 'gpt-4-turbo-novidades',
     content: `
@@ -165,7 +165,7 @@ O futuro da IA é promissor, mas requer cuidado e responsabilidade.
     views: 1680
   },
   {
-    id: '5',
+    id: 5,
     title: 'O Futuro da Humanidade com IA: Previsões para 2030',
     slug: 'futuro-humanidade-ia-2030',
     content: `
@@ -204,8 +204,8 @@ export const getArticlesByCategory = (categorySlug: string) => {
   );
 };
 
-export const getArticleById = (id: string) => {
-  return mockArticles.find(article => article.id === id);
+export const getArticleById = (id: string | number) => {
+  return mockArticles.find(article => article.id.toString() === id.toString());
 };
 
 export const getArticlesByCategoryId = (categoryId: string) => {

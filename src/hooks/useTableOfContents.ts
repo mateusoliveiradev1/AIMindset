@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export interface TOCItem {
   id: string;
@@ -7,21 +7,45 @@ export interface TOCItem {
   element: HTMLElement;
 }
 
+// Utility function for throttling
+const throttle = (func: Function, delay: number) => {
+  let timeoutId: NodeJS.Timeout | null = null;
+  let lastExecTime = 0;
+  
+  return (...args: any[]) => {
+    const currentTime = Date.now();
+    
+    if (currentTime - lastExecTime > delay) {
+      func(...args);
+      lastExecTime = currentTime;
+    } else {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        func(...args);
+        lastExecTime = Date.now();
+      }, delay - (currentTime - lastExecTime));
+    }
+  };
+};
+
 export const useTableOfContents = (contentSelector: string = '[data-article-content]') => {
   const [toc, setToc] = useState<TOCItem[]>([]);
   const [activeId, setActiveId] = useState<string>('');
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  // Throttled function to update active ID
+  const throttledSetActiveId = useCallback(
+    throttle((id: string) => {
+      setActiveId(id);
+    }, 100),
+    []
+  );
 
   useEffect(() => {
     const generateTOC = () => {
       console.log('🔍 Gerando TOC, procurando por:', contentSelector);
       const content = document.querySelector(contentSelector);
       console.log('📄 Elemento encontrado:', content);
-      
-      // Força o log para aparecer
-      if (typeof window !== 'undefined') {
-        window.console.log('🔍 TOC DEBUG - Selector:', contentSelector);
-        window.console.log('📄 TOC DEBUG - Element:', content);
-      }
       
       if (!content) {
         console.warn('❌ Elemento não encontrado:', contentSelector);
@@ -68,19 +92,38 @@ export const useTableOfContents = (contentSelector: string = '[data-article-cont
   useEffect(() => {
     if (toc.length === 0) return;
 
+    // Cleanup previous observer
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    // Enhanced observer options for better responsiveness
     const observerOptions = {
-      rootMargin: '-20% 0% -35% 0%',
-      threshold: 0
+      rootMargin: '-10% 0% -60% 0%', // More responsive margins
+      threshold: [0, 0.1, 0.5, 1] // Multiple thresholds for better detection
     };
 
     const observer = new IntersectionObserver((entries) => {
+      // Find the most visible heading
+      let mostVisible = entries[0];
+      let maxRatio = 0;
+
       entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setActiveId(entry.target.id);
+        if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
+          maxRatio = entry.intersectionRatio;
+          mostVisible = entry;
         }
       });
+
+      // If we have a visible heading, update active ID
+      if (mostVisible && mostVisible.isIntersecting) {
+        throttledSetActiveId(mostVisible.target.id);
+      }
     }, observerOptions);
 
+    observerRef.current = observer;
+
+    // Observe all headings
     toc.forEach((item) => {
       if (item.element) {
         observer.observe(item.element);
@@ -88,11 +131,13 @@ export const useTableOfContents = (contentSelector: string = '[data-article-cont
     });
 
     return () => {
-      observer.disconnect();
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
     };
-  }, [toc]);
+  }, [toc, throttledSetActiveId]);
 
-  const scrollToHeading = (id: string) => {
+  const scrollToHeading = useCallback((id: string) => {
     const element = document.getElementById(id);
     if (element) {
       const headerOffset = 100; // Offset for fixed header
@@ -104,7 +149,7 @@ export const useTableOfContents = (contentSelector: string = '[data-article-cont
         behavior: 'smooth'
       });
     }
-  };
+  }, []);
 
   return {
     toc,

@@ -134,16 +134,30 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
   // Impedir scroll do body quando modal estiver aberto
   useEffect(() => {
     if (isOpen) {
+      // Salvar o valor atual do scroll antes de bloquear
+      const scrollY = window.scrollY;
       document.body.style.overflow = 'hidden';
-      document.body.style.paddingRight = '0px'; // Evitar shift de layout
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
     } else {
-      document.body.style.overflow = 'unset';
-      document.body.style.paddingRight = '0px';
+      // Restaurar o scroll quando fechar o modal
+      const scrollY = document.body.style.top;
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
     }
 
     return () => {
-      document.body.style.overflow = 'unset';
-      document.body.style.paddingRight = '0px';
+      // Cleanup para garantir que o body volte ao normal
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
     };
   }, [isOpen]);
 
