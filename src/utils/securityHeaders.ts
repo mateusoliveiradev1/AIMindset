@@ -1,7 +1,8 @@
 // Security Headers and XSS Protection Utilities
 export class SecurityHeaders {
-  // Content Security Policy configuration
-  static getCSPHeader(): string {
+  // Content Security Policy configuration for meta tags
+  // Note: Some CSP directives like 'frame-ancestors' can only be set via HTTP headers
+  static getCSPHeaderForMetaTags(): string {
     const cspDirectives = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com",
@@ -13,30 +14,28 @@ export class SecurityHeaders {
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
-      "frame-ancestors 'none'",
+      // Note: 'frame-ancestors' removed - only works via HTTP header
       "upgrade-insecure-requests"
     ];
     
     return cspDirectives.join('; ');
   }
 
-  // Set security headers for the application
+  // Set security headers for the application via meta tags
+  // Note: Some headers like X-Frame-Options can only be set via HTTP headers
   static setSecurityHeaders(): void {
     if (typeof document !== 'undefined') {
-      // Create meta tags for security headers
+      // Create meta tags for security headers that support meta tag delivery
       const headers = [
         {
           name: 'Content-Security-Policy',
-          content: this.getCSPHeader()
+          content: this.getCSPHeaderForMetaTags()
         },
         {
           name: 'X-Content-Type-Options',
           content: 'nosniff'
         },
-        {
-          name: 'X-Frame-Options',
-          content: 'DENY'
-        },
+        // Note: X-Frame-Options removed - only works via HTTP header
         {
           name: 'X-XSS-Protection',
           content: '1; mode=block'
