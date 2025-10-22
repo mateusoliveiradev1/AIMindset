@@ -68,9 +68,9 @@ const FeaturedArticles: React.FC = () => {
                       </div>
                     </div>
                   )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-primary-dark/80 to-transparent pointer-events-none"></div>
                 </Link>
-                <div className="absolute inset-0 bg-gradient-to-t from-primary-dark/80 to-transparent"></div>
-                <div className="absolute top-4 left-4">
+                <div className="absolute top-4 left-4 z-10 pointer-events-none">
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-montserrat font-semibold bg-neon-purple/20 text-neon-purple border border-neon-purple/30">
                     <Tag className="h-3 w-3 mr-1" />
                     {(article.category as any)?.name || 'Sem categoria'}

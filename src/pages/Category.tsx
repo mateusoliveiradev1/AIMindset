@@ -91,15 +91,15 @@ const Category: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {categoryArticles.map((article) => (
               <Card key={article.id} variant="glass" className="overflow-hidden group">
-                <Link to={`/artigo/${article.slug}`} className="block relative cursor-pointer">
+                <Link to={`/artigo/${article.slug}`} className="block relative w-full aspect-[4/3] sm:aspect-[16/9] overflow-hidden cursor-pointer">
                   {article.image_url ? (
                     <img
                       src={article.image_url}
                       alt={article.title}
-                      className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                   ) : (
-                    <div className="w-full h-48 bg-gradient-to-br from-neon-purple/20 to-lime-green/20 flex items-center justify-center">
+                    <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-neon-purple/20 to-lime-green/20 flex items-center justify-center">
                       <div className="text-center">
                         <Tag className="w-12 h-12 text-futuristic-gray mx-auto mb-2" />
                         <p className="text-futuristic-gray text-sm">Sem imagem</p>

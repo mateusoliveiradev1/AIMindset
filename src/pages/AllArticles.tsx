@@ -181,11 +181,11 @@ const AllArticles: React.FC = () => {
 
                   {/* Imagem */}
                   {article.image_url && (
-                    <Link to={`/artigo/${article.slug}`} className="block mb-4 overflow-hidden rounded-lg cursor-pointer">
+                    <Link to={`/artigo/${article.slug}`} className="block relative mb-4 w-full aspect-[4/3] sm:aspect-[16/9] overflow-hidden rounded-lg cursor-pointer">
                       <img
                         src={article.image_url}
                         alt={article.title}
-                        className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.src = 'https://via.placeholder.com/400x200/1a1a2e/ffffff?text=Imagem+Indisponível';

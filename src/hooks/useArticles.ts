@@ -78,12 +78,18 @@ export interface UseArticlesReturn {
 export const useArticles = (): UseArticlesReturn => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(false); // Changed to false initially
+  const [loading, setLoading] = useState(true); // Changed back to true for initial load
   const [error, setError] = useState<string | null>(null);
 
   const fetchArticles = useCallback(async () => {
     try {
       setError(null);
+      console.log('🔄 Tentando buscar artigos do Supabase...');
+
+      // Verificar se o Supabase está configurado
+      if (!supabase) {
+        throw new Error('Supabase não está configurado');
+      }
 
       const { data, error: fetchError } = await supabase
         .from('articles')
@@ -99,15 +105,31 @@ export const useArticles = (): UseArticlesReturn => {
         .order('created_at', { ascending: false });
 
       if (fetchError) {
-        console.error('Error fetching articles:', fetchError);
-        setError('Failed to fetch articles');
+        console.error('❌ Error fetching articles:', fetchError);
+        setError('Failed to fetch articles from database');
+        
+        // Fallback para dados mock
+        console.log('🔄 Usando dados mock como fallback...');
+        const { mockArticles } = await import('../data/mockData');
+        setArticles(mockArticles || []);
         return;
       }
 
+      console.log('✅ Artigos carregados com sucesso:', data?.length || 0);
       setArticles(data || []);
     } catch (err) {
-      console.error('Error fetching articles:', err);
+      console.error('❌ Error fetching articles:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch articles');
+      
+      // Fallback para dados mock em caso de erro
+      try {
+        console.log('🔄 Carregando dados mock como fallback...');
+        const { mockArticles } = await import('../data/mockData');
+        setArticles(mockArticles || []);
+        console.log('✅ Dados mock carregados:', mockArticles?.length || 0);
+      } catch (mockError) {
+        console.error('❌ Erro ao carregar dados mock:', mockError);
+      }
     }
   }, []);
 
@@ -428,6 +450,11 @@ export const useArticles = (): UseArticlesReturn => {
       return false;
     }
   };
+
+  // Initialize data on mount
+  useEffect(() => {
+    refreshArticles();
+  }, [refreshArticles]);
 
   return {
     articles,
