@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import Layout from './components/Layout/Layout';
@@ -20,11 +20,19 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { ToastProvider } from './hooks/useToast';
 import { ScrollToTop } from './components/ScrollToTop';
 import { useScrollToTop } from './hooks/useScrollToTop';
+import { SecurityHeaders } from './utils/securityHeaders';
+import { initializeSecurityConfig } from './utils/corsConfig';
 
 // Componente interno para usar hooks do Router
 function AppContent() {
   // Hook para scroll automático ao topo em mudanças de rota
   useScrollToTop();
+
+  // Initialize security headers and protections
+  useEffect(() => {
+    SecurityHeaders.initialize();
+    initializeSecurityConfig();
+  }, []);
 
   return (
     <>
