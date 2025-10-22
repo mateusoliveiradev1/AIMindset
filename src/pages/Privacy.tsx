@@ -1,9 +1,526 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Shield, Eye, Lock, Users, FileText, Mail, CheckCircle, AlertTriangle, Globe, Calendar, ArrowRight, Download, Trash2, Edit, UserCheck, Database, Server, Zap } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
+import CookieModal from '../components/UI/CookieModal';
+import { useUserData } from '../hooks/useUserData';
 
 const Privacy: React.FC = () => {
+  const [cookiePreferences, setCookiePreferences] = useState({
+    essential: true,
+    analytics: false,
+    functional: false
+  });
+
+  const [isCookieModalOpen, setIsCookieModalOpen] = useState(false);
+  const { saveUserProfile, saveCookiePreferences, createPrivacyRequest, loading } = useUserData();
+
+  const handleCookieManagement = () => {
+    setIsCookieModalOpen(true);
+  };
+
+  const handleCookieSave = async (preferences: any) => {
+    const preferencesWithTimestamp = {
+      ...preferences,
+      timestamp: new Date().toISOString()
+    };
+    
+    setCookiePreferences(preferences);
+    localStorage.setItem('cookiePreferences', JSON.stringify(preferencesWithTimestamp));
+    
+    // Salvar no banco de dados
+    const userEmail = localStorage.getItem('userEmail') || 'usuario@aimindset.com';
+    const cookieData = {
+      user_email: userEmail,
+      essential: preferences.essential,
+      analytics: preferences.analytics,
+      marketing: preferences.functional, // Mapear functional para marketing
+      personalization: false
+    };
+    
+    const success = await saveCookiePreferences(cookieData);
+    
+    // Mostrar feedback visual
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 right-4 bg-lime-green text-primary-dark px-6 py-3 rounded-lg font-medium z-50 animate-pulse';
+    toast.textContent = success ? 'Preferências salvas no banco de dados!' : 'Preferências salvas localmente (erro no banco)';
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      document.body.removeChild(toast);
+    }, 3000);
+  };
+
+  const handleAcceptAllCookies = () => {
+    const allAccepted = {
+      essential: true,
+      analytics: true,
+      functional: true,
+      timestamp: new Date().toISOString()
+    };
+    
+    setCookiePreferences(allAccepted);
+    localStorage.setItem('cookiePreferences', JSON.stringify(allAccepted));
+    alert('Todos os cookies foram aceitos!');
+  };
+
+  const handleDataDownload = () => {
+    // Buscar dados reais do usuário
+    const userEmail = localStorage.getItem('userEmail') || 'usuario@aimindset.com';
+    const userName = localStorage.getItem('userName') || 'Usuário AIMindset';
+    const userData = {
+      informacoesPessoais: {
+        email: userEmail,
+        nome: userName,
+        dataRegistro: new Date().toISOString(),
+        ultimoLogin: new Date().toISOString()
+      },
+      preferencias: {
+        cookies: cookiePreferences,
+        newsletter: true,
+        notificacoes: true
+      },
+      historico: {
+        artigosLidos: ['Como a IA está transformando o mundo', 'Machine Learning para iniciantes'],
+        pesquisas: ['inteligência artificial', 'machine learning'],
+        tempoNoSite: '2h 30min'
+      },
+      dadosTecnicos: {
+        navegador: navigator.userAgent,
+        idioma: navigator.language,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      }
+    };
+    
+    const dataStr = JSON.stringify(userData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `meus-dados-aimindset-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    // Feedback visual
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 right-4 bg-lime-green text-primary-dark px-6 py-3 rounded-lg font-medium z-50 animate-pulse';
+    toast.textContent = '📥 Seus dados foram baixados com sucesso!';
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      document.body.removeChild(toast);
+    }, 3000);
+  };
+
+  const handleDataEdit = () => {
+    // Criar um formulário modal simples para edição de dados
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+      <div class="bg-gray-900/98 border-2 border-lime-green/60 rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl shadow-lime-green/20 backdrop-blur-sm">
+        <h3 class="text-lime-green font-orbitron font-bold text-2xl mb-6 text-center drop-shadow-lg">✏️ Editar Dados Pessoais</h3>
+        <form id="editForm" class="space-y-6">
+          <div>
+            <label class="block text-lime-green font-bold mb-3 text-base uppercase tracking-wide drop-shadow-sm">Nome Completo:</label>
+            <input type="text" name="nome" value="" placeholder="Digite seu nome completo" class="w-full p-4 bg-gray-800/90 border-2 border-lime-green/50 rounded-lg text-white font-medium placeholder-gray-400 focus:border-lime-green focus:ring-4 focus:ring-lime-green/30 focus:outline-none transition-all duration-300 shadow-inner">
+          </div>
+          <div>
+            <label class="block text-lime-green font-bold mb-3 text-base uppercase tracking-wide drop-shadow-sm">Email:</label>
+            <input type="email" name="email" value="" placeholder="Digite seu email" class="w-full p-4 bg-gray-800/90 border-2 border-lime-green/50 rounded-lg text-white font-medium placeholder-gray-400 focus:border-lime-green focus:ring-4 focus:ring-lime-green/30 focus:outline-none transition-all duration-300 shadow-inner">
+          </div>
+          <div>
+            <label class="block text-lime-green font-bold mb-3 text-base uppercase tracking-wide drop-shadow-sm">Newsletter:</label>
+            <select name="newsletter" class="w-full p-4 bg-gray-800/90 border-2 border-lime-green/50 rounded-lg text-white font-medium focus:border-lime-green focus:ring-4 focus:ring-lime-green/30 focus:outline-none transition-all duration-300 shadow-inner">
+              <option value="" class="bg-gray-800 text-gray-300">Selecione uma opção</option>
+              <option value="true" class="bg-gray-800 text-white font-medium">✅ Sim, quero receber newsletter</option>
+              <option value="false" class="bg-gray-800 text-white font-medium">❌ Não quero receber newsletter</option>
+            </select>
+          </div>
+          <div class="flex gap-4 mt-8">
+            <button type="submit" class="flex-1 bg-lime-green text-gray-900 py-4 px-6 rounded-lg font-bold text-base uppercase tracking-wide hover:bg-lime-green/90 hover:shadow-xl hover:shadow-lime-green/30 transition-all duration-300 transform hover:scale-105 active:scale-95">
+              💾 Salvar Alterações
+            </button>
+            <button type="button" id="cancelEdit" class="flex-1 bg-red-600 text-white py-4 px-6 rounded-lg font-bold text-base uppercase tracking-wide hover:bg-red-500 hover:shadow-xl hover:shadow-red-600/30 transition-all duration-300 transform hover:scale-105 active:scale-95">
+              ❌ Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Event listeners
+    const form = modal.querySelector('#editForm') as HTMLFormElement;
+    const cancelBtn = modal.querySelector('#cancelEdit') as HTMLButtonElement;
+    
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      
+      // Extrair dados do formulário
+      const userData = {
+        name: formData.get('nome') as string,
+        email: formData.get('email') as string,
+        newsletter_preference: formData.get('newsletter') === 'true'
+      };
+      
+      // Salvar no banco de dados
+      const success = await saveUserProfile(userData);
+      
+      // Criar solicitação de privacidade para auditoria
+      await createPrivacyRequest({
+        user_email: userData.email,
+        request_type: 'data_edit',
+        request_data: userData,
+        notes: 'Usuário editou seus dados pessoais via modal'
+      });
+      
+      // Mostrar feedback visual
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-4 right-4 bg-lime-green text-primary-dark px-6 py-3 rounded-lg font-medium z-50 animate-pulse';
+      toast.textContent = success ? '✅ Dados salvos no banco de dados!' : '⚠️ Dados salvos localmente (erro no banco)';
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        document.body.removeChild(toast);
+      }, 3000);
+      
+      document.body.removeChild(modal);
+    });
+    
+    cancelBtn.addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    // Fechar ao clicar fora
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
+      }
+    });
+  };
+
+  const handleDataDeletion = () => {
+    // Criar modal de confirmação para exclusão de dados
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+      <div class="bg-gray-900/98 border-2 border-red-500/60 rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl shadow-red-500/20 backdrop-blur-sm">
+        <h3 class="text-red-400 font-orbitron font-bold text-2xl mb-6 text-center drop-shadow-lg">⚠️ Exclusão de Dados</h3>
+        <div class="space-y-6 mb-8">
+          <p class="text-white font-medium text-base">Esta ação irá excluir permanentemente:</p>
+          <ul class="text-gray-300 font-medium space-y-2 ml-4">
+            <li>• Todas as informações pessoais</li>
+            <li>• Histórico de navegação</li>
+            <li>• Preferências salvas</li>
+            <li>• Assinatura da newsletter</li>
+          </ul>
+          <div class="bg-red-500/20 border-2 border-red-500/40 rounded-lg p-4 shadow-inner">
+            <p class="text-red-400 font-bold text-base">
+              ⚠️ Esta ação é irreversível e não pode ser desfeita!
+            </p>
+          </div>
+          <div class="space-y-3 bg-gray-800/50 p-4 rounded-lg border border-red-500/30">
+            <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-700/50 p-2 rounded transition-colors">
+              <input type="checkbox" id="confirmDeletion" class="w-5 h-5 text-red-500 bg-gray-700 border-2 border-red-500/50 rounded focus:ring-red-500 focus:ring-2">
+              <span class="text-white font-medium">Confirmo que desejo excluir todos os meus dados</span>
+            </label>
+            <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-700/50 p-2 rounded transition-colors">
+              <input type="checkbox" id="confirmIrreversible" class="w-5 h-5 text-red-500 bg-gray-700 border-2 border-red-500/50 rounded focus:ring-red-500 focus:ring-2">
+              <span class="text-white font-medium">Entendo que esta ação é irreversível</span>
+            </label>
+          </div>
+        </div>
+        <div class="flex gap-4">
+          <button id="confirmDelete" class="flex-1 bg-red-600 text-white py-4 px-6 rounded-lg font-bold text-base uppercase tracking-wide hover:bg-red-500 hover:shadow-xl hover:shadow-red-600/30 transition-all duration-300 transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" disabled>
+            🗑️ Excluir Dados
+          </button>
+          <button id="cancelDelete" class="flex-1 bg-gray-600 text-white py-4 px-6 rounded-lg font-bold text-base uppercase tracking-wide hover:bg-gray-500 hover:shadow-xl hover:shadow-gray-600/30 transition-all duration-300 transform hover:scale-105 active:scale-95">
+            ❌ Cancelar
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Event listeners
+    const confirmBtn = modal.querySelector('#confirmDelete') as HTMLButtonElement;
+    const cancelBtn = modal.querySelector('#cancelDelete') as HTMLButtonElement;
+    const checkbox1 = modal.querySelector('#confirmDeletion') as HTMLInputElement;
+    const checkbox2 = modal.querySelector('#confirmIrreversible') as HTMLInputElement;
+    
+    // Habilitar botão apenas quando ambos checkboxes estiverem marcados
+    const checkboxes = [checkbox1, checkbox2];
+    checkboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', () => {
+        confirmBtn.disabled = !checkboxes.every(cb => cb.checked);
+      });
+    });
+    
+    confirmBtn.addEventListener('click', async () => {
+      // Criar solicitação de exclusão no banco de dados
+      const userEmail = localStorage.getItem('userEmail') || 'usuario@aimindset.com';
+      const success = await createPrivacyRequest({
+        user_email: userEmail,
+        request_type: 'data_deletion',
+        request_data: {
+          confirmation_checkboxes: ['confirmDeletion', 'confirmIrreversible'],
+          timestamp: new Date().toISOString()
+        },
+        notes: 'Usuário solicitou exclusão completa de dados via modal'
+      });
+      
+      // Limpar dados locais
+      localStorage.removeItem('cookiePreferences');
+      localStorage.removeItem('userPreferences');
+      
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg font-medium z-50 animate-pulse';
+      toast.textContent = success ? '🗑️ Solicitação de exclusão registrada!' : '⚠️ Dados locais removidos (erro no banco)';
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        document.body.removeChild(toast);
+      }, 3000);
+      
+      document.body.removeChild(modal);
+    });
+    
+    cancelBtn.addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    // Fechar ao clicar fora
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
+      }
+    });
+  };
+
+  const handleProcessingLimitation = () => {
+    // Criar modal para limitação de processamento
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+      <div class="bg-gray-900/98 border-2 border-lime-green/60 rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl shadow-lime-green/20 backdrop-blur-sm">
+        <h3 class="text-lime-green font-orbitron font-bold text-2xl mb-6 text-center drop-shadow-lg">🔒 Limitação de Processamento</h3>
+        <form id="limitationForm" class="space-y-6">
+          <div>
+            <label class="block text-lime-green font-bold mb-3 text-base uppercase tracking-wide drop-shadow-sm">Motivo da limitação:</label>
+            <select name="motivo" class="w-full p-4 bg-gray-800/90 border-2 border-lime-green/50 rounded-lg text-white font-medium focus:border-lime-green focus:ring-4 focus:ring-lime-green/30 focus:outline-none transition-all duration-300 shadow-inner" required>
+              <option value="" class="bg-gray-800 text-gray-300">Selecione um motivo</option>
+              <option value="contestacao" class="bg-gray-800 text-white font-medium">Contestação da exatidão dos dados</option>
+              <option value="ilicito" class="bg-gray-800 text-white font-medium">Processamento ilícito</option>
+              <option value="desnecessario" class="bg-gray-800 text-white font-medium">Dados não necessários</option>
+              <option value="oposicao" class="bg-gray-800 text-white font-medium">Oposição ao processamento</option>
+              <option value="outros" class="bg-gray-800 text-white font-medium">Outros</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-lime-green font-bold mb-3 text-base uppercase tracking-wide drop-shadow-sm">Tipos de dados a limitar:</label>
+            <div class="space-y-3 bg-gray-800/50 p-4 rounded-lg border border-lime-green/30">
+              <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-700/50 p-2 rounded transition-colors">
+                <input type="checkbox" name="dados" value="perfil" class="w-5 h-5 text-lime-green bg-gray-700 border-2 border-lime-green/50 rounded focus:ring-lime-green focus:ring-2">
+                <span class="text-white font-medium">Dados de perfil</span>
+              </label>
+              <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-700/50 p-2 rounded transition-colors">
+                <input type="checkbox" name="dados" value="navegacao" class="w-5 h-5 text-lime-green bg-gray-700 border-2 border-lime-green/50 rounded focus:ring-lime-green focus:ring-2">
+                <span class="text-white font-medium">Histórico de navegação</span>
+              </label>
+              <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-700/50 p-2 rounded transition-colors">
+                <input type="checkbox" name="dados" value="marketing" class="w-5 h-5 text-lime-green bg-gray-700 border-2 border-lime-green/50 rounded focus:ring-lime-green focus:ring-2">
+                <span class="text-white font-medium">Dados de marketing</span>
+              </label>
+              <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-700/50 p-2 rounded transition-colors">
+                <input type="checkbox" name="dados" value="todos" class="w-5 h-5 text-lime-green bg-gray-700 border-2 border-lime-green/50 rounded focus:ring-lime-green focus:ring-2">
+                <span class="text-white font-medium">Todos os dados</span>
+              </label>
+            </div>
+          </div>
+          <div>
+            <label class="block text-lime-green font-bold mb-3 text-base uppercase tracking-wide drop-shadow-sm">Período (opcional):</label>
+            <input type="text" name="periodo" placeholder="Ex: 30 dias, até resolução..." class="w-full p-4 bg-gray-800/90 border-2 border-lime-green/50 rounded-lg text-white font-medium placeholder-gray-400 focus:border-lime-green focus:ring-4 focus:ring-lime-green/30 focus:outline-none transition-all duration-300 shadow-inner">
+          </div>
+          <div class="flex gap-4 mt-8">
+            <button type="submit" class="flex-1 bg-lime-green text-gray-900 py-4 px-6 rounded-lg font-bold text-base uppercase tracking-wide hover:bg-lime-green/90 hover:shadow-xl hover:shadow-lime-green/30 transition-all duration-300 transform hover:scale-105 active:scale-95">
+              🔒 Solicitar Limitação
+            </button>
+            <button type="button" id="cancelLimitation" class="flex-1 bg-red-600 text-white py-4 px-6 rounded-lg font-bold text-base uppercase tracking-wide hover:bg-red-500 hover:shadow-xl hover:shadow-red-600/30 transition-all duration-300 transform hover:scale-105 active:scale-95">
+              ❌ Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Event listeners
+    const form = modal.querySelector('#limitationForm') as HTMLFormElement;
+    const cancelBtn = modal.querySelector('#cancelLimitation') as HTMLButtonElement;
+    
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      
+      // Preparar dados da limitação
+      const limitationData = {
+        motivo: formData.get('motivo'),
+        dados: formData.getAll('dados'),
+        periodo: formData.get('periodo'),
+        timestamp: new Date().toISOString()
+      };
+      
+      // Salvar no banco de dados
+      const userEmail = localStorage.getItem('userEmail') || 'usuario@aimindset.com';
+      const success = await createPrivacyRequest({
+        user_email: userEmail,
+        request_type: 'processing_limitation',
+        request_data: limitationData,
+        notes: `Usuário solicitou limitação de processamento. Motivo: ${limitationData.motivo}`
+      });
+      
+      // Salvar localmente também
+      localStorage.setItem('dataProcessingLimitation', JSON.stringify(limitationData));
+      
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-4 right-4 bg-lime-green text-primary-dark px-6 py-3 rounded-lg font-medium z-50 animate-pulse';
+      toast.textContent = success ? '🔒 Limitação registrada no banco!' : '⚠️ Limitação salva localmente (erro no banco)';
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        document.body.removeChild(toast);
+      }, 3000);
+      
+      document.body.removeChild(modal);
+    });
+    
+    cancelBtn.addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    // Fechar ao clicar fora
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
+      }
+    });
+  };
+
+  const handlePrivacyContact = () => {
+    // Criar modal de contato para privacidade
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+      <div class="bg-gray-900/98 border-2 border-lime-green/60 rounded-xl p-8 max-w-lg w-full mx-4 shadow-2xl shadow-lime-green/20 backdrop-blur-sm">
+        <h3 class="text-lime-green font-orbitron font-bold text-2xl mb-6 text-center drop-shadow-lg">📧 Contato - Privacidade</h3>
+        <form id="contactForm" class="space-y-6">
+          <div>
+            <label class="block text-lime-green font-bold mb-3 text-base uppercase tracking-wide drop-shadow-sm">Seu Nome:</label>
+            <input type="text" name="nome" required placeholder="Digite seu nome completo" class="w-full p-4 bg-gray-800/90 border-2 border-lime-green/50 rounded-lg text-white font-medium placeholder-gray-400 focus:border-lime-green focus:ring-4 focus:ring-lime-green/30 focus:outline-none transition-all duration-300 shadow-inner">
+          </div>
+          <div>
+            <label class="block text-lime-green font-bold mb-3 text-base uppercase tracking-wide drop-shadow-sm">Seu Email:</label>
+            <input type="email" name="email" required placeholder="Digite seu email" class="w-full p-4 bg-gray-800/90 border-2 border-lime-green/50 rounded-lg text-white font-medium placeholder-gray-400 focus:border-lime-green focus:ring-4 focus:ring-lime-green/30 focus:outline-none transition-all duration-300 shadow-inner">
+          </div>
+          <div>
+            <label class="block text-lime-green font-bold mb-3 text-base uppercase tracking-wide drop-shadow-sm">Assunto:</label>
+            <select name="assunto" class="w-full p-4 bg-gray-800/90 border-2 border-lime-green/50 rounded-lg text-white font-medium focus:border-lime-green focus:ring-4 focus:ring-lime-green/30 focus:outline-none transition-all duration-300 shadow-inner" required>
+              <option value="" class="bg-gray-800 text-gray-300">Selecione um assunto</option>
+              <option value="duvida-geral" class="bg-gray-800 text-white font-medium">Dúvida geral sobre privacidade</option>
+              <option value="dados-pessoais" class="bg-gray-800 text-white font-medium">Questão sobre meus dados pessoais</option>
+              <option value="cookies" class="bg-gray-800 text-white font-medium">Dúvida sobre cookies</option>
+              <option value="lgpd" class="bg-gray-800 text-white font-medium">Questão sobre LGPD</option>
+              <option value="seguranca" class="bg-gray-800 text-white font-medium">Questão de segurança</option>
+              <option value="outros" class="bg-gray-800 text-white font-medium">Outros</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-lime-green font-bold mb-3 text-base uppercase tracking-wide drop-shadow-sm">Mensagem:</label>
+            <textarea name="mensagem" rows="4" required placeholder="Descreva sua dúvida ou questão..." class="w-full p-4 bg-gray-800/90 border-2 border-lime-green/50 rounded-lg text-white font-medium placeholder-gray-400 focus:border-lime-green focus:ring-4 focus:ring-lime-green/30 focus:outline-none transition-all duration-300 shadow-inner resize-none"></textarea>
+          </div>
+          <div class="bg-gray-800/70 border-2 border-lime-green/40 rounded-lg p-4 shadow-inner">
+            <p class="text-lime-green font-medium text-base">
+              📞 <strong class="text-lime-green">Contatos alternativos:</strong><br>
+              <span class="text-white">Email: privacidade@aimindset.com</span><br>
+              <span class="text-white">Telefone: (11) 9999-9999</span><br>
+              <span class="text-white">Horário: Segunda a Sexta, 9h às 18h</span>
+            </p>
+          </div>
+          <div class="flex gap-4 mt-8">
+            <button type="submit" class="flex-1 bg-lime-green text-gray-900 py-4 px-6 rounded-lg font-bold text-base uppercase tracking-wide hover:bg-lime-green/90 hover:shadow-xl hover:shadow-lime-green/30 transition-all duration-300 transform hover:scale-105 active:scale-95">
+              📧 Enviar Mensagem
+            </button>
+            <button type="button" id="cancelContact" class="flex-1 bg-red-600 text-white py-4 px-6 rounded-lg font-bold text-base uppercase tracking-wide hover:bg-red-500 hover:shadow-xl hover:shadow-red-600/30 transition-all duration-300 transform hover:scale-105 active:scale-95">
+              ❌ Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Event listeners
+    const form = modal.querySelector('#contactForm') as HTMLFormElement;
+    const cancelBtn = modal.querySelector('#cancelContact') as HTMLButtonElement;
+    
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      
+      // Preparar dados do contato
+      const contactData = {
+        nome: formData.get('nome'),
+        email: formData.get('email'),
+        assunto: formData.get('assunto'),
+        mensagem: formData.get('mensagem'),
+        timestamp: new Date().toISOString()
+      };
+      
+      // Salvar no banco de dados
+      const success = await createPrivacyRequest({
+        user_email: contactData.email as string,
+        request_type: 'privacy_contact',
+        request_data: contactData,
+        notes: `Contato de privacidade. Assunto: ${contactData.assunto}`
+      });
+      
+      // Salvar no localStorage para demonstração
+      const existingContacts = JSON.parse(localStorage.getItem('privacyContacts') || '[]');
+      existingContacts.push(contactData);
+      localStorage.setItem('privacyContacts', JSON.stringify(existingContacts));
+      
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-4 right-4 bg-lime-green text-primary-dark px-6 py-3 rounded-lg font-medium z-50 animate-pulse';
+      toast.textContent = success ? '📧 Mensagem registrada no banco!' : '⚠️ Mensagem salva localmente (erro no banco)';
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        document.body.removeChild(toast);
+      }, 4000);
+      
+      document.body.removeChild(modal);
+    });
+    
+    cancelBtn.addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    // Fechar ao clicar fora
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
+      }
+    });
+  };
   const dataTypes = [
     {
       icon: Users,
@@ -30,25 +547,29 @@ const Privacy: React.FC = () => {
       icon: Download,
       title: 'Acesso e Portabilidade',
       description: 'Solicite uma cópia completa dos seus dados pessoais em formato estruturado',
-      action: 'Baixar Dados'
+      action: 'Baixar Dados',
+      handler: handleDataDownload
     },
     {
       icon: Edit,
       title: 'Retificação',
       description: 'Corrija informações imprecisas ou atualize dados desatualizados',
-      action: 'Editar Dados'
+      action: 'Editar Dados',
+      handler: handleDataEdit
     },
     {
       icon: Trash2,
       title: 'Exclusão (Direito ao Esquecimento)',
       description: 'Solicite a remoção completa dos seus dados pessoais dos nossos sistemas',
-      action: 'Excluir Dados'
+      action: 'Excluir Dados',
+      handler: handleDataDeletion
     },
     {
       icon: UserCheck,
       title: 'Limitação de Processamento',
       description: 'Restrinja como processamos seus dados pessoais em situações específicas',
-      action: 'Limitar Uso'
+      action: 'Limitar Uso',
+      handler: handleProcessingLimitation
     }
   ];
 
@@ -322,6 +843,7 @@ const Privacy: React.FC = () => {
                       variant="outline"
                       size="sm"
                       className="group-hover:border-neon-purple group-hover:text-neon-purple transition-colors"
+                      onClick={right.handler}
                     >
                       {right.action}
                       <ArrowRight className="ml-2 w-4 h-4" />
@@ -378,10 +900,10 @@ const Privacy: React.FC = () => {
               </div>
             </div>
             <div className="mt-6 text-center">
-              <Button variant="primary" size="lg" className="mr-4">
+              <Button variant="primary" size="lg" className="mr-4" onClick={handleCookieManagement}>
                 Gerenciar Cookies
               </Button>
-              <Button variant="outline" size="lg">
+              <Button variant="outline" size="lg" onClick={handleAcceptAllCookies}>
                 Aceitar Todos
               </Button>
             </div>
@@ -456,11 +978,11 @@ const Privacy: React.FC = () => {
                 </div>
                 <div className="p-4 bg-primary-dark/50 rounded-lg">
                   <h3 className="text-white font-semibold mb-2">Encarregado de Dados</h3>
-                  <p className="text-neon-purple font-medium">Dr. Ana Silva</p>
-                  <p className="text-futuristic-gray text-sm">Certificada LGPD</p>
+                  <p className="text-neon-purple font-medium">Mateus Oliveira</p>
+                  <p className="text-futuristic-gray text-sm">Fundador & CEO</p>
                 </div>
               </div>
-              <Button variant="primary" size="lg" className="hover-lift">
+              <Button variant="primary" size="lg" className="hover-lift" onClick={handlePrivacyContact}>
                 <Mail className="mr-2 w-5 h-5" />
                 Entrar em Contato
                 <ArrowRight className="ml-2 w-5 h-5" />
@@ -508,6 +1030,14 @@ const Privacy: React.FC = () => {
           </Card>
         </div>
       </section>
+
+      {/* Cookie Modal */}
+      <CookieModal
+        isOpen={isCookieModalOpen}
+        onClose={() => setIsCookieModalOpen(false)}
+        onSave={handleCookieSave}
+        initialPreferences={cookiePreferences}
+      />
     </div>
   );
 };

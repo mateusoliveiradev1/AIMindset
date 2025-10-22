@@ -3,9 +3,19 @@ import { Mail, Phone, MapPin, Send, CheckCircle, MessageCircle, Clock, Users, Za
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import { useContacts } from '../hooks/useContacts';
+import { useContactStats } from '../hooks/useContactStats';
 
 export const Contact: React.FC = () => {
   const { submitContact, loading } = useContacts();
+  const { 
+    totalContacts, 
+    averageResponseTime, 
+    satisfactionRate, 
+    systemStatus, 
+    messagesThisWeek,
+    loading: statsLoading 
+  } = useContactStats();
+  
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -41,7 +51,7 @@ export const Contact: React.FC = () => {
     {
       icon: Mail,
       title: 'Email Direto',
-      description: 'Resposta em até 24 horas',
+      description: `Resposta em ${averageResponseTime}`,
       contact: 'contato@aimindset.com',
       color: 'neon-purple',
       bgColor: 'neon-purple/20'
@@ -49,16 +59,16 @@ export const Contact: React.FC = () => {
     {
       icon: MessageCircle,
       title: 'Chat Online',
-      description: 'Suporte em tempo real',
+      description: systemStatus === 'online' ? 'Sistema Online' : 'Sistema em Manutenção',
       contact: 'Segunda a Sexta, 9h-18h',
-      color: 'lime-green',
-      bgColor: 'lime-green/20'
+      color: systemStatus === 'online' ? 'lime-green' : 'yellow-500',
+      bgColor: systemStatus === 'online' ? 'lime-green/20' : 'yellow-500/20'
     },
     {
       icon: Phone,
       title: 'Telefone',
       description: 'Atendimento personalizado',
-      contact: '+55 (11) 9999-9999',
+      contact: '+55 (11) 99999-9999',
       color: 'electric-blue',
       bgColor: 'electric-blue/20'
     }
@@ -87,11 +97,28 @@ export const Contact: React.FC = () => {
     }
   ];
 
+  // Estatísticas reais baseadas nos dados do Supabase
   const stats = [
-    { number: '< 24h', label: 'Tempo de Resposta', icon: Clock },
-    { number: '98%', label: 'Satisfação', icon: Heart },
-    { number: '15+', label: 'Idiomas', icon: Globe },
-    { number: '24/7', label: 'Disponibilidade', icon: Zap }
+    { 
+      number: averageResponseTime, 
+      label: 'Tempo de Resposta', 
+      icon: Clock 
+    },
+    { 
+      number: statsLoading ? '...' : `${satisfactionRate}%`, 
+      label: 'Satisfação', 
+      icon: Heart 
+    },
+    { 
+      number: '1', 
+      label: 'País (Brasil)', 
+      icon: Globe 
+    },
+    { 
+      number: systemStatus === 'online' ? '24/7' : 'Manutenção', 
+      label: 'Disponibilidade', 
+      icon: Zap 
+    }
   ];
 
   return (
@@ -113,10 +140,10 @@ export const Contact: React.FC = () => {
           </p>
           <div className="flex justify-center space-x-4">
             <div className="px-4 py-2 bg-lime-green/20 rounded-full text-lime-green text-sm font-medium">
-              💬 Suporte 24/7
+              💬 {statsLoading ? 'Carregando...' : `${messagesThisWeek} mensagens esta semana`}
             </div>
             <div className="px-4 py-2 bg-neon-purple/20 rounded-full text-neon-purple text-sm font-medium">
-              🚀 Resposta Rápida
+              🚀 {systemStatus === 'online' ? 'Sistema Online' : 'Sistema em Manutenção'}
             </div>
           </div>
         </div>
@@ -139,6 +166,18 @@ export const Contact: React.FC = () => {
                 </div>
               </Card>
             ))}
+          </div>
+          
+          {/* Estatísticas adicionais */}
+          <div className="mt-8 text-center">
+            <p className="text-futuristic-gray font-roboto">
+              {statsLoading ? 'Carregando estatísticas...' : (
+                <>
+                  <span className="text-lime-green font-semibold">{totalContacts}</span> mensagens recebidas até agora • 
+                  <span className="text-neon-purple font-semibold ml-2">{messagesThisWeek}</span> esta semana
+                </>
+              )}
+            </p>
           </div>
         </div>
       </section>
@@ -417,7 +456,7 @@ export const Contact: React.FC = () => {
 
                   <p className="text-center text-xs text-futuristic-gray">
                     Ao enviar esta mensagem, você concorda com nossa{' '}
-                    <a href="/privacy" className="text-lime-green hover:text-lime-green/80 transition-colors">
+                    <a href="/politica-privacidade" className="text-lime-green hover:text-lime-green/80 transition-colors">
                       Política de Privacidade
                     </a>
                   </p>
