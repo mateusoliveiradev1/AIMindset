@@ -33,8 +33,8 @@ export const sanitizeInput = (input: string): string => {
     .replace(/javascript:/gi, '') // Remove javascript: URLs
     .replace(/data:/gi, '') // Remove data: URLs
     .replace(/vbscript:/gi, '') // Remove vbscript: URLs
-    .replace(/on\w+=/gi, '') // Remove event handlers
-    .slice(0, 1000); // Limita tamanho
+    .replace(/on\w+=/gi, ''); // Remove event handlers
+    // Removido limite de 1000 caracteres para permitir artigos longos
 };
 
 /**
@@ -71,12 +71,12 @@ export const sanitizeName = (name: string): string => {
   
   const sanitized = sanitizeInput(name);
   
-  // Remove números e caracteres especiais, mantém apenas letras, espaços e acentos
+  // Mantém letras, números, espaços e acentos - removido filtro que excluía números
   return sanitized
-    .replace(/[^a-zA-ZÀ-ÿ\s]/g, '')
+    .replace(/[^a-zA-ZÀ-ÿ0-9\s]/g, '')
     .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 100);
+    .trim();
+    // Removido limite de 100 caracteres para permitir títulos longos
 };
 
 /**
@@ -90,8 +90,8 @@ export const sanitizeMessage = (message: string): string => {
   // Remove URLs suspeitas
   return sanitized
     .replace(/https?:\/\/[^\s]+/gi, '[URL removida]')
-    .replace(/www\.[^\s]+/gi, '[URL removida]')
-    .slice(0, 5000);
+    .replace(/www\.[^\s]+/gi, '[URL removida]');
+    // Removido limite de 5000 caracteres para permitir artigos longos
 };
 
 /**

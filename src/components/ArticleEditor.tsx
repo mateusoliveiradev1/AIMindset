@@ -31,13 +31,11 @@ import {
 import { 
   sanitizeName, 
   sanitizeMessage, 
-  sanitizeUrl, 
   validators, 
   RateLimiter,
   sanitizeInput,
   sanitizeEmail,
-  validateCSRFToken,
-  generateCSRFToken,
+  CSRFProtection,
   validateOrigin
 } from '../utils/security';
 import { SecurityHeaders } from '../utils/securityHeaders';
@@ -301,34 +299,52 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
   ];
 
   const handleSave = async () => {
+    console.log('🔥 INICIANDO SALVAMENTO - ArticleEditor.handleSave()');
+    console.log('📊 DADOS INICIAIS:', {
+      title: title.length,
+      content: content.length,
+      excerpt: excerpt.length,
+      tags: tags.length,
+      timestamp: new Date().toISOString()
+    });
+
     // Verificar rate limiting para salvamento de artigos
     if (!RateLimiter.canPerformAction('article_save', 10, 60000)) { // 10 salvamentos por minuto
+      console.log('❌ RATE LIMIT ATINGIDO');
       alert('Muitas tentativas de salvamento. Aguarde um momento.');
       return;
     }
 
     // Validação básica
     if (!validators.required(title.trim()) || !validators.required(content.trim())) {
+      console.log('❌ VALIDAÇÃO BÁSICA FALHOU:', {
+        titleValid: validators.required(title.trim()),
+        contentValid: validators.required(content.trim())
+      });
       alert('Por favor, preencha pelo menos o título e o conteúdo.');
       return;
     }
 
-    // Validar comprimento dos campos
-    if (title.trim().length > 200) {
-      alert('O título deve ter no máximo 200 caracteres.');
-      return;
-    }
+    // Validar comprimento dos campos - removido limite de título para permitir textos longos
+    // if (title.trim().length > 500) { // Removido limite para permitir títulos longos
+    //   alert('O título deve ter no máximo 500 caracteres.');
+    //   return;
+    // }
 
-    if (excerpt.trim().length > 500) {
-      alert('O resumo deve ter no máximo 500 caracteres.');
-      return;
-    }
+    // Removido limite de resumo para permitir textos longos
+    // if (excerpt.trim().length > 1000) { // Removido limite para permitir resumos longos
+    //   alert('O resumo deve ter no máximo 1000 caracteres.');
+    //   return;
+    // }
 
     if (metaDescription.trim().length > 160) {
+      console.log('❌ META DESCRIPTION MUITO LONGA:', metaDescription.trim().length);
       alert('A meta descrição deve ter no máximo 160 caracteres.');
       return;
     }
 
+    console.log('🧹 INICIANDO SANITIZAÇÃO DOS DADOS');
+    
     // Sanitizar dados
     const sanitizedTitle = sanitizeName(title.trim());
     const sanitizedExcerpt = sanitizeMessage(excerpt.trim());
@@ -337,7 +353,19 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
     const sanitizedTags = sanitizeMessage(tags.trim());
     const sanitizedFeaturedImage = featuredImage.trim() ? SecurityHeaders.sanitizeUrl(featuredImage.trim()) : '';
 
+    console.log('📋 DADOS SANITIZADOS:', {
+      titleLength: sanitizedTitle.length,
+      excerptLength: sanitizedExcerpt.length,
+      contentLength: sanitizedContent.length,
+      tagsLength: sanitizedTags.length,
+      imageUrl: sanitizedFeaturedImage ? 'presente' : 'ausente'
+    });
+
     if (!sanitizedTitle || !sanitizedContent) {
+      console.log('❌ SANITIZAÇÃO FALHOU:', {
+        sanitizedTitle: !!sanitizedTitle,
+        sanitizedContent: !!sanitizedContent
+      });
       alert('Dados inválidos detectados. Verifique o conteúdo.');
       return;
     }
@@ -354,8 +382,33 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
       published: isPublished
     };
 
+    console.log('📦 DADOS FINAIS PARA SALVAMENTO:', {
+      title: articleData.title.substring(0, 50) + '...',
+      slug: articleData.slug,
+      contentSize: articleData.content.length,
+      contentSizeKB: (new TextEncoder().encode(articleData.content).length / 1024).toFixed(2),
+      totalDataSize: JSON.stringify(articleData).length,
+      totalDataSizeKB: (new TextEncoder().encode(JSON.stringify(articleData)).length / 1024).toFixed(2),
+      category: articleData.category,
+      published: articleData.published
+    });
+
+    console.log('🚀 CHAMANDO onSave() - PASSANDO PARA useArticles');
+    
     if (onSave) {
-      onSave(articleData);
+      try {
+        console.log('⏰ TIMESTAMP ANTES DO onSave:', new Date().toISOString());
+        await onSave(articleData);
+        console.log('✅ onSave() CONCLUÍDO COM SUCESSO');
+      } catch (error) {
+        console.error('💥 ERRO NO onSave():', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack?.substring(0, 500)
+        });
+      }
+    } else {
+      console.log('⚠️ onSave não definido - nenhuma ação executada');
     }
   };
 

@@ -6,6 +6,9 @@ import { traeBadgePlugin } from 'vite-plugin-trae-solo-badge';
 // https://vite.dev/config/
 export default defineConfig({
   server: {
+    // Configurações para suportar payloads grandes
+    timeout: 300000, // 5 minutos de timeout
+    maxPayload: 50 * 1024 * 1024, // 50MB de payload máximo
     headers: {
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
