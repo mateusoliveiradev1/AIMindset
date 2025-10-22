@@ -1,14 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Search, Brain } from 'lucide-react';
+import { Menu, X, Search, User, LogOut, Settings, Brain } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import Button from '../UI/Button';
+import AdvancedSearch from '../AdvancedSearch';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const { user, logout } = useAuth();
 
   const navigation = [
     { name: 'Home', href: '/' },
@@ -19,6 +25,10 @@ const Header: React.FC = () => {
   ];
 
   const isActive = (path: string) => location.pathname === path;
+
+  // Páginas onde o botão de busca não deve aparecer
+  const hiddenSearchPages = ['/admin', '/admin-login', '/about', '/contact', '/privacy'];
+  const shouldShowSearch = !hiddenSearchPages.some(page => location.pathname.startsWith(page));
 
   // Focar no input quando a busca é aberta
   useEffect(() => {
@@ -51,11 +61,15 @@ const Header: React.FC = () => {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchTerm.trim()) {
-      navigate(`/artigos?search=${encodeURIComponent(searchTerm.trim())}`);
+    if (searchQuery.trim()) {
+      setIsAdvancedSearchOpen(true);
       setIsSearchOpen(false);
-      setSearchTerm('');
     }
+  };
+
+  const handleAdvancedSearchOpen = () => {
+    setIsAdvancedSearchOpen(true);
+    setIsSearchOpen(false);
   };
 
   return (
@@ -95,38 +109,47 @@ const Header: React.FC = () => {
 
           {/* Search & Mobile Menu */}
           <div className="flex items-center space-x-4">
-            {/* Search */}
-            <div className="relative">
-              {!isSearchOpen ? (
-                <button 
-                  onClick={handleSearchToggle}
-                  className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 hover-lift"
-                >
-                  <Search className="h-5 w-5" />
-                </button>
-              ) : (
-                <form onSubmit={handleSearchSubmit} className="flex items-center">
-                  <div className="relative">
-                    <input
-                      ref={searchInputRef}
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Buscar artigos..."
-                      className="w-48 md:w-64 px-4 py-2 pl-10 bg-dark-surface/95 backdrop-blur-md border border-neon-purple/30 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green transition-all duration-300"
-                    />
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-futuristic-gray" />
-                  </div>
-                  <button
-                    type="button"
+            {/* Search - Only show on allowed pages */}
+            {shouldShowSearch && (
+              <div className="relative">
+                {!isSearchOpen ? (
+                  <button 
                     onClick={handleSearchToggle}
-                    className="ml-2 p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300"
+                    className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 hover-lift"
                   >
-                    <X className="h-4 w-4" />
+                    <Search className="h-5 w-5" />
                   </button>
-                </form>
-              )}
-            </div>
+                ) : (
+                  <form onSubmit={handleSearchSubmit} className="flex items-center">
+                    <div className="relative">
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Buscar artigos..."
+                        className="w-32 sm:w-40 md:w-48 lg:w-64 px-4 py-2 pl-10 bg-dark-surface/95 backdrop-blur-md border border-neon-purple/30 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green transition-all duration-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAdvancedSearchOpen}
+                        className="ml-2 px-3 py-2 text-xs bg-neon-purple/20 text-neon-purple hover:bg-neon-purple/30 rounded-lg transition-colors duration-300"
+                      >
+                        Avançada
+                      </button>
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-futuristic-gray" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSearchToggle}
+                      className="ml-2 p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
             
             {/* Mobile menu button */}
             <button
@@ -160,8 +183,15 @@ const Header: React.FC = () => {
           </div>
         )}
       </div>
-    </header>
-  );
-};
 
-export default Header;
+        {/* Advanced Search Modal */}
+        <AdvancedSearch
+          isOpen={isAdvancedSearchOpen}
+          onClose={() => setIsAdvancedSearchOpen(false)}
+          initialQuery={searchQuery}
+        />
+      </header>
+    );
+  };
+  
+  export default Header;

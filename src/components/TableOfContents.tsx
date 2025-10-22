@@ -45,6 +45,22 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
     setIsModalOpen(newState);
   }, [isModalOpen]);
 
+  // Impedir scroll do body quando modal estiver aberto
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.paddingRight = '0px';
+    } else {
+      document.body.style.overflow = 'unset';
+      document.body.style.paddingRight = '0px';
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+      document.body.style.paddingRight = '0px';
+    };
+  }, [isModalOpen]);
+
   // Detectar tamanho da tela - SIMPLIFICADO
   useEffect(() => {
     const updateScreenSize = () => {
@@ -161,7 +177,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
           {/* Modal Universal - Mobile e Tablet */}
           {isModalOpen && (
             <div 
-              className="fixed inset-0 z-40 flex items-center justify-center"
+              className="fixed inset-0 z-[9998] flex items-center justify-center overflow-hidden"
               style={{
                 position: 'fixed',
                 top: '0px',
@@ -173,21 +189,22 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
             >
               {/* Backdrop */}
               <div 
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
                 onClick={toggleModal}
+                style={{ touchAction: 'none' }}
               />
               
               {/* Modal Content */}
               <div className={`
                 relative mx-4 bg-gray-900/95 backdrop-blur-sm border border-lime-400/20 
-                rounded-2xl shadow-2xl animate-slide-up
+                rounded-2xl shadow-2xl animate-slide-up flex flex-col
                 ${screenSize === 'mobile' 
-                  ? 'w-full max-w-md max-h-[80vh]' 
-                  : 'w-full max-w-lg max-h-[85vh]'
+                  ? 'w-full max-w-md max-h-[75vh] min-h-[200px]' 
+                  : 'w-full max-w-lg max-h-[80vh] min-h-[300px]'
                 }
               `}>
-                {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-lime-400/20">
+                {/* Header - Fixed */}
+                <div className="flex items-center justify-between p-4 sm:p-6 border-b border-lime-400/20 flex-shrink-0">
                   <h3 className={`font-semibold text-lime-400 flex items-center gap-3 ${
                     screenSize === 'mobile' ? 'text-lg' : 'text-xl'
                   }`}>
@@ -203,9 +220,14 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
                   </button>
                 </div>
 
-                {/* TOC Items */}
-                <nav className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-lime-400/20 scrollbar-track-gray-800/20">
-                  {renderTOCItems()}
+                {/* TOC Items - Scrollable */}
+                <nav className={`
+                  flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-lime-400/20 scrollbar-track-gray-800/20
+                  ${screenSize === 'mobile' ? 'p-3' : 'p-4 sm:p-6'}
+                `}>
+                  <div className="space-y-1">
+                    {renderTOCItems()}
+                  </div>
                 </nav>
               </div>
             </div>

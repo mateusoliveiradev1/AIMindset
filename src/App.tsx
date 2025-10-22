@@ -18,6 +18,38 @@ import AdminLogin from './pages/AdminLogin';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ToastProvider } from './hooks/useToast';
+import { ScrollToTop } from './components/ScrollToTop';
+import { useScrollToTop } from './hooks/useScrollToTop';
+
+// Componente interno para usar hooks do Router
+function AppContent() {
+  // Hook para scroll automático ao topo em mudanças de rota
+  useScrollToTop();
+
+  return (
+    <>
+      <Routes>
+        {/* Public routes with Layout */}
+        <Route path="/" element={<Layout><Home /></Layout>} />
+        <Route path="/categoria" element={<Layout><Categories /></Layout>} />
+        <Route path="/categoria/:slug" element={<Layout><Category /></Layout>} />
+        <Route path="/artigo/:slug" element={<Layout><Article /></Layout>} />
+        <Route path="/artigos" element={<Layout><AllArticles /></Layout>} />
+        <Route path="/contato" element={<Layout><Contact /></Layout>} />
+        <Route path="/newsletter" element={<Layout><Newsletter /></Layout>} />
+        <Route path="/sobre" element={<Layout><About /></Layout>} />
+        <Route path="/politica-privacidade" element={<Layout><Privacy /></Layout>} />
+        
+        {/* Admin routes without Layout */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+      </Routes>
+      
+      {/* Botão Voltar ao Topo - Global */}
+      <ScrollToTop />
+    </>
+  );
+}
 
 function App() {
   return (
@@ -25,22 +57,7 @@ function App() {
       <AuthProvider>
         <ToastProvider>
           <Router>
-          <Routes>
-            {/* Public routes with Layout */}
-            <Route path="/" element={<Layout><Home /></Layout>} />
-            <Route path="/categoria" element={<Layout><Categories /></Layout>} />
-            <Route path="/categoria/:slug" element={<Layout><Category /></Layout>} />
-            <Route path="/artigo/:slug" element={<Layout><Article /></Layout>} />
-            <Route path="/artigos" element={<Layout><AllArticles /></Layout>} />
-            <Route path="/contato" element={<Layout><Contact /></Layout>} />
-            <Route path="/newsletter" element={<Layout><Newsletter /></Layout>} />
-            <Route path="/sobre" element={<Layout><About /></Layout>} />
-            <Route path="/politica-privacidade" element={<Layout><Privacy /></Layout>} />
-            
-            {/* Admin routes without Layout */}
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-          </Routes>
+            <AppContent />
           </Router>
         </ToastProvider>
         <Toaster 
