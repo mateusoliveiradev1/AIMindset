@@ -15,10 +15,7 @@ export const useArticleNavigation = (currentSlug: string, categoryId?: string) =
   const [nextArticle, setNextArticle] = useState<NavigationArticle | null>(null);
 
   useEffect(() => {
-    console.log('🔍 useArticleNavigation - Iniciando:', { currentSlug, categoryId, articlesLength: articles.length });
-    
     if (!articles.length || !currentSlug) {
-      console.warn('❌ Dados insuficientes:', { articles: articles.length, currentSlug });
       return;
     }
 
@@ -27,24 +24,19 @@ export const useArticleNavigation = (currentSlug: string, categoryId?: string) =
       ? articles.filter(article => article.category_id === categoryId)
       : articles;
 
-    console.log('📋 Artigos filtrados:', filteredArticles.length, filteredArticles.map(a => ({ title: a.title, slug: a.slug })));
-
     // Sort by created_at descending (newest first)
     const sortedArticles = [...filteredArticles].sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
 
     const currentIndex = sortedArticles.findIndex(article => article.slug === currentSlug);
-    console.log('📍 Índice do artigo atual:', currentIndex, 'de', sortedArticles.length);
     
     if (currentIndex === -1) {
-      console.warn('❌ Artigo atual não encontrado na lista');
       return;
     }
 
     // Previous article (newer)
     const prevArticle = currentIndex > 0 ? sortedArticles[currentIndex - 1] : null;
-    console.log('⬅️ Artigo anterior:', prevArticle ? prevArticle.title : 'Nenhum');
     
     if (prevArticle) {
       setPreviousArticle({
@@ -60,7 +52,6 @@ export const useArticleNavigation = (currentSlug: string, categoryId?: string) =
 
     // Next article (older)
     const nextArt = currentIndex < sortedArticles.length - 1 ? sortedArticles[currentIndex + 1] : null;
-    console.log('➡️ Próximo artigo:', nextArt ? nextArt.title : 'Nenhum');
     
     if (nextArt) {
       setNextArticle({

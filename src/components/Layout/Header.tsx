@@ -42,7 +42,7 @@ const Header: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsSearchOpen(false);
-        setSearchTerm('');
+        setSearchQuery('');
       }
     };
 
@@ -55,7 +55,7 @@ const Header: React.FC = () => {
   const handleSearchToggle = () => {
     setIsSearchOpen(!isSearchOpen);
     if (isSearchOpen) {
-      setSearchTerm('');
+      setSearchQuery('');
     }
   };
 

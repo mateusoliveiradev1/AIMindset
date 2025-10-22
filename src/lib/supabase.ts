@@ -2,12 +2,37 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5d2pxemhxeW5obmhldGlkenNhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDkyOTEzNCwiZXhwIjoyMDc2NTA1MTM0fQ.04Y2US3KKeveKGi_8PvhqxS1EKiAB4xNjuFZTP1VLOQ';
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
+// Singleton instance for regular client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Singleton instance for service role client com configurações otimizadas para payloads grandes
+export const supabaseServiceClient = createClient(supabaseUrl, supabaseServiceKey, {
+  db: {
+    schema: 'public'
+  },
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  },
+  global: {
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    }
+  },
+  // Configurações para suportar payloads grandes
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
+  }
+});
 
 export interface Contact {
   id: string;
@@ -22,7 +47,7 @@ export interface Contact {
 export interface Article {
   id: string;
   title: string;
-  slug?: string;
+  slug: string; // Obrigatório para compatibilidade
   excerpt?: string;
   meta_description?: string;
   content: string;

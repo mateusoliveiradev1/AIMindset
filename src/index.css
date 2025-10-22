@@ -105,6 +105,9 @@
     background: linear-gradient(135deg, #8A2DC7, #4AE54A);
   }
 
+  /* Import newsletter animations */
+  @import './styles/newsletter-animations.css';
+
   /* Animation for mobile TOC modal */
   @keyframes slide-up {
     from {

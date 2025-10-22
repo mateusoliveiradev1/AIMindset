@@ -153,7 +153,7 @@ export class SecurityHeaders {
   static preventClickjacking(): void {
     if (typeof window !== 'undefined' && window.top !== window.self) {
       // If the page is in a frame, redirect to break out
-      window.top!.location = window.self.location;
+      window.top!.location.href = window.self.location.href;
     }
   }
 

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Incremental Frontend - Artigos Grandes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test-section {
+            background: #2a2a2a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #444;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .log {
+            background: #000;
+            color: #0f0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .error {
+            color: #f00;
+        }
+        .success {
+            color: #0f0;
+        }
+        .info {
+            color: #0ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔥 TESTE INCREMENTAL - ARTIGOS GRANDES</h1>
+    <p>Este teste vai identificar EXATAMENTE onde o problema ocorre no frontend.</p>
+
+    <div class="test-section">
+        <h2>📊 Gerador de Conteúdo</h2>
+        <label>Tamanho do artigo (KB):</label>
+        <input type="number" id="sizeInput" value="1" min="1" max="500">
+        <button onclick="generateContent()">Gerar Conteúdo</button>
+        <button onclick="clearLog()">Limpar Log</button>
+        
+        <h3>Conteúdo Gerado:</h3>
+        <textarea id="contentArea" placeholder="Conteúdo será gerado aqui..."></textarea>
+        
+        <div>
+            <strong>Tamanho atual:</strong> 
+            <span id="currentSize">0 caracteres (0 KB)</span>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Testes de Salvamento</h2>
+        <button onclick="testSave(1)">Teste 1KB</button>
+        <button onclick="testSave(5)">Teste 5KB</button>
+        <button onclick="testSave(10)">Teste 10KB</button>
+        <button onclick="testSave(25)">Teste 25KB</button>
+        <button onclick="testSave(50)">Teste 50KB</button>
+        <button onclick="testSave(100)">Teste 100KB</button>
+        <button onclick="testSave(200)">Teste 200KB</button>
+        
+        <h3>Teste Manual:</h3>
+        <button onclick="testManualSave()" id="manualSaveBtn">Testar Salvamento Manual</button>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 Log de Testes</h2>
+        <div id="logArea" class="log">Aguardando testes...\n</div>
+    </div>
+
+    <script>
+        let logArea = document.getElementById('logArea');
+        let contentArea = document.getElementById('contentArea');
+        let sizeInput = document.getElementById('sizeInput');
+        let currentSizeSpan = document.getElementById('currentSize');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toISOString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            logArea.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            logArea.scrollTop = logArea.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        function clearLog() {
+            logArea.innerHTML = 'Log limpo...\n';
+        }
+
+        function generateContent() {
+            const sizeKB = parseInt(sizeInput.value);
+            log(`🔄 Gerando conteúdo de ${sizeKB}KB...`);
+            
+            const targetSize = sizeKB * 1024;
+            let content = '';
+            const baseText = 'Este é um texto de teste para artigo grande. ';
+            
+            while (content.length < targetSize) {
+                content += baseText + `Parágrafo ${Math.floor(content.length / 100) + 1}. `;
+                content += 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. ';
+                content += 'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ';
+                content += 'Ut enim ad minim veniam, quis nostrud exercitation ullamco. ';
+                content += '\n\n';
+            }
+            
+            content = content.substring(0, targetSize);
+            contentArea.value = content;
+            updateSize();
+            
+            log(`✅ Conteúdo gerado: ${content.length} caracteres (${(content.length/1024).toFixed(2)}KB)`, 'success');
+        }
+
+        function updateSize() {
+            const content = contentArea.value;
+            const chars = content.length;
+            const kb = (chars / 1024).toFixed(2);
+            currentSizeSpan.textContent = `${chars} caracteres (${kb} KB)`;
+        }
+
+        contentArea.addEventListener('input', updateSize);
+
+        async function testSave(sizeKB) {
+            log(`🚀 INICIANDO TESTE ${sizeKB}KB`);
+            
+            // Gerar conteúdo
+            sizeInput.value = sizeKB;
+            generateContent();
+            
+            // Aguardar um pouco
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Testar salvamento
+            await testManualSave();
+        }
+
+        async function testManualSave() {
+            const content = contentArea.value;
+            if (!content) {
+                log('❌ Nenhum conteúdo para testar', 'error');
+                return;
+            }
+
+            const sizeKB = (content.length / 1024).toFixed(2);
+            log(`🎯 TESTANDO SALVAMENTO - ${sizeKB}KB`);
+            
+            const manualSaveBtn = document.getElementById('manualSaveBtn');
+            manualSaveBtn.disabled = true;
+            manualSaveBtn.textContent = 'Testando...';
+
+            try {
+                // Simular dados do artigo
+                const articleData = {
+                    title: `Teste Frontend ${sizeKB}KB - ${new Date().toISOString()}`,
+                    slug: `teste-frontend-${sizeKB}kb-${Date.now()}`,
+                    excerpt: `Artigo de teste com ${sizeKB}KB gerado no frontend`,
+                    content: content,
+                    tags: 'teste,frontend,incremental',
+                    category: '',
+                    published: false
+                };
+
+                log(`📊 DADOS PREPARADOS:`);
+                log(`   - Título: ${articleData.title}`);
+                log(`   - Conteúdo: ${content.length} caracteres`);
+                log(`   - Tamanho em bytes: ${new TextEncoder().encode(content).length}`);
+                log(`   - Tamanho total JSON: ${JSON.stringify(articleData).length} caracteres`);
+
+                // Tentar "salvar" (simular requisição)
+                log(`🌐 SIMULANDO REQUISIÇÃO HTTP...`);
+                
+                const startTime = Date.now();
+                
+                // Simular requisição fetch
+                const response = await fetch('http://localhost:5173/admin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(articleData)
+                });
+
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                log(`📡 RESPOSTA RECEBIDA:`);
+                log(`   - Status: ${response.status}`);
+                log(`   - Status Text: ${response.statusText}`);
+                log(`   - Duração: ${duration}ms`);
+                log(`   - Headers: ${JSON.stringify(Object.fromEntries(response.headers))}`);
+
+                if (response.ok) {
+                    log(`✅ SUCESSO NO TESTE ${sizeKB}KB!`, 'success');
+                } else {
+                    log(`❌ FALHA NO TESTE ${sizeKB}KB - Status: ${response.status}`, 'error');
+                }
+
+            } catch (error) {
+                log(`💥 ERRO CRÍTICO NO TESTE:`, 'error');
+                log(`   - Tipo: ${error.name}`, 'error');
+                log(`   - Mensagem: ${error.message}`, 'error');
+                log(`   - Stack: ${error.stack?.substring(0, 300)}...`, 'error');
+            } finally {
+                manualSaveBtn.disabled = false;
+                manualSaveBtn.textContent = 'Testar Salvamento Manual';
+            }
+        }
+
+        // Instruções
+        log('🎯 INSTRUÇÕES DE TESTE:');
+        log('1. Use os botões para testar diferentes tamanhos');
+        log('2. Observe onde exatamente falha');
+        log('3. Compare com os logs do console do navegador');
+        log('4. Identifique o ponto de quebra');
+        log('');
+        log('📋 PRONTO PARA TESTES!');
+    </script>
+</body>
+</html>

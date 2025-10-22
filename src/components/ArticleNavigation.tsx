@@ -85,12 +85,7 @@ export const ArticleNavigation: React.FC<ArticleNavigationProps> = ({
 }) => {
   const { previousArticle, nextArticle } = useArticleNavigation(currentSlug, categoryId);
 
-  console.log('🔄 ArticleNavigation - Props:', { currentSlug, categoryId });
-  console.log('⬅️ ArticleNavigation - Previous:', previousArticle?.title || 'Nenhum');
-  console.log('➡️ ArticleNavigation - Next:', nextArticle?.title || 'Nenhum');
-
   if (!previousArticle && !nextArticle) {
-    console.warn('❌ ArticleNavigation - Nenhum artigo para navegação');
     return null;
   }
 

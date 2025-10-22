@@ -122,7 +122,12 @@ export const Admin: React.FC = () => {
         await refreshArticles();
       }
       if (tab === 'dashboard' || tab === 'newsletter') {
-        await refreshNewsletter();
+        try {
+          await refreshNewsletter();
+        } catch (newsletterError) {
+          console.error('Erro específico na newsletter:', newsletterError);
+          // Não bloquear o carregamento de outras abas por erro na newsletter
+        }
       }
       if (tab === 'dashboard') {
         await refreshContacts();
@@ -1217,6 +1222,11 @@ export const Admin: React.FC = () => {
                   // Preparar dados para o Supabase (incluindo tags)
                   const supabaseArticle = {
                     title: articleData.title,
+                    slug: articleData.title.toLowerCase()
+                      .replace(/[^a-z0-9\s-]/g, '')
+                      .replace(/\s+/g, '-')
+                      .replace(/-+/g, '-')
+                      .trim(),
                     excerpt: articleData.excerpt,
                     content: articleData.content,
                     image_url: articleData.featuredImage || '',

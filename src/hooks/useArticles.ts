@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseServiceClient } from '../lib/supabase';
 import type { Article, Category } from '../lib/supabase';
 
 // Função para gerar slug a partir do título
@@ -165,40 +165,122 @@ export const useArticles = (): UseArticlesReturn => {
     try {
       setError(null);
       
+      // 🔥 LOGS EXTREMOS PARA DEBUG
+      console.log('🚀🚀🚀 INÍCIO - Processo de criação de artigo');
+      console.log('📊 DADOS RECEBIDOS:', {
+        title: articleData.title,
+        excerpt: articleData.excerpt?.substring(0, 100) + '...',
+        contentLength: articleData.content?.length || 0,
+        category_id: articleData.category_id,
+        author_id: articleData.author_id,
+        published: articleData.published,
+        tags: articleData.tags
+      });
+      
+      console.log('📊 TAMANHOS DETALHADOS:');
+      console.log('- Conteúdo:', articleData.content?.length || 0, 'caracteres');
+      console.log('- Título:', articleData.title?.length || 0, 'caracteres');
+      console.log('- Excerpt:', articleData.excerpt?.length || 0, 'caracteres');
+      console.log('- Tags:', JSON.stringify(articleData.tags).length, 'caracteres');
+      
+      const totalDataSize = JSON.stringify(articleData).length;
+      console.log('📊 TAMANHO TOTAL DOS DADOS:', totalDataSize, 'bytes');
+      console.log('📊 TAMANHO TOTAL EM KB:', Math.round(totalDataSize / 1024), 'KB');
+      
+      // Verificar se os dados são muito grandes
+      if (totalDataSize > 1024 * 1024) { // 1MB
+        console.warn('⚠️ AVISO: Dados muito grandes (>1MB)');
+      }
+      
       // Gerar slug único a partir do título
+      console.log('🔗 Gerando slug único...');
       const baseSlug = generateSlug(articleData.title);
+      console.log('🔗 Base slug:', baseSlug);
+      
       const uniqueSlug = await ensureUniqueSlug(baseSlug);
+      console.log('🔗 Slug único gerado:', uniqueSlug);
       
       const articleWithSlug = { 
         ...articleData, 
         slug: uniqueSlug 
       };
       
-      console.log('🚀 Tentando salvar artigo com slug:', articleWithSlug);
+      const finalDataSize = JSON.stringify(articleWithSlug).length;
+      console.log('📝 DADOS FINAIS PARA INSERÇÃO:');
+      console.log('- Título:', articleWithSlug.title);
+      console.log('- Slug:', articleWithSlug.slug);
+      console.log('- Tamanho do conteúdo:', articleWithSlug.content?.length || 0, 'caracteres');
+      console.log('- Category ID:', articleWithSlug.category_id);
+      console.log('- Author ID:', articleWithSlug.author_id);
+      console.log('- Published:', articleWithSlug.published);
+      console.log('- Tags:', articleWithSlug.tags);
+      console.log('- Tamanho final dos dados:', finalDataSize, 'bytes');
+      console.log('- Tamanho final em KB:', Math.round(finalDataSize / 1024), 'KB');
       
-      // Usar service role para garantir que funcione
-      const { createClient } = await import('@supabase/supabase-js');
-      const serviceClient = createClient(
-        'https://jywjqzhqynhnhetidzsa.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5d2pxemhxeW5obmhldGlkenNhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDkyOTEzNCwiZXhwIjoyMDc2NTA1MTM0fQ.04Y2US3KKeveKGi_8PvhqxS1EKiAB4xNjuFZTP1VLOQ'
-      );
+      console.log('⏱️ INICIANDO INSERÇÃO NO SUPABASE...');
+      console.log('🔧 Cliente Supabase:', supabaseServiceClient ? 'Configurado' : 'NÃO CONFIGURADO');
       
-      const { data, error: insertError } = await serviceClient
+      const startTime = Date.now();
+      console.log('⏱️ Timestamp de início:', new Date(startTime).toISOString());
+      
+      // Usar service role client singleton para evitar múltiplas instâncias
+      const { data, error: insertError } = await supabaseServiceClient
         .from('articles')
         .insert([articleWithSlug])
         .select()
         .single();
 
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      
+      console.log('⏱️ INSERÇÃO CONCLUÍDA:');
+      console.log('- Timestamp de fim:', new Date(endTime).toISOString());
+      console.log('- Duração total:', duration, 'ms');
+      console.log('- Duração em segundos:', Math.round(duration / 1000), 's');
+
       if (insertError) {
-        console.error('❌ Erro ao salvar com service role:', insertError);
+        console.error('❌❌❌ ERRO DETALHADO AO SALVAR:');
+        console.error('- Código:', insertError.code);
+        console.error('- Mensagem:', insertError.message);
+        console.error('- Detalhes:', insertError.details);
+        console.error('- Hint:', insertError.hint);
+        console.error('- Erro completo:', insertError);
+        
+        // Verificar tipos específicos de erro
+        if (insertError.code === 'PGRST116') {
+          console.error('💥 ERRO: Payload muito grande para o Supabase');
+        } else if (insertError.code === '22001') {
+          console.error('💥 ERRO: String muito longa para o campo');
+        } else if (insertError.message?.includes('timeout')) {
+          console.error('💥 ERRO: Timeout na requisição');
+        }
+        
         throw insertError;
       }
 
-      console.log('✅ Artigo salvo com sucesso:', data);
+      console.log('✅✅✅ ARTIGO SALVO COM SUCESSO!');
+      console.log('- ID do artigo:', data?.id);
+      console.log('- Slug final:', data?.slug);
+      console.log('- Dados retornados:', data);
+      
+      console.log('🔄 ATUALIZANDO LISTA DE ARTIGOS...');
       await fetchArticles();
+      console.log('✅ LISTA DE ARTIGOS ATUALIZADA!');
+      
+      console.log('🎉🎉🎉 PROCESSO CONCLUÍDO COM SUCESSO TOTAL!');
       return true;
     } catch (err) {
-      console.error('Error creating article:', err);
+      console.error('❌❌❌ ERRO CRÍTICO NA CRIAÇÃO DO ARTIGO:');
+      console.error('- Tipo do erro:', err?.constructor?.name || 'Desconhecido');
+      console.error('- Mensagem:', err instanceof Error ? err.message : 'Erro desconhecido');
+      console.error('- Stack trace:', err instanceof Error ? err.stack : 'N/A');
+      console.error('- Erro completo:', err);
+      
+      // Verificar se é erro de rede
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        console.error('💥 ERRO DE REDE: Problema de conectividade');
+      }
+      
       setError(err instanceof Error ? err.message : 'Failed to create article');
       return false;
     }
@@ -247,16 +329,10 @@ export const useArticles = (): UseArticlesReturn => {
       
       console.log('📝 DADOS FINAIS para atualização (limpos):', JSON.stringify(cleanedData, null, 2));
       
-      // Usar service role para garantir que funcione
-      const { createClient } = await import('@supabase/supabase-js');
-      const serviceClient = createClient(
-        'https://jywjqzhqynhnhetidzsa.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5d2pxemhxeW5obmhldGlkenNhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDkyOTEzNCwiZXhwIjoyMDc2NTA1MTM0fQ.04Y2US3KKeveKGi_8PvhqxS1EKiAB4xNjuFZTP1VLOQ'
-      );
-      
       console.log('🔧 Executando query UPDATE no Supabase...');
       
-      const { data, error: updateError } = await serviceClient
+      // Usar service role client singleton para evitar múltiplas instâncias
+      const { data, error: updateError } = await supabaseServiceClient
         .from('articles')
         .update(cleanedData)
         .eq('id', id)

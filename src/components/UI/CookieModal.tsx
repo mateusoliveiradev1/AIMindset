@@ -13,9 +13,10 @@ interface CookieModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (preferences: CookiePreferences) => void;
+  initialPreferences?: CookiePreferences;
 }
 
-const CookieModal: React.FC<CookieModalProps> = ({ isOpen, onClose, onSave }) => {
+const CookieModal: React.FC<CookieModalProps> = ({ isOpen, onClose, onSave, initialPreferences }) => {
   const [preferences, setPreferences] = useState<CookiePreferences>({
     essential: true,
     analytics: false,
@@ -23,21 +24,25 @@ const CookieModal: React.FC<CookieModalProps> = ({ isOpen, onClose, onSave }) =>
   });
 
   useEffect(() => {
-    // Carregar preferências salvas do localStorage
-    const saved = localStorage.getItem('cookiePreferences');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setPreferences({
-          essential: true, // Sempre true
-          analytics: parsed.analytics || false,
-          functional: parsed.functional || false
-        });
-      } catch (error) {
-        console.error('Erro ao carregar preferências de cookies:', error);
+    // Usar preferências iniciais se fornecidas, senão carregar do localStorage
+    if (initialPreferences) {
+      setPreferences(initialPreferences);
+    } else {
+      const saved = localStorage.getItem('cookiePreferences');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setPreferences({
+            essential: true, // Sempre true
+            analytics: parsed.analytics || false,
+            functional: parsed.functional || false
+          });
+        } catch (error) {
+          console.error('Erro ao carregar preferências de cookies:', error);
+        }
       }
     }
-  }, [isOpen]);
+  }, [isOpen, initialPreferences]);
 
   const handleSave = () => {
     onSave(preferences);

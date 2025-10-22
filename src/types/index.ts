@@ -19,11 +19,12 @@ export interface Article {
   title: string;
   slug: string;
   content: string;
+  excerpt?: string; // Adicionado campo excerpt
   meta_description?: string;
   featured_image?: string;
   published: boolean;
   category_id: string;
-  category?: Category; // Objeto Category do JOIN
+  category?: Category | string; // Pode ser objeto Category ou string
   tags?: Tag[] | string[] | string; // Pode ser array de objetos Tag, strings ou string simples
   reading_time?: number;
   read_time?: number; // Alias para compatibilidade

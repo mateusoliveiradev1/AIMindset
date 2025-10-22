@@ -69,9 +69,20 @@ export const useAdvancedSearch = () => {
       }
 
       // Tags (peso 2)
-      if (article.tags && article.tags.some(tag => tag.toLowerCase().includes(term))) {
-        score += 2;
-        if (!matchedFields.includes('tags')) matchedFields.push('tags');
+      if (article.tags) {
+        let tagsArray: string[] = [];
+        if (typeof article.tags === 'string') {
+          tagsArray = article.tags.split(',').map(tag => tag.trim());
+        } else if (Array.isArray(article.tags)) {
+          tagsArray = article.tags.map(tag => 
+            typeof tag === 'string' ? tag : tag.name || tag.slug || ''
+          );
+        }
+        
+        if (tagsArray.some(tag => tag.toLowerCase().includes(term))) {
+          score += 2;
+          if (!matchedFields.includes('tags')) matchedFields.push('tags');
+        }
       }
 
       // Resumo (peso 2)
@@ -123,8 +134,19 @@ export const useAdvancedSearch = () => {
 
       // Filtro por tags
       if (filters.tags.length > 0) {
-        if (!article.tags || !filters.tags.some(tag => 
-          article.tags!.some(articleTag => 
+        if (!article.tags) return false;
+        
+        let tagsArray: string[] = [];
+        if (typeof article.tags === 'string') {
+          tagsArray = article.tags.split(',').map(tag => tag.trim());
+        } else if (Array.isArray(article.tags)) {
+          tagsArray = article.tags.map(tag => 
+            typeof tag === 'string' ? tag : tag.name || tag.slug || ''
+          );
+        }
+        
+        if (!filters.tags.some(tag => 
+          tagsArray.some(articleTag => 
             articleTag.toLowerCase().includes(tag.toLowerCase())
           )
         )) return false;
@@ -185,11 +207,23 @@ export const useAdvancedSearch = () => {
     // Sugestões de tags
     articles.forEach(article => {
       if (article.tags) {
-        article.tags.forEach(tag => {
-          if (tag.toLowerCase().includes(query)) {
-            suggestions.add(tag);
-          }
-        });
+        // Verificar se tags é um array
+        if (Array.isArray(article.tags)) {
+          article.tags.forEach(tag => {
+            const tagName = typeof tag === 'string' ? tag : tag.name;
+            if (tagName.toLowerCase().includes(query)) {
+              suggestions.add(tagName);
+            }
+          });
+        } else if (typeof article.tags === 'string') {
+          // Se tags é uma string, dividir por vírgula
+          const tagArray = article.tags.split(',').map(t => t.trim());
+          tagArray.forEach(tag => {
+            if (tag.toLowerCase().includes(query)) {
+              suggestions.add(tag);
+            }
+          });
+        }
       }
     });
 
