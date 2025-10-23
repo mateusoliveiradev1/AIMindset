@@ -272,6 +272,10 @@ export const Admin: React.FC = () => {
   const [showNewCampaignModal, setShowNewCampaignModal] = useState(false);
   const [showNewCategoryModal, setShowNewCategoryModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
+  const [categorySearchTerm, setCategorySearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all'); // all, with-articles, without-articles
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
 
   // Estados para os modais
   const [newCampaignData, setNewCampaignData] = useState({
@@ -513,13 +517,29 @@ export const Admin: React.FC = () => {
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
+    // Verificar se há artigos vinculados à categoria
+    const articlesInCategory = articles.filter(a => a.category_id === categoryId);
+    
+    if (articlesInCategory.length > 0) {
+      toast.error(`Não é possível excluir esta categoria pois há ${articlesInCategory.length} artigo(s) vinculado(s) a ela.`);
+      return;
+    }
+
     const success = await deleteCategory(categoryId);
     
     if (success) {
       toast.success('Categoria excluída com sucesso!');
+      setShowDeleteConfirmModal(false);
+      setCategoryToDelete(null);
     } else {
       toast.error('Erro ao excluir categoria. Tente novamente.');
     }
+  };
+
+  // Função para confirmar exclusão
+  const confirmDeleteCategory = (category: any) => {
+    setCategoryToDelete(category);
+    setShowDeleteConfirmModal(true);
   };
 
   // Função para nova campanha
@@ -1240,65 +1260,254 @@ export const Admin: React.FC = () => {
         {/* Categories Tab */}
         {activeTab === 'categories' && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-orbitron font-bold text-white">
-                Gerenciamento de Categorias
-              </h3>
-              <Button
-                onClick={() => setShowNewCategoryModal(true)}
-                className="bg-neon-gradient hover:bg-neon-gradient/80"
-              >
-                <PlusCircle className="w-4 h-4 mr-2" />
-                Nova Categoria
-              </Button>
-            </div>
-
-            {/* Categories List */}
-            <Card className="glass-effect">
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {categories.map((category) => (
-                    <div key={category.id} className="p-4 bg-darker-surface/30 rounded-lg hover:bg-darker-surface/50 transition-colors">
-                      <div className="flex items-start justify-between mb-3">
-                        <h4 className="text-white font-medium text-lg">{category.name}</h4>
-                        <div className="flex space-x-2 flex-shrink-0">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setEditingCategory(category)}
-                            className="text-yellow-400 hover:text-yellow-300 p-1 sm:p-2"
-                          >
-                            <Edit3 className="w-3 h-3 sm:w-4 sm:h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDeleteCategory(category.id)}
-                            className="text-red-400 hover:text-red-300 p-1 sm:p-2"
-                          >
-                            <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <p className="text-futuristic-gray text-xs sm:text-sm mb-2 line-clamp-2">
-                        {category.description || 'Sem descrição'}
-                      </p>
-                      <p className="text-futuristic-gray text-xs truncate">
-                        Slug: {category.slug}
-                      </p>
-                      <p className="text-futuristic-gray text-xs">
-                        Artigos: {articles.filter(a => a.category_id === category.id).length}
-                      </p>
-                    </div>
-                  ))}
+            {/* Header com busca e filtros */}
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-2xl font-orbitron font-bold text-white mb-2">
+                  Gerenciamento de Categorias
+                </h3>
+                <p className="text-futuristic-gray text-sm">
+                  Total: {categories.length} categorias • {categories.filter(c => articles.some(a => a.category_id === c.id)).length} com artigos
+                </p>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+                {/* Busca */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-futuristic-gray w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Buscar categorias..."
+                    value={categorySearchTerm}
+                    onChange={(e) => setCategorySearchTerm(e.target.value)}
+                    className="pl-10 pr-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple w-full sm:w-64"
+                  />
                 </div>
 
-                {categories.length === 0 && (
-                  <div className="text-center py-8 sm:py-12">
-                    <TrendingUp className="w-12 h-12 sm:w-16 sm:h-16 text-futuristic-gray mx-auto mb-4" />
-                    <p className="text-futuristic-gray text-base sm:text-lg">Nenhuma categoria encontrada</p>
-                    <p className="text-futuristic-gray text-xs sm:text-sm">Comece criando sua primeira categoria</p>
+                {/* Filtro */}
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="px-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple"
+                >
+                  <option value="all">Todas</option>
+                  <option value="with-articles">Com artigos</option>
+                  <option value="without-articles">Sem artigos</option>
+                </select>
+
+                <Button
+                  onClick={() => setShowNewCategoryModal(true)}
+                  className="bg-neon-gradient hover:bg-neon-gradient/80 whitespace-nowrap"
+                >
+                  <PlusCircle className="w-4 h-4 mr-2" />
+                  Nova Categoria
+                </Button>
+              </div>
+            </div>
+
+            {/* Estatísticas */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card className="glass-effect">
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-futuristic-gray text-sm">Total de Categorias</p>
+                      <p className="text-2xl font-bold text-white">{categories.length}</p>
+                    </div>
+                    <TrendingUp className="w-8 h-8 text-lime-green" />
                   </div>
+                </div>
+              </Card>
+
+              <Card className="glass-effect">
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-futuristic-gray text-sm">Com Artigos</p>
+                      <p className="text-2xl font-bold text-white">
+                        {categories.filter(c => articles.some(a => a.category_id === c.id)).length}
+                      </p>
+                    </div>
+                    <FileText className="w-8 h-8 text-neon-purple" />
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="glass-effect">
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-futuristic-gray text-sm">Sem Artigos</p>
+                      <p className="text-2xl font-bold text-white">
+                        {categories.filter(c => !articles.some(a => a.category_id === c.id)).length}
+                      </p>
+                    </div>
+                    <Brain className="w-8 h-8 text-yellow-400" />
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="glass-effect">
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-futuristic-gray text-sm">Mais Popular</p>
+                      <p className="text-sm font-medium text-white truncate">
+                        {categories.length > 0 
+                          ? categories.reduce((prev, current) => {
+                              const prevCount = articles.filter(a => a.category_id === prev.id).length;
+                              const currentCount = articles.filter(a => a.category_id === current.id).length;
+                              return currentCount > prevCount ? current : prev;
+                            }).name
+                          : 'N/A'
+                        }
+                      </p>
+                    </div>
+                    <BarChart3 className="w-8 h-8 text-orange-400" />
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Lista de Categorias */}
+            <Card className="glass-effect">
+              <div className="p-6">
+                {loadingArticles ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-green mx-auto mb-4"></div>
+                    <p className="text-futuristic-gray">Carregando categorias...</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {categories
+                        .filter(category => {
+                          const matchesSearch = category.name.toLowerCase().includes(categorySearchTerm.toLowerCase()) ||
+                                              category.description?.toLowerCase().includes(categorySearchTerm.toLowerCase()) ||
+                                              category.slug.toLowerCase().includes(categorySearchTerm.toLowerCase());
+                          
+                          const hasArticles = articles.some(a => a.category_id === category.id);
+                          const matchesFilter = categoryFilter === 'all' ||
+                                              (categoryFilter === 'with-articles' && hasArticles) ||
+                                              (categoryFilter === 'without-articles' && !hasArticles);
+                          
+                          return matchesSearch && matchesFilter;
+                        })
+                        .map((category) => {
+                          const articleCount = articles.filter(a => a.category_id === category.id).length;
+                          
+                          return (
+                            <div key={category.id} className="p-4 bg-darker-surface/30 rounded-lg hover:bg-darker-surface/50 transition-colors border border-neon-purple/10 hover:border-neon-purple/30">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="text-white font-medium text-lg mb-1 truncate">{category.name}</h4>
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    <span className="text-xs px-2 py-1 bg-neon-purple/20 text-neon-purple rounded-full">
+                                      {category.slug}
+                                    </span>
+                                    <span className={`text-xs px-2 py-1 rounded-full ${
+                                      articleCount > 0 
+                                        ? 'bg-lime-green/20 text-lime-green' 
+                                        : 'bg-yellow-400/20 text-yellow-400'
+                                    }`}>
+                                      {articleCount} artigo{articleCount !== 1 ? 's' : ''}
+                                    </span>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex space-x-2 flex-shrink-0">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setEditingCategory({
+                                      ...category,
+                                      description: category.description || ''
+                                    })}
+                                    className="text-yellow-400 hover:text-yellow-300 p-1 sm:p-2"
+                                    title="Editar categoria"
+                                  >
+                                    <Edit3 className="w-3 h-3 sm:w-4 sm:h-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => confirmDeleteCategory(category)}
+                                    className="text-red-400 hover:text-red-300 p-1 sm:p-2"
+                                    title="Excluir categoria"
+                                  >
+                                    <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                              
+                              <p className="text-futuristic-gray text-xs sm:text-sm mb-3 line-clamp-2">
+                                {category.description || 'Sem descrição'}
+                              </p>
+                              
+                              {articleCount > 0 && (
+                                <div className="text-xs text-futuristic-gray">
+                                  <span className="font-medium">Artigos recentes:</span>
+                                  <div className="mt-1 space-y-1">
+                                    {articles
+                                      .filter(a => a.category_id === category.id)
+                                      .slice(0, 2)
+                                      .map(article => (
+                                        <div key={article.id} className="truncate">
+                                          • {article.title}
+                                        </div>
+                                      ))
+                                    }
+                                    {articleCount > 2 && (
+                                      <div className="text-neon-purple">
+                                        +{articleCount - 2} mais...
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+
+                    {categories.filter(category => {
+                      const matchesSearch = category.name.toLowerCase().includes(categorySearchTerm.toLowerCase()) ||
+                                          category.description?.toLowerCase().includes(categorySearchTerm.toLowerCase()) ||
+                                          category.slug.toLowerCase().includes(categorySearchTerm.toLowerCase());
+                      
+                      const hasArticles = articles.some(a => a.category_id === category.id);
+                      const matchesFilter = categoryFilter === 'all' ||
+                                          (categoryFilter === 'with-articles' && hasArticles) ||
+                                          (categoryFilter === 'without-articles' && !hasArticles);
+                      
+                      return matchesSearch && matchesFilter;
+                    }).length === 0 && (
+                      <div className="text-center py-12">
+                        <TrendingUp className="w-16 h-16 text-futuristic-gray mx-auto mb-4" />
+                        <h4 className="text-white font-medium text-lg mb-2">
+                          {categorySearchTerm || categoryFilter !== 'all' 
+                            ? 'Nenhuma categoria encontrada' 
+                            : 'Nenhuma categoria cadastrada'
+                          }
+                        </h4>
+                        <p className="text-futuristic-gray text-sm mb-4">
+                          {categorySearchTerm || categoryFilter !== 'all'
+                            ? 'Tente ajustar os filtros de busca'
+                            : 'Comece criando sua primeira categoria'
+                          }
+                        </p>
+                        {(!categorySearchTerm && categoryFilter === 'all') && (
+                          <Button
+                            onClick={() => setShowNewCategoryModal(true)}
+                            className="bg-neon-gradient hover:bg-neon-gradient/80"
+                          >
+                            <PlusCircle className="w-4 h-4 mr-2" />
+                            Criar Primeira Categoria
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </Card>
@@ -1434,6 +1643,136 @@ export const Admin: React.FC = () => {
                 disabled={isLoading}
               >
                 {isLoading ? 'Enviando...' : 'Criar e Enviar'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão */}
+      {showDeleteConfirmModal && categoryToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-darker-surface border border-red-500/20 rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex items-center mb-4">
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mr-4">
+                <Trash2 className="w-6 h-6 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-xl font-orbitron font-bold text-white">Confirmar Exclusão</h3>
+                <p className="text-futuristic-gray text-sm">Esta ação não pode ser desfeita</p>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-white mb-2">
+                Tem certeza que deseja excluir a categoria <strong>"{categoryToDelete.name}"</strong>?
+              </p>
+              <p className="text-futuristic-gray text-sm">
+                Slug: {categoryToDelete.slug}
+              </p>
+              {articles.filter(a => a.category_id === categoryToDelete.id).length > 0 && (
+                <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                  <p className="text-red-400 text-sm font-medium">
+                    ⚠️ Esta categoria possui {articles.filter(a => a.category_id === categoryToDelete.id).length} artigo(s) vinculado(s)
+                  </p>
+                  <p className="text-red-400 text-xs mt-1">
+                    Não é possível excluir categorias com artigos vinculados
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex space-x-3">
+              <Button
+                onClick={() => {
+                  setShowDeleteConfirmModal(false);
+                  setCategoryToDelete(null);
+                }}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => handleDeleteCategory(categoryToDelete.id)}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                disabled={articles.filter(a => a.category_id === categoryToDelete.id).length > 0}
+              >
+                Excluir
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Edição de Categoria */}
+      {editingCategory && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-darker-surface border border-neon-purple/20 rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-xl font-orbitron font-bold text-white mb-4">Editar Categoria</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-futuristic-gray text-sm mb-2">Nome *</label>
+                <input
+                  type="text"
+                  value={editingCategory.name}
+                  onChange={(e) => setEditingCategory(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple"
+                  placeholder="Digite o nome da categoria"
+                />
+              </div>
+
+              <div>
+                <label className="block text-futuristic-gray text-sm mb-2">Descrição</label>
+                <textarea
+                  value={editingCategory.description || ''}
+                  onChange={(e) => setEditingCategory(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-3 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple h-24 resize-none"
+                  placeholder="Digite a descrição da categoria"
+                />
+              </div>
+
+              <div>
+                <label className="block text-futuristic-gray text-sm mb-2">Slug *</label>
+                <input
+                  type="text"
+                  value={editingCategory.slug}
+                  onChange={(e) => setEditingCategory(prev => ({ ...prev, slug: e.target.value }))}
+                  className="w-full px-3 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple"
+                  placeholder="slug-da-categoria"
+                />
+              </div>
+
+              <div className="p-3 bg-neon-purple/10 border border-neon-purple/20 rounded-lg">
+                <p className="text-neon-purple text-sm font-medium mb-1">Informações da categoria:</p>
+                <p className="text-futuristic-gray text-xs">
+                  • {articles.filter(a => a.category_id === editingCategory.id).length} artigo(s) vinculado(s)
+                </p>
+                <p className="text-futuristic-gray text-xs">
+                  • Criada em: {new Date(editingCategory.created_at).toLocaleDateString('pt-BR')}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex space-x-3 mt-6">
+              <Button
+                onClick={() => setEditingCategory(null)}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => handleEditCategory({
+                  name: editingCategory.name,
+                  description: editingCategory.description || '',
+                  slug: editingCategory.slug
+                })}
+                className="flex-1 bg-neon-gradient hover:bg-neon-gradient/80"
+                disabled={!editingCategory.name.trim() || !editingCategory.slug.trim()}
+              >
+                Salvar Alterações
               </Button>
             </div>
           </div>
