@@ -72,7 +72,7 @@ export function useDashboardStats() {
 
   const fetchDashboardStats = useCallback(async () => {
     try {
-      console.log('📊 [DASHBOARD-STATS] Iniciando busca de estatísticas...');
+      // console.log('📊 [DASHBOARD-STATS] Iniciando busca de estatísticas...');
       setStats(prev => ({ ...prev, loading: true, error: null }));
 
       // Buscar dados de todas as tabelas em paralelo

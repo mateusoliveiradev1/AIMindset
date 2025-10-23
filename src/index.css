@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Montserrat:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap');
+/* Fontes carregadas via preconnect no SEOManager */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -45,6 +45,8 @@
   html {
     scroll-behavior: smooth;
     overflow-x: hidden;
+    /* Transições suaves para mudanças de título */
+    transition: all 0.2s ease-in-out;
   }
 
   body {
@@ -53,6 +55,8 @@
     min-height: 100vh;
     overflow-x: hidden;
     position: relative;
+    /* Transição suave para mudanças de página */
+    transition: opacity 0.1s ease-in-out;
   }
   
   h1, h2, h3, h4, h5, h6 {
@@ -75,7 +79,37 @@
   .lime-glow {
     box-shadow: 0 0 10px rgba(50, 205, 50, 0.5), 0 0 20px rgba(50, 205, 50, 0.3);
   }
-  
+
+  /* Otimizações para transições de título */
+  title {
+    transition: opacity 0.15s ease-in-out;
+  }
+
+  /* Classe para aplicar durante mudanças de página */
+  .page-transition {
+    opacity: 0.95;
+    transition: opacity 0.1s ease-in-out;
+  }
+
+  .page-transition-complete {
+    opacity: 1;
+  }
+
+  /* Prevenção de flash durante mudanças */
+  .seo-updating {
+    transition: none !important;
+  }
+
+  /* Animação sutil para indicar mudança de página */
+  @keyframes titleChange {
+    0% { opacity: 1; }
+    50% { opacity: 0.98; }
+    100% { opacity: 1; }
+  }
+
+  .title-changing {
+    animation: titleChange 0.2s ease-in-out;
+  }
   .glass-effect {
     background: rgba(26, 26, 26, 0.8);
     backdrop-filter: blur(10px);

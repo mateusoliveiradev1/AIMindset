@@ -6,8 +6,19 @@ import { Link } from 'react-router-dom';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import CookieModal from '../components/UI/CookieModal';
+import SEOManager from '../components/SEO/SEOManager';
+import { useSEO } from '../hooks/useSEO';
 
 const Privacy: React.FC = () => {
+  // SEO Hook
+  const seoHook = useSEO({
+    pageType: 'privacy',
+    fallbackTitle: 'Política de Privacidade - AIMindset',
+    fallbackDescription: 'Conheça nossa política de privacidade e como protegemos seus dados no AIMindset.'
+  });
+
+  const metadata = seoHook.getMetadata();
+
   const [cookiePreferences, setCookiePreferences] = useState({
     essential: true,
     analytics: false,
@@ -605,35 +616,38 @@ const Privacy: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-primary-dark text-white">
-      {/* Hero Section */}
-      <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-neon-purple/10 to-lime-green/10"></div>
-        <div className="relative max-w-4xl mx-auto text-center">
-          <div className="flex justify-center mb-6">
-            <div className="p-4 bg-neon-gradient rounded-full animate-pulse">
-              <Shield className="w-12 h-12 text-white" />
+    <>
+      <SEOManager metadata={metadata} />
+      
+      <div className="min-h-screen bg-primary-dark text-white">
+        {/* Hero Section */}
+        <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-neon-purple/10 to-lime-green/10"></div>
+          <div className="relative max-w-4xl mx-auto text-center">
+            <div className="flex justify-center mb-6">
+              <div className="p-4 bg-neon-gradient rounded-full animate-pulse">
+                <Shield className="w-12 h-12 text-white" />
+              </div>
             </div>
+            <h1 className="text-4xl md:text-6xl font-orbitron font-bold mb-6 gradient-text">
+              Política de Privacidade
+            </h1>
+            <p className="text-xl md:text-2xl text-futuristic-gray font-roboto leading-relaxed mb-8">
+              Transparência total na proteção dos seus dados pessoais
+            </p>
+            <div className="flex justify-center space-x-4 mb-6">
+              <div className="px-4 py-2 bg-lime-green/20 rounded-full text-lime-green text-sm font-medium">
+                🛡️ LGPD Compliant
+              </div>
+              <div className="px-4 py-2 bg-neon-purple/20 rounded-full text-neon-purple text-sm font-medium">
+                🔒 Criptografia 256-bit
+              </div>
+            </div>
+            <p className="text-sm text-futuristic-gray">
+              Última atualização: {new Date().toLocaleDateString('pt-BR')} • Versão 2.1
+            </p>
           </div>
-          <h1 className="text-4xl md:text-6xl font-orbitron font-bold mb-6 gradient-text">
-            Política de Privacidade
-          </h1>
-          <p className="text-xl md:text-2xl text-futuristic-gray font-roboto leading-relaxed mb-8">
-            Transparência total na proteção dos seus dados pessoais
-          </p>
-          <div className="flex justify-center space-x-4 mb-6">
-            <div className="px-4 py-2 bg-lime-green/20 rounded-full text-lime-green text-sm font-medium">
-              🛡️ LGPD Compliant
-            </div>
-            <div className="px-4 py-2 bg-neon-purple/20 rounded-full text-neon-purple text-sm font-medium">
-              🔒 Criptografia 256-bit
-            </div>
-          </div>
-          <p className="text-sm text-futuristic-gray">
-            Última atualização: {new Date().toLocaleDateString('pt-BR')} • Versão 2.1
-          </p>
-        </div>
-      </section>
+        </section>
 
       {/* Stats Section */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
@@ -1040,6 +1054,7 @@ const Privacy: React.FC = () => {
         initialPreferences={cookiePreferences}
       />
     </div>
+    </>
   );
 };
 

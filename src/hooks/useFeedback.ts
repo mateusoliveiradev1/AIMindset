@@ -54,7 +54,7 @@ export const useFeedback = (articleId: string): UseFeedbackReturn => {
       }
 
       // Inserir no banco
-      console.log('📝 [DEBUG] Enviando feedback para articleId:', articleId, 'useful:', useful);
+      // console.log('📝 [FEEDBACK] Enviando feedback:', { articleId, useful });
       const { error: insertError } = await supabase
         .from('feedback')
         .insert({
@@ -81,7 +81,7 @@ export const useFeedback = (articleId: string): UseFeedbackReturn => {
       return true;
       
     } catch (err) {
-      console.error('Erro ao enviar feedback:', err);
+      console.error('❌ [FEEDBACK] Erro ao enviar feedback:', error);
       const errorMessage = err instanceof Error ? err.message : 'Erro ao enviar feedback';
       setError(errorMessage);
       toast.error('Erro ao enviar feedback. Tente novamente.');

@@ -104,7 +104,7 @@ const retryWithBackoff = async <T>(
       }
       
       const delay = baseDelay * Math.pow(2, attempt);
-      console.log(`🔄 Tentativa ${attempt + 1} falhou, tentando novamente em ${delay}ms...`);
+      // console.log(`🔄 Tentativa ${attempt + 1} falhou, tentando novamente em ${delay}ms...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -157,7 +157,7 @@ export const useNewsletter = () => {
   // Enhanced request management
   const createUniqueRequest = (requestId: string): boolean => {
     if (requestsInProgress.current.has(requestId)) {
-      console.log(`🚫 [${requestId}] Requisição já em andamento, ignorando...`);
+      // console.log(`🚫 [${requestId}] Requisição já em andamento, ignorando...`);
       return false;
     }
     
@@ -167,7 +167,7 @@ export const useNewsletter = () => {
     const timeout = setTimeout(() => {
       requestsInProgress.current.delete(requestId);
       requestTimeouts.current.delete(requestId);
-      console.log(`⏰ [${requestId}] Request timeout - cleaned up`);
+      // console.log(`⏰ [${requestId}] Request timeout - cleaned up`);
     }, 30000); // 30 seconds timeout
     
     requestTimeouts.current.set(requestId, timeout);
@@ -194,7 +194,7 @@ export const useNewsletter = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log(`🚀 [${requestId}] Iniciando busca de assinantes`);
+      // console.log(`🚀 [${requestId}] Iniciando busca de assinantes`);
 
       // Always use service client for admin operations
       const client = supabaseServiceClient;
@@ -230,7 +230,7 @@ export const useNewsletter = () => {
           totalPages: Math.ceil((result.count || 0) / ITEMS_PER_PAGE),
           itemsPerPage: ITEMS_PER_PAGE
         });
-        console.log(`✅ [${requestId}] Assinantes carregados com sucesso:`, result.data.length);
+        // console.log(`✅ [${requestId}] Assinantes carregados com sucesso:`, result.data.length);
       }
     } catch (err: any) {
       console.error(`❌ [${requestId}] Erro:`, err);
@@ -253,7 +253,7 @@ export const useNewsletter = () => {
     try {
       setCampaignLoading(true);
       setError(null);
-      console.log(`🚀 [${requestId}] Iniciando busca de campanhas`);
+      // console.log(`🚀 [${requestId}] Iniciando busca de campanhas`);
 
       // Always use service client for admin operations
       const client = supabaseServiceClient;
@@ -279,7 +279,7 @@ export const useNewsletter = () => {
           totalPages: Math.ceil((result.count || 0) / ITEMS_PER_PAGE),
           itemsPerPage: ITEMS_PER_PAGE
         });
-        console.log(`✅ [${requestId}] Campanhas carregadas com sucesso:`, result.data.length);
+        // console.log(`✅ [${requestId}] Campanhas carregadas com sucesso:`, result.data.length);
       }
     } catch (err: any) {
       console.error(`❌ [${requestId}] Erro:`, err);
@@ -300,7 +300,7 @@ export const useNewsletter = () => {
     }
 
     try {
-      console.log(`🚀 [${requestId}] Iniciando cálculo de estatísticas`);
+      // console.log(`🚀 [${requestId}] Iniciando cálculo de estatísticas`);
       
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -327,7 +327,7 @@ export const useNewsletter = () => {
       };
 
       // SOLUÇÃO DEFINITIVA: Usar apenas uma consulta para obter todos os dados necessários
-      console.log('📊 Obtendo todos os dados de assinantes de uma vez...');
+      // console.log('📊 Obtendo todos os dados de assinantes de uma vez...');
       const subscribersResult = await client.from('newsletter_subscribers').select('*');
       
       if (subscribersResult.error) {
@@ -352,7 +352,7 @@ export const useNewsletter = () => {
 
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      console.log('📊 Obtendo todos os dados de campanhas de uma vez...');
+      // console.log('📊 Obtendo todos os dados de campanhas de uma vez...');
       const campaignsResult = await client.from('newsletter_campaigns').select('*');
       
       if (campaignsResult.error) {
@@ -400,7 +400,7 @@ export const useNewsletter = () => {
         (stats.newSubscribersWeek / stats.totalSubscribers * 100) : 0;
 
       setStats(stats);
-      console.log(`✅ [${requestId}] Estatísticas calculadas com sucesso:`, stats);
+      // console.log(`✅ [${requestId}] Estatísticas calculadas com sucesso:`, stats);
       
     } catch (err: any) {
       console.error(`❌ [${requestId}] Erro ao calcular estatísticas:`, err);
@@ -654,10 +654,10 @@ export const useNewsletter = () => {
       // Here you would integrate with your email service (Resend, SendGrid, etc.)
       // For now, we'll just simulate the sending
       if (campaignData.send_immediately) {
-        console.log(`Enviando campanha "${campaignData.subject}" para ${activeSubscribers.length} inscritos`);
+        // console.log(`Enviando campanha "${campaignData.subject}" para ${activeSubscribers.length} inscritos`);
         toast.success(`Campanha enviada para ${activeSubscribers.length} inscritos!`);
       } else {
-        console.log(`Campanha "${campaignData.subject}" agendada para ${campaignData.scheduled_at}`);
+        // console.log(`Campanha "${campaignData.subject}" agendada para ${campaignData.scheduled_at}`);
         toast.success('Campanha agendada com sucesso!');
       }
       
@@ -684,7 +684,7 @@ export const useNewsletter = () => {
       setError(null);
 
       // Here you would integrate with your email service to send a test email
-      console.log(`Enviando email de teste para ${email} com assunto "${subject}"`);
+      // console.log(`Enviando email de teste para ${email} com assunto "${subject}"`);
       
       toast.success(`Email de teste enviado para ${email}!`);
       return true;
@@ -756,7 +756,7 @@ export const useNewsletter = () => {
   // Initialize data
   useEffect(() => {
     const initializeData = async () => {
-      console.log('🚀 [useNewsletter] Inicializando dados da newsletter...');
+      // console.log('🚀 [useNewsletter] Inicializando dados da newsletter...');
       
       try {
         // Initialize data sequentially to prevent conflicts
@@ -771,7 +771,7 @@ export const useNewsletter = () => {
         
         await calculateStats();
         
-        console.log('✅ [useNewsletter] Inicialização completa');
+        // console.log('✅ [useNewsletter] Inicialização completa');
       } catch (error) {
         console.error('❌ [useNewsletter] Erro na inicialização:', error);
       }
@@ -816,14 +816,14 @@ export const useNewsletter = () => {
     
     // Utilities
     refreshData: async () => {
-      console.log('🔄 [useNewsletter] Atualizando dados...');
+      // console.log('🔄 [useNewsletter] Atualizando dados...');
       try {
         await fetchSubscribers();
         await new Promise(resolve => setTimeout(resolve, 300));
         await fetchCampaigns();
         await new Promise(resolve => setTimeout(resolve, 300));
         await calculateStats();
-        console.log('✅ [useNewsletter] Dados atualizados');
+        // console.log('✅ [useNewsletter] Dados atualizados');
       } catch (error) {
         console.error('❌ [useNewsletter] Erro na atualização:', error);
       }

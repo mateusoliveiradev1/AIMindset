@@ -21,7 +21,7 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
   metrics,
   onArticleClick
 }) => {
-  const [updatingArticles, setUpdatingArticles] = useState<Set<number>>(new Set());
+  const [updatingArticles, setUpdatingArticles] = useState<Set<string>>(new Set());
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   // Detectar mudanças nas métricas para mostrar indicadores visuais
@@ -36,7 +36,7 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
     if (metrics && metrics.length > 0) {
       const articleIds = metrics.map(m => m.article_id);
       console.log('🔄 [METRICS-TABLE] Atualizando indicadores para artigos:', articleIds);
-      setUpdatingArticles(new Set(articleIds.map(id => typeof id === 'string' ? parseInt(id) : id)));
+      setUpdatingArticles(new Set(articleIds.map(id => typeof id === 'string' ? id : String(id))));
       
       // Remover indicador após 2 segundos
       const timer = setTimeout(() => {
@@ -48,9 +48,9 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
     }
   }, [metrics]);
 
-  const getMetricsForArticle = (articleId: number): ArticleMetrics => {
-    // Converter articleId para string para comparação
-    const articleIdStr = articleId.toString();
+  const getMetricsForArticle = (articleId: string): ArticleMetrics => {
+    // articleId já é string
+    const articleIdStr = articleId;
     
     console.log(`🔍 [METRICS-TABLE] Buscando métricas para artigo ${articleId} (string: ${articleIdStr})`);
     console.log(`🔍 [METRICS-TABLE] Métricas disponíveis:`, metrics?.map(m => ({ 

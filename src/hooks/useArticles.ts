@@ -87,7 +87,7 @@ export const useArticles = (): UseArticlesReturn => {
   const fetchArticles = useCallback(async () => {
     try {
       setError(null);
-      console.log('🔄 Tentando buscar artigos do Supabase...');
+      // console.log('🔄 Tentando buscar artigos do Supabase...');
 
       // Verificar se o Supabase está configurado
       if (!supabase) {
@@ -114,7 +114,7 @@ export const useArticles = (): UseArticlesReturn => {
         data = result.data;
         fetchError = result.error;
       } catch (networkError) {
-        console.warn('⚠️ Erro de rede com cliente normal, tentando com admin...', networkError);
+        // console.warn('⚠️ Erro de rede com cliente normal, tentando com admin...', networkError);
         
         // Fallback para cliente admin
         const adminResult = await supabaseAdmin
@@ -139,13 +139,13 @@ export const useArticles = (): UseArticlesReturn => {
         setError('Failed to fetch articles from database');
         
         // Fallback para dados mock
-        console.log('🔄 Usando dados mock como fallback...');
+        // console.log('🔄 Usando dados mock como fallback...');
         const { mockArticles } = await import('../data/mockData');
         setArticles(mockArticles || []);
         return;
       }
 
-      console.log('✅ Artigos carregados com sucesso:', data?.length || 0);
+      // console.log('✅ Artigos carregados com sucesso:', data?.length || 0);
       setArticles(data || []);
     } catch (err) {
       console.error('❌ Error fetching articles:', err);
@@ -153,10 +153,10 @@ export const useArticles = (): UseArticlesReturn => {
       
       // Fallback para dados mock em caso de erro
       try {
-        console.log('🔄 Carregando dados mock como fallback...');
+        // console.log('🔄 Carregando dados mock como fallback...');
         const { mockArticles } = await import('../data/mockData');
         setArticles(mockArticles || []);
-        console.log('✅ Dados mock carregados:', mockArticles?.length || 0);
+        // console.log('✅ Dados mock carregados:', mockArticles?.length || 0);
       } catch (mockError) {
         console.error('❌ Erro ao carregar dados mock:', mockError);
       }
@@ -214,27 +214,27 @@ export const useArticles = (): UseArticlesReturn => {
     try {
       setError(null);
       
-      // 🔥 LOGS EXTREMOS PARA DEBUG
-      console.log('🚀🚀🚀 INÍCIO - Processo de criação de artigo');
-      console.log('📊 DADOS RECEBIDOS:', {
-        title: articleData.title,
-        excerpt: articleData.excerpt?.substring(0, 100) + '...',
-        contentLength: articleData.content?.length || 0,
-        category_id: articleData.category_id,
-        author_id: articleData.author_id,
-        published: articleData.published,
-        tags: articleData.tags
-      });
+      // 🔥 LOGS EXTREMOS PARA DEBUG - DESABILITADOS
+      // console.log('🚀🚀🚀 INÍCIO - Processo de criação de artigo');
+      // console.log('📊 DADOS RECEBIDOS:', {
+      //   title: articleData.title,
+      //   excerpt: articleData.excerpt?.substring(0, 100) + '...',
+      //   contentLength: articleData.content?.length || 0,
+      //   category_id: articleData.category_id,
+      //   author_id: articleData.author_id,
+      //   published: articleData.published,
+      //   tags: articleData.tags
+      // });
       
-      console.log('📊 TAMANHOS DETALHADOS:');
-      console.log('- Conteúdo:', articleData.content?.length || 0, 'caracteres');
-      console.log('- Título:', articleData.title?.length || 0, 'caracteres');
-      console.log('- Excerpt:', articleData.excerpt?.length || 0, 'caracteres');
-      console.log('- Tags:', JSON.stringify(articleData.tags).length, 'caracteres');
+      // console.log('📊 TAMANHOS DETALHADOS:');
+      // console.log('- Conteúdo:', articleData.content?.length || 0, 'caracteres');
+      // console.log('- Título:', articleData.title?.length || 0, 'caracteres');
+      // console.log('- Excerpt:', articleData.excerpt?.length || 0, 'caracteres');
+      // console.log('- Tags:', JSON.stringify(articleData.tags).length, 'caracteres');
       
       const totalDataSize = JSON.stringify(articleData).length;
-      console.log('📊 TAMANHO TOTAL DOS DADOS:', totalDataSize, 'bytes');
-      console.log('📊 TAMANHO TOTAL EM KB:', Math.round(totalDataSize / 1024), 'KB');
+      // console.log('📊 TAMANHO TOTAL DOS DADOS:', totalDataSize, 'bytes');
+      // console.log('📊 TAMANHO TOTAL EM KB:', Math.round(totalDataSize / 1024), 'KB');
       
       // Verificar se os dados são muito grandes
       if (totalDataSize > 1024 * 1024) { // 1MB
@@ -242,12 +242,12 @@ export const useArticles = (): UseArticlesReturn => {
       }
       
       // Gerar slug único a partir do título
-      console.log('🔗 Gerando slug único...');
+      // console.log('🔗 Gerando slug único...');
       const baseSlug = generateSlug(articleData.title);
-      console.log('🔗 Base slug:', baseSlug);
+      // console.log('🔗 Base slug:', baseSlug);
       
       const uniqueSlug = await ensureUniqueSlug(baseSlug);
-      console.log('🔗 Slug único gerado:', uniqueSlug);
+      // console.log('🔗 Slug único gerado:', uniqueSlug);
       
       const articleWithSlug = { 
         ...articleData, 
@@ -255,22 +255,22 @@ export const useArticles = (): UseArticlesReturn => {
       };
       
       const finalDataSize = JSON.stringify(articleWithSlug).length;
-      console.log('📝 DADOS FINAIS PARA INSERÇÃO:');
-      console.log('- Título:', articleWithSlug.title);
-      console.log('- Slug:', articleWithSlug.slug);
-      console.log('- Tamanho do conteúdo:', articleWithSlug.content?.length || 0, 'caracteres');
-      console.log('- Category ID:', articleWithSlug.category_id);
-      console.log('- Author ID:', articleWithSlug.author_id);
-      console.log('- Published:', articleWithSlug.published);
-      console.log('- Tags:', articleWithSlug.tags);
-      console.log('- Tamanho final dos dados:', finalDataSize, 'bytes');
-      console.log('- Tamanho final em KB:', Math.round(finalDataSize / 1024), 'KB');
+      // console.log('📝 DADOS FINAIS PARA INSERÇÃO:');
+      // console.log('- Título:', articleWithSlug.title);
+      // console.log('- Slug:', articleWithSlug.slug);
+      // console.log('- Tamanho do conteúdo:', articleWithSlug.content?.length || 0, 'caracteres');
+      // console.log('- Category ID:', articleWithSlug.category_id);
+      // console.log('- Author ID:', articleWithSlug.author_id);
+      // console.log('- Published:', articleWithSlug.published);
+      // console.log('- Tags:', articleWithSlug.tags);
+      // console.log('- Tamanho final dos dados:', finalDataSize, 'bytes');
+      // console.log('- Tamanho final em KB:', Math.round(finalDataSize / 1024), 'KB');
       
-      console.log('⏱️ INICIANDO INSERÇÃO NO SUPABASE...');
-      console.log('🔧 Cliente Supabase:', supabaseServiceClient ? 'Configurado' : 'NÃO CONFIGURADO');
+      // console.log('⏱️ INICIANDO INSERÇÃO NO SUPABASE...');
+      // console.log('🔧 Cliente Supabase:', supabaseServiceClient ? 'Configurado' : 'NÃO CONFIGURADO');
       
       const startTime = Date.now();
-      console.log('⏱️ Timestamp de início:', new Date(startTime).toISOString());
+      // console.log('⏱️ Timestamp de início:', new Date(startTime).toISOString());
       
       // Usar service role client singleton para evitar múltiplas instâncias
       const { data, error: insertError } = await supabaseServiceClient
@@ -282,10 +282,10 @@ export const useArticles = (): UseArticlesReturn => {
       const endTime = Date.now();
       const duration = endTime - startTime;
       
-      console.log('⏱️ INSERÇÃO CONCLUÍDA:');
-      console.log('- Timestamp de fim:', new Date(endTime).toISOString());
-      console.log('- Duração total:', duration, 'ms');
-      console.log('- Duração em segundos:', Math.round(duration / 1000), 's');
+      // console.log('⏱️ INSERÇÃO CONCLUÍDA:');
+      // console.log('- Timestamp de fim:', new Date(endTime).toISOString());
+      // console.log('- Duração total:', duration, 'ms');
+      // console.log('- Duração em segundos:', Math.round(duration / 1000), 's');
 
       if (insertError) {
         console.error('❌❌❌ ERRO DETALHADO AO SALVAR:');
@@ -307,16 +307,16 @@ export const useArticles = (): UseArticlesReturn => {
         throw insertError;
       }
 
-      console.log('✅✅✅ ARTIGO SALVO COM SUCESSO!');
-      console.log('- ID do artigo:', data?.id);
-      console.log('- Slug final:', data?.slug);
-      console.log('- Dados retornados:', data);
+      // console.log('✅✅✅ ARTIGO SALVO COM SUCESSO!');
+      // console.log('- ID do artigo:', data?.id);
+      // console.log('- Slug final:', data?.slug);
+      // console.log('- Dados retornados:', data);
       
-      console.log('🔄 ATUALIZANDO LISTA DE ARTIGOS...');
+      // console.log('🔄 ATUALIZANDO LISTA DE ARTIGOS...');
       await fetchArticles();
-      console.log('✅ LISTA DE ARTIGOS ATUALIZADA!');
+      // console.log('✅ LISTA DE ARTIGOS ATUALIZADA!');
       
-      console.log('🎉🎉🎉 PROCESSO CONCLUÍDO COM SUCESSO TOTAL!');
+      // console.log('🎉🎉🎉 PROCESSO CONCLUÍDO COM SUCESSO TOTAL!');
       return true;
     } catch (err) {
       console.error('❌❌❌ ERRO CRÍTICO NA CRIAÇÃO DO ARTIGO:');
@@ -339,8 +339,8 @@ export const useArticles = (): UseArticlesReturn => {
     try {
       setError(null);
       
-      console.log('🔄 INÍCIO - Tentando atualizar artigo ID:', id);
-      console.log('📝 DADOS RECEBIDOS para atualização:', JSON.stringify(articleData, null, 2));
+      // console.log('🔄 INÍCIO - Tentando atualizar artigo ID:', id);
+      // console.log('📝 DADOS RECEBIDOS para atualização:', JSON.stringify(articleData, null, 2));
       
       // Validar se o ID existe
       if (!id || id.trim() === '') {
@@ -355,7 +355,7 @@ export const useArticles = (): UseArticlesReturn => {
         const baseSlug = generateSlug(updateData.title);
         const uniqueSlug = await ensureUniqueSlug(baseSlug, id);
         updateData.slug = uniqueSlug;
-        console.log('🔗 Slug gerado:', uniqueSlug);
+        // console.log('🔗 Slug gerado:', uniqueSlug);
       }
       
       // Remover campos que não devem ser atualizados ou que não existem na tabela
@@ -376,9 +376,9 @@ export const useArticles = (): UseArticlesReturn => {
         }
       }
       
-      console.log('📝 DADOS FINAIS para atualização (limpos):', JSON.stringify(cleanedData, null, 2));
+      // console.log('📝 DADOS FINAIS para atualização (limpos):', JSON.stringify(cleanedData, null, 2));
       
-      console.log('🔧 Executando query UPDATE no Supabase...');
+      // console.log('🔧 Executando query UPDATE no Supabase...');
       
       // Usar service role client singleton para evitar múltiplas instâncias
       const { data, error: updateError } = await supabaseServiceClient
@@ -396,12 +396,12 @@ export const useArticles = (): UseArticlesReturn => {
         throw updateError;
       }
 
-      console.log('✅ SUCESSO - Artigo atualizado:', JSON.stringify(data, null, 2));
-      console.log('🔄 Atualizando lista de artigos...');
+      // console.log('✅ SUCESSO - Artigo atualizado:', JSON.stringify(data, null, 2));
+      // console.log('🔄 Atualizando lista de artigos...');
       
       await fetchArticles();
       
-      console.log('✅ CONCLUÍDO - Lista de artigos atualizada');
+      // console.log('✅ CONCLUÍDO - Lista de artigos atualizada');
       return true;
     } catch (err) {
       console.error('❌ ERRO GERAL ao atualizar artigo:', err);

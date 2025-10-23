@@ -383,7 +383,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                         <span className="px-2 py-1 bg-neon-purple/20 text-neon-purple rounded-full">
                           {typeof article.category === 'string' 
                             ? categories.find(cat => cat.slug === article.category)?.name || article.category
-                            : article.category?.name || 'Sem categoria'}
+                            : (typeof article.category === 'object' && article.category?.name) || 'Sem categoria'}
                         </span>
                         
                         <div className="flex items-center">

@@ -1,4 +1,4 @@
-import type { Article, Category } from '../types';
+import type { Article, Category } from '../lib/supabase';
 
 export const mockCategories: Category[] = [
   {
@@ -29,7 +29,7 @@ export const mockCategories: Category[] = [
 
 export const mockArticles: Article[] = [
   {
-    id: 1,
+    id: '1',
     title: 'O Futuro da Inteligência Artificial: Tendências para 2024',
     slug: 'futuro-inteligencia-artificial-2024',
     content: `# O Futuro da Inteligência Artificial: Tendências para 2024
@@ -75,18 +75,22 @@ Novas formas de ensino e aprendizado emergirão.
 
 O futuro da IA é promissor, mas requer cuidado e responsabilidade.
     `,
+    excerpt: 'Descubra as principais tendências da inteligência artificial para 2024 e como elas impactarão nosso futuro.',
     meta_description: 'Descubra as principais tendências da inteligência artificial para 2024 e como elas impactarão nosso futuro.',
+    meta_title: 'O Futuro da Inteligência Artificial: Tendências para 2024',
     featured_image: '/images/ai-future-2024.jpg',
     category_id: '1',
     category: mockCategories[0],
+    author_id: '1',
     published: true,
     reading_time: 8,
     created_at: '2024-01-15T10:00:00Z',
     updated_at: '2024-01-15T10:00:00Z',
-    views: 1250
+    views: 1250,
+    tags: ['IA', 'Futuro', 'Tecnologia', '2024']
   },
   {
-    id: 2,
+    id: '2',
     title: 'ChatGPT vs Claude: Qual é o Melhor?',
     slug: 'chatgpt-vs-claude-comparacao',
     content: `
@@ -102,18 +106,22 @@ O futuro da IA é promissor, mas requer cuidado e responsabilidade.
       - Foco em segurança e ética
       - Melhor para análises complexas
     `,
+    excerpt: 'Comparativo completo entre ChatGPT e Claude, os dois principais assistentes de IA do mercado.',
     meta_description: 'Comparativo completo entre as duas principais ferramentas de geração de imagens por IA do mercado.',
+    meta_title: 'ChatGPT vs Claude: Qual é o Melhor?',
     featured_image: '/images/chatgpt-vs-claude.jpg',
     category_id: '1',
     category: mockCategories[0],
+    author_id: '1',
     published: true,
     reading_time: 6,
     created_at: '2024-01-10T14:30:00Z',
     updated_at: '2024-01-10T14:30:00Z',
-    views: 890
+    views: 890,
+    tags: ['ChatGPT', 'Claude', 'Comparação', 'IA']
   },
   {
-    id: 3,
+    id: '3',
     title: '5 Hacks de IA para Aumentar sua Produtividade',
     slug: '5-hacks-ia-produtividade',
     content: `
@@ -128,18 +136,22 @@ O futuro da IA é promissor, mas requer cuidado e responsabilidade.
       ## 3. Análise de Dados
       Transforme dados complexos em insights acionáveis.
     `,
+    excerpt: 'Aprenda 5 hacks poderosos de IA para triplicar sua produtividade no trabalho e vida pessoal.',
     meta_description: 'Aprenda 5 hacks poderosos de IA para triplicar sua produtividade no trabalho e vida pessoal.',
+    meta_title: '5 Hacks de IA para Aumentar sua Produtividade',
     featured_image: '/images/ai-productivity-hacks.jpg',
     category_id: '2',
     category: mockCategories[1],
+    author_id: '1',
     published: true,
     reading_time: 5,
     created_at: '2024-01-08T09:15:00Z',
     updated_at: '2024-01-08T09:15:00Z',
-    views: 2100
+    views: 2100,
+    tags: ['Produtividade', 'IA', 'Hacks', 'Automação']
   },
   {
-    id: 4,
+    id: '4',
     title: 'GPT-4 Turbo: Tudo o que Você Precisa Saber',
     slug: 'gpt-4-turbo-novidades',
     content: `
@@ -154,18 +166,22 @@ O futuro da IA é promissor, mas requer cuidado e responsabilidade.
       ## Impacto no Mercado
       Essas melhorias revolucionarão como usamos IA no dia a dia.
     `,
+    excerpt: 'Conheça todas as novidades do GPT-4 Turbo da OpenAI e como isso impacta o mercado de IA.',
     meta_description: 'Conheça todas as novidades do GPT-4 Turbo da OpenAI e como isso impacta o mercado de IA.',
+    meta_title: 'GPT-4 Turbo: Tudo o que Você Precisa Saber',
     featured_image: '/images/gpt-4-turbo.jpg',
     category_id: '1',
     category: mockCategories[0],
+    author_id: '1',
     published: true,
     reading_time: 7,
     created_at: '2024-01-05T16:45:00Z',
     updated_at: '2024-01-05T16:45:00Z',
-    views: 1680
+    views: 1680,
+    tags: ['GPT-4', 'OpenAI', 'Turbo', 'Novidades']
   },
   {
-    id: 5,
+    id: '5',
     title: 'O Futuro da Humanidade com IA: Previsões para 2030',
     slug: 'futuro-humanidade-ia-2030',
     content: `
@@ -183,15 +199,19 @@ O futuro da IA é promissor, mas requer cuidado e responsabilidade.
       - Tratamentos personalizados
       - Descoberta acelerada de medicamentos
     `,
+    excerpt: 'Explore as principais tendências e previsões para o futuro da IA nos próximos anos.',
     meta_description: 'Explore as principais tendências e previsões para o futuro da IA nos próximos anos.',
+    meta_title: 'O Futuro da Humanidade com IA: Previsões para 2030',
     featured_image: '/images/future-humanity-ai.jpg',
     category_id: '3',
     category: mockCategories[2],
+    author_id: '1',
     published: true,
     reading_time: 10,
     created_at: '2024-01-03T11:20:00Z',
     updated_at: '2024-01-03T11:20:00Z',
-    views: 950
+    views: 950,
+    tags: ['Futuro', 'Humanidade', 'IA', '2030', 'Previsões']
   }
 ];
 
@@ -199,6 +219,7 @@ O futuro da IA é promissor, mas requer cuidado e responsabilidade.
 export const getArticlesByCategory = (categorySlug: string) => {
   return mockArticles.filter(article => 
     typeof article.category === 'object' && 
+    'slug' in article.category &&
     article.category.slug === categorySlug && 
     article.published
   );

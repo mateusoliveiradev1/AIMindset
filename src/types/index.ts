@@ -15,22 +15,24 @@ export interface Tag {
 }
 
 export interface Article {
-  id: number;
+  id: string;
   title: string;
-  slug: string;
   content: string;
-  excerpt?: string; // Adicionado campo excerpt
-  meta_description?: string;
-  featured_image?: string;
+  excerpt: string;
+  featured_image: string;
+  slug: string;
   published: boolean;
   category_id: string;
-  category?: Category | string; // Pode ser objeto Category ou string
-  tags?: Tag[] | string[] | string; // Pode ser array de objetos Tag, strings ou string simples
-  reading_time?: number;
-  read_time?: number; // Alias para compatibilidade
+  author_id: string;
   created_at: string;
   updated_at: string;
-  author_id?: string;
+  meta_title?: string;
+  meta_description: string;
+  image_url?: string; // Alias para featured_image
+  category?: Category;
+  tags?: string[] | string | null;
+  reading_time?: number;
+  read_time?: number;
   views?: number;
 }
 

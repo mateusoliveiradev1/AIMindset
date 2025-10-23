@@ -161,9 +161,9 @@ export const Articles: React.FC = () => {
                   {/* Categoria */}
                   <div className="flex items-center justify-between mb-4">
                     <span className="px-3 py-1 bg-neon-purple/20 text-neon-purple rounded-full text-xs font-montserrat font-medium">
-                      {typeof article.category === 'string' 
-                        ? categories.find(cat => cat.slug === article.category)?.name || article.category
-                        : article.category?.name || 'Sem categoria'}
+                      {(typeof article.category === 'object' && article.category?.name) || 
+                       categories.find(cat => cat.id === article.category_id)?.name || 
+                       'Sem categoria'}
                     </span>
                     <div className="flex items-center text-futuristic-gray text-xs">
                       <Clock className="w-3 h-3 mr-1" />
@@ -189,7 +189,7 @@ export const Articles: React.FC = () => {
                         if (!tags) return null;
                         
                         // Se for string, dividir por vírgula
-                        if (typeof tags === 'string') {
+                        if (typeof tags === 'string' && tags.length > 0) {
                           const tagArray = tags.split(',').map(t => t.trim()).filter(t => t);
                           return tagArray.slice(0, 3).map((tag, index) => (
                             <span
@@ -202,22 +202,29 @@ export const Articles: React.FC = () => {
                         }
                         
                         // Se for array
-                        return tags.slice(0, 3).map((tag, index) => (
-                          <span
-                            key={tag?.id || index}
-                            className="px-2 py-1 bg-lime-green/10 text-lime-green rounded text-xs font-roboto"
-                          >
-                            {typeof tag === 'string' ? tag : tag?.name || 'Tag'}
-                          </span>
-                        ));
+                        if (Array.isArray(tags) && tags.length > 0) {
+                          return tags.slice(0, 3).map((tag, index) => (
+                            <span
+                              key={index}
+                              className="px-2 py-1 bg-lime-green/10 text-lime-green rounded text-xs font-roboto"
+                            >
+                              {String(tag)}
+                            </span>
+                          ));
+                        }
+                        
+                        return null;
                       })()}
                       {(() => {
                         const tags = article.tags;
                         if (!tags) return null;
                         
-                        const tagCount = typeof tags === 'string' 
-                          ? tags.split(',').map(t => t.trim()).filter(t => t).length
-                          : tags.length;
+                        let tagCount = 0;
+                        if (typeof tags === 'string' && tags.length > 0) {
+                          tagCount = tags.split(',').map(t => t.trim()).filter(t => t).length;
+                        } else if (Array.isArray(tags)) {
+                          tagCount = tags.length;
+                        }
                           
                         return tagCount > 3 && (
                           <span className="px-2 py-1 bg-futuristic-gray/10 text-futuristic-gray rounded text-xs font-roboto">

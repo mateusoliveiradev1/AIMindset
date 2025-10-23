@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useArticles } from './useArticles';
 
 export interface ArticleMetrics {
-  article_id: number;
+  article_id: string;
   article_title: string;
   positive_feedback: number;
   negative_feedback: number;

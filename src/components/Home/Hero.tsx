@@ -21,10 +21,14 @@ const Hero: React.FC = () => {
   const estimatedReaders = totalArticles > 0 ? Math.max(100, totalArticles * 50) : 100;
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section 
+      className="relative min-h-screen flex items-center justify-center overflow-hidden"
+      role="banner"
+      aria-label="Seção principal do AIMindset"
+    >
       {/* Background Effects */}
-      <div className="absolute inset-0 bg-dark-gradient"></div>
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 bg-dark-gradient" aria-hidden="true"></div>
+      <div className="absolute inset-0" aria-hidden="true">
         <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-neon-purple/10 rounded-full blur-3xl animate-float"></div>
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-lime-green/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }}></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-neon-purple/20 rounded-full blur-2xl animate-pulse-neon"></div>
@@ -39,7 +43,10 @@ const Hero: React.FC = () => {
             </span>
           </div>
           
-          <h1 className="font-orbitron font-bold text-4xl md:text-6xl lg:text-7xl mb-6 leading-tight">
+          <h1 
+            className="font-orbitron font-bold text-4xl md:text-6xl lg:text-7xl mb-6 leading-tight"
+            id="main-heading"
+          >
             <span className="gradient-text">AIMindset</span>
             <br />
             <span className="text-white">O Futuro é</span>
@@ -71,9 +78,18 @@ const Hero: React.FC = () => {
         </div>
         
         {/* Stats - Agora usando dados reais do Supabase */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-          <div className="text-center">
-            <div className="text-3xl md:text-4xl font-orbitron font-bold text-lime-green mb-2">
+        <div 
+          className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto"
+          role="region"
+          aria-labelledby="stats-heading"
+        >
+          <div className="sr-only" id="stats-heading">Estatísticas do AIMindset</div>
+          
+          <div className="text-center" role="group" aria-label="Estatística de artigos">
+            <div 
+              className="text-3xl md:text-4xl font-orbitron font-bold text-lime-green mb-2"
+              aria-label={`${loading ? 'Carregando' : totalArticles} ${totalArticles === 1 ? 'artigo publicado' : 'artigos publicados'}`}
+            >
               {loading ? '...' : totalArticles}
             </div>
             <div className="text-futuristic-gray font-montserrat">
@@ -81,8 +97,11 @@ const Hero: React.FC = () => {
             </div>
           </div>
           
-          <div className="text-center">
-            <div className="text-3xl md:text-4xl font-orbitron font-bold text-neon-purple mb-2">
+          <div className="text-center" role="group" aria-label="Estatística de categorias">
+            <div 
+              className="text-3xl md:text-4xl font-orbitron font-bold text-neon-purple mb-2"
+              aria-label={`${loading ? 'Carregando' : totalCategories} ${totalCategories === 1 ? 'categoria' : 'categorias'}`}
+            >
               {loading ? '...' : totalCategories}
             </div>
             <div className="text-futuristic-gray font-montserrat">
@@ -90,8 +109,11 @@ const Hero: React.FC = () => {
             </div>
           </div>
           
-          <div className="text-center">
-            <div className="text-3xl md:text-4xl font-orbitron font-bold text-lime-green mb-2">
+          <div className="text-center" role="group" aria-label="Estatística de leitores">
+            <div 
+              className="text-3xl md:text-4xl font-orbitron font-bold text-lime-green mb-2"
+              aria-label={`${loading ? 'Carregando' : `Mais de ${estimatedReaders}`} leitores`}
+            >
               {loading ? '...' : `${estimatedReaders}+`}
             </div>
             <div className="text-futuristic-gray font-montserrat">

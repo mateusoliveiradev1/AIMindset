@@ -1,0 +1,23 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://aimindset.com.br/sitemap.xml
+
+# Disallow admin pages
+Disallow: /admin/
+Disallow: /api/admin/
+
+# Allow important pages
+Allow: /
+Allow: /artigos/
+Allow: /categorias/
+Allow: /sobre
+Allow: /contato
+Allow: /newsletter
+
+# Crawl delay (optional)
+Crawl-delay: 1
+
+# Host
+Host: https://aimindset.com.br

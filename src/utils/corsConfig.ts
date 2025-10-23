@@ -270,9 +270,4 @@ export class CSPManager {
 export function initializeSecurityConfig(): void {
   HTTPSEnforcement.initialize();
   CSPManager.initialize();
-  
-  console.log('🔒 Security configuration initialized');
-  console.log('🔒 HTTPS Enforcement:', HTTPSEnforcement.isSecureConnection() ? 'Active' : 'Inactive');
-  console.log('🔒 CORS Configuration: Active');
-  console.log('🔒 CSP Violation Reporting: Active');
 }

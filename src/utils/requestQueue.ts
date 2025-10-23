@@ -33,13 +33,13 @@ class RequestQueue {
     // Verificar cache primeiro
     const cached = this.getFromCache(key, ttl);
     if (cached) {
-      console.log(`📦 Cache hit para ${key}`);
+      // console.log(`📦 Cache hit para ${key}`);
       return cached;
     }
 
     // Cancelar requisição duplicada se existir
     if (this.activeRequests.has(key)) {
-      console.log(`🚫 Cancelando requisição duplicada: ${key}`);
+      // console.log(`🚫 Cancelando requisição duplicada: ${key}`);
       return this.waitForActiveRequest(key);
     }
 

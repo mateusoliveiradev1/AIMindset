@@ -5,6 +5,8 @@ import Button from '../components/UI/Button';
 import { useContacts } from '../hooks/useContacts';
 import { useContactStats } from '../hooks/useContactStats';
 import { sanitizeName, sanitizeEmail, sanitizeMessage, validators, RateLimiter } from '../utils/security';
+import SEOManager from '../components/SEO/SEOManager';
+import { useSEO } from '../hooks/useSEO';
 
 export const Contact: React.FC = () => {
   const { submitContact, loading } = useContacts();
@@ -16,6 +18,15 @@ export const Contact: React.FC = () => {
     messagesThisWeek,
     loading: statsLoading 
   } = useContactStats();
+
+  // SEO para página de contato
+  const { getMetadata } = useSEO({ 
+    pageType: 'contact',
+    fallbackTitle: 'Contato - AIMindset',
+    fallbackDescription: 'Entre em contato conosco. Tire suas dúvidas, envie sugestões ou colabore com o AIMindset.'
+  });
+
+  const metadata = getMetadata();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -188,411 +199,355 @@ export const Contact: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-primary-dark text-white">
-      {/* Hero Section */}
-      <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-neon-purple/10 to-lime-green/10"></div>
-        <div className="relative max-w-4xl mx-auto text-center">
-          <div className="flex justify-center mb-6">
-            <div className="p-4 bg-neon-gradient rounded-full animate-pulse">
-              <MessageCircle className="w-12 h-12 text-white" />
+    <>
+      <SEOManager metadata={metadata} />
+      <div className="min-h-screen bg-primary-dark text-white">
+        {/* Hero Section */}
+        <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-neon-purple/20 via-transparent to-lime-green/20"></div>
+          <div className="relative max-w-7xl mx-auto">
+            <div className="text-center mb-16">
+              <h1 className="text-4xl md:text-6xl font-orbitron font-bold mb-6">
+                Entre em <span className="gradient-text">Contato</span>
+              </h1>
+              <p className="text-xl md:text-2xl text-futuristic-gray font-roboto max-w-3xl mx-auto">
+                Conecte-se conosco e faça parte da revolução da Inteligência Artificial
+              </p>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16">
+              {stats.map((stat, index) => (
+                <Card key={index} className="p-6 text-center glass-effect">
+                  <stat.icon className="w-8 h-8 text-lime-green mx-auto mb-3" aria-hidden="true" />
+                  <div className="text-2xl md:text-3xl font-orbitron font-bold text-white mb-1">
+                    {stat.number}
+                  </div>
+                  <div className="text-sm text-futuristic-gray font-roboto">
+                    {stat.label}
+                  </div>
+                </Card>
+              ))}
             </div>
           </div>
-          <h1 className="text-4xl md:text-6xl font-orbitron font-bold mb-6 gradient-text">
-            Entre em Contato
-          </h1>
-          <p className="text-xl md:text-2xl text-futuristic-gray font-roboto leading-relaxed mb-8">
-            Conecte-se conosco e faça parte da revolução da inteligência artificial
-          </p>
-          <div className="flex justify-center space-x-4">
-            <div className="px-4 py-2 bg-lime-green/20 rounded-full text-lime-green text-sm font-medium">
-              💬 {statsLoading ? 'Carregando...' : `${messagesThisWeek} mensagens esta semana`}
+        </section>
+
+        {/* Contact Methods */}
+        <section className="py-16 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-orbitron font-bold text-center mb-12 text-white">
+              Como Podemos <span className="gradient-text">Ajudar</span>
+            </h2>
+            <div className="grid md:grid-cols-3 gap-8" role="list" aria-label="Métodos de contato disponíveis">
+              {contactMethods.map((method, index) => (
+                <Card key={index} className="p-6 text-center hover-lift glass-effect group">
+                  <div className="flex justify-center mb-4">
+                    <div className={`p-3 bg-${method.bgColor} rounded-full group-hover:scale-110 transition-transform`}>
+                      <method.icon className={`w-8 h-8 text-${method.color}`} aria-hidden="true" />
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-orbitron font-semibold mb-2 text-white">
+                    {method.title}
+                  </h3>
+                  <p className="text-futuristic-gray font-roboto mb-3 text-sm">
+                    {method.description}
+                  </p>
+                  <p className={`text-${method.color} font-medium`}>
+                    {method.contact}
+                  </p>
+                </Card>
+              ))}
             </div>
-            <div className="px-4 py-2 bg-neon-purple/20 rounded-full text-neon-purple text-sm font-medium">
-              🚀 {systemStatus === 'online' ? 'Sistema Online' : 'Sistema em Manutenção'}
-            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Stats Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {stats.map((stat, index) => (
-              <Card key={index} className="p-6 text-center hover-lift glass-effect">
-                <div className="flex justify-center mb-3">
-                  <stat.icon className="w-8 h-8 text-lime-green" />
-                </div>
-                <div className="text-2xl md:text-3xl font-orbitron font-bold text-white mb-1">
-                  {stat.number}
-                </div>
-                <div className="text-sm text-futuristic-gray font-roboto">
-                  {stat.label}
-                </div>
-              </Card>
-            ))}
-          </div>
-          
-          {/* Estatísticas adicionais */}
-          <div className="mt-8 text-center">
-            <p className="text-futuristic-gray font-roboto">
-              {statsLoading ? 'Carregando estatísticas...' : (
-                <>
-                  <span className="text-lime-green font-semibold">{totalContacts}</span> mensagens recebidas até agora • 
-                  <span className="text-neon-purple font-semibold ml-2">{messagesThisWeek}</span> esta semana
-                </>
-              )}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Contact Methods */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-orbitron font-bold text-center mb-12 text-white">
-            Como Podemos <span className="gradient-text">Ajudar</span>
-          </h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {contactMethods.map((method, index) => (
-              <Card key={index} className="p-6 text-center hover-lift glass-effect group">
-                <div className="flex justify-center mb-4">
-                  <div className={`p-3 bg-${method.bgColor} rounded-full group-hover:scale-110 transition-transform`}>
-                    <method.icon className={`w-8 h-8 text-${method.color}`} />
-                  </div>
-                </div>
-                <h3 className="text-xl font-orbitron font-semibold mb-2 text-white">
-                  {method.title}
-                </h3>
-                <p className="text-futuristic-gray font-roboto mb-3 text-sm">
-                  {method.description}
-                </p>
-                <p className={`text-${method.color} font-medium`}>
-                  {method.contact}
-                </p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Contact Information & Support Topics */}
-          <div className="space-y-8">
-            {/* Contact Info */}
-            <Card className="glass-effect">
-              <div className="p-8">
-                <h2 className="text-2xl font-orbitron font-bold text-white mb-6 flex items-center">
-                  <MapPin className="w-6 h-6 mr-2 text-lime-green" />
-                  Informações de Contato
-                </h2>
-                
-                <div className="space-y-6">
-                  <div className="flex items-center space-x-4 group">
-                    <div className="w-12 h-12 bg-neon-purple/20 rounded-lg flex items-center justify-center group-hover:bg-neon-purple/30 transition-colors">
-                      <Mail className="w-6 h-6 text-neon-purple" />
-                    </div>
-                    <div>
-                      <h3 className="font-orbitron font-semibold text-white">Email Principal</h3>
-                      <p className="text-futuristic-gray font-roboto">contato@aimindset.com</p>
-                      <p className="text-xs text-lime-green">Resposta garantida em 24h</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-4 group">
-                    <div className="w-12 h-12 bg-lime-green/20 rounded-lg flex items-center justify-center group-hover:bg-lime-green/30 transition-colors">
-                      <Phone className="w-6 h-6 text-lime-green" />
-                    </div>
-                    <div>
-                      <h3 className="font-orbitron font-semibold text-white">Telefone & WhatsApp</h3>
-                      <p className="text-futuristic-gray font-roboto">+55 (11) 9999-9999</p>
-                      <p className="text-xs text-neon-purple">Atendimento personalizado</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-4 group">
-                    <div className="w-12 h-12 bg-electric-blue/20 rounded-lg flex items-center justify-center group-hover:bg-electric-blue/30 transition-colors">
-                      <Globe className="w-6 h-6 text-electric-blue" />
-                    </div>
-                    <div>
-                      <h3 className="font-orbitron font-semibold text-white">Localização</h3>
-                      <p className="text-futuristic-gray font-roboto">São Paulo, Brasil</p>
-                      <p className="text-xs text-lime-green">Atendimento global online</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Support Topics */}
-            <Card className="glass-effect">
-              <div className="p-8">
-                <h2 className="text-2xl font-orbitron font-bold text-white mb-6 flex items-center">
-                  <Headphones className="w-6 h-6 mr-2 text-neon-purple" />
-                  Como Podemos Ajudar
-                </h2>
-                
-                <div className="space-y-4">
-                  {supportTopics.map((topic, index) => (
-                    <div key={index} className="flex items-start space-x-4 p-4 rounded-lg hover:bg-primary-dark/50 transition-colors group">
-                      <div className="flex-shrink-0 w-10 h-10 bg-lime-green/20 rounded-lg flex items-center justify-center group-hover:bg-lime-green/30 transition-colors">
-                        <topic.icon className="w-5 h-5 text-lime-green" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* Contact Information & Support Topics */}
+            <div className="space-y-8">
+              {/* Contact Info */}
+              <Card className="glass-effect">
+                <div className="p-8">
+                  <h2 className="text-2xl font-orbitron font-bold text-white mb-6 flex items-center">
+                    <MapPin className="w-6 h-6 mr-2 text-lime-green" aria-hidden="true" />
+                    Informações de Contato
+                  </h2>
+                  
+                  <div className="space-y-6" role="list" aria-label="Informações de contato detalhadas">
+                    <div className="flex items-center space-x-4 group">
+                      <div className="w-12 h-12 bg-neon-purple/20 rounded-lg flex items-center justify-center group-hover:bg-neon-purple/30 transition-colors">
+                        <Mail className="w-6 h-6 text-neon-purple" aria-hidden="true" />
                       </div>
                       <div>
-                        <h3 className="font-orbitron font-semibold text-white mb-1">
-                          {topic.title}
-                        </h3>
-                        <p className="text-futuristic-gray font-roboto text-sm leading-relaxed">
-                          {topic.description}
-                        </p>
+                        <h3 className="font-orbitron font-semibold text-white">Email Principal</h3>
+                        <p className="text-futuristic-gray font-roboto">contato@aimindset.com</p>
+                        <p className="text-xs text-lime-green">Resposta garantida em 24h</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </Card>
 
-            {/* Business Hours */}
-            <Card className="glass-effect">
-              <div className="p-8">
-                <h2 className="text-2xl font-orbitron font-bold text-white mb-6 flex items-center">
-                  <Clock className="w-6 h-6 mr-2 text-electric-blue" />
-                  Horário de Atendimento
-                </h2>
-                
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center p-3 rounded-lg bg-lime-green/10">
-                    <span className="font-orbitron text-white">Segunda - Sexta</span>
-                    <span className="text-lime-green font-roboto font-medium">9:00 - 18:00</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 rounded-lg bg-neon-purple/10">
-                    <span className="font-orbitron text-white">Sábado</span>
-                    <span className="text-neon-purple font-roboto font-medium">9:00 - 14:00</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 rounded-lg bg-futuristic-gray/10">
-                    <span className="font-orbitron text-white">Domingo</span>
-                    <span className="text-futuristic-gray font-roboto">Fechado</span>
-                  </div>
-                  <div className="mt-4 p-3 bg-electric-blue/10 rounded-lg">
-                    <p className="text-electric-blue text-sm font-roboto text-center">
-                      💡 Email e chat online disponíveis 24/7 com resposta automática
-                    </p>
+                    <div className="flex items-center space-x-4 group">
+                      <div className="w-12 h-12 bg-lime-green/20 rounded-lg flex items-center justify-center group-hover:bg-lime-green/30 transition-colors">
+                        <Phone className="w-6 h-6 text-lime-green" aria-hidden="true" />
+                      </div>
+                      <div>
+                        <h3 className="font-orbitron font-semibold text-white">Telefone & WhatsApp</h3>
+                        <p className="text-futuristic-gray font-roboto">+55 (11) 9999-9999</p>
+                        <p className="text-xs text-neon-purple">Atendimento personalizado</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-4 group">
+                      <div className="w-12 h-12 bg-electric-blue/20 rounded-lg flex items-center justify-center group-hover:bg-electric-blue/30 transition-colors">
+                        <Globe className="w-6 h-6 text-electric-blue" aria-hidden="true" />
+                      </div>
+                      <div>
+                        <h3 className="font-orbitron font-semibold text-white">Localização</h3>
+                        <p className="text-futuristic-gray font-roboto">São Paulo, Brasil</p>
+                        <p className="text-xs text-lime-green">Atendimento global online</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Card>
-          </div>
+              </Card>
 
-          {/* Contact Form */}
-          <div>
-            <Card className="glass-effect">
-              <div className="p-8">
-                <h2 className="text-2xl font-orbitron font-bold text-white mb-6 flex items-center">
-                  <Send className="w-6 h-6 mr-2 text-lime-green" />
-                  Envie sua Mensagem
-                </h2>
-
-                {isSubmitted && (
-                  <div className="mb-6 p-4 bg-lime-green/20 border border-lime-green/30 rounded-lg flex items-center space-x-3 animate-pulse">
-                    <CheckCircle className="w-5 h-5 text-lime-green" />
-                    <div>
-                      <p className="text-lime-green font-roboto font-medium">
-                        Mensagem enviada com sucesso!
-                      </p>
-                      <p className="text-lime-green/80 text-sm">
-                        Entraremos em contato em até 24 horas.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {rateLimitError && (
-                  <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg flex items-center space-x-3">
-                    <Shield className="w-5 h-5 text-red-500" />
-                    <p className="text-red-500 font-roboto font-medium">
-                      {rateLimitError}
-                    </p>
-                  </div>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label htmlFor="name" className="block text-sm font-orbitron font-medium text-white mb-2">
-                        Nome Completo *
-                      </label>
-                      <input
-                        type="text"
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        required
-                        maxLength={100}
-                        className={`w-full px-4 py-3 bg-primary-dark border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all ${
-                          errors.name 
-                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
-                            : 'border-neon-purple/30 focus:border-lime-green focus:ring-lime-green/20'
-                        }`}
-                        placeholder="Seu nome completo"
-                      />
-                      {errors.name && (
-                        <p className="mt-1 text-sm text-red-500">{errors.name}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label htmlFor="email" className="block text-sm font-orbitron font-medium text-white mb-2">
-                        Email *
-                      </label>
-                      <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        required
-                        maxLength={255}
-                        className={`w-full px-4 py-3 bg-primary-dark border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all ${
-                          errors.email 
-                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
-                            : 'border-neon-purple/30 focus:border-lime-green focus:ring-lime-green/20'
-                        }`}
-                        placeholder="seu@email.com"
-                      />
-                      {errors.email && (
-                        <p className="mt-1 text-sm text-red-500">{errors.email}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label htmlFor="subject" className="block text-sm font-orbitron font-medium text-white mb-2">
-                      Assunto *
-                    </label>
-                    <select
-                      id="subject"
-                      name="subject"
-                      value={formData.subject}
-                      onChange={handleChange}
-                      required
-                      className={`w-full px-4 py-3 bg-primary-dark border rounded-lg text-white focus:outline-none focus:ring-2 transition-all ${
-                        errors.subject 
-                          ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
-                          : 'border-neon-purple/30 focus:border-lime-green focus:ring-lime-green/20'
-                      }`}
-                    >
-                      <option value="">Selecione um assunto</option>
-                      <option value="Parceria">Parceria & Colaboração</option>
-                      <option value="Suporte">Suporte Técnico</option>
-                      <option value="Feedback">Feedback & Sugestões</option>
-                      <option value="Privacidade">Questões de Privacidade</option>
-                      <option value="Geral">Assunto Geral</option>
-                    </select>
-                    {errors.subject && (
-                      <p className="mt-1 text-sm text-red-500">{errors.subject}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label htmlFor="message" className="block text-sm font-orbitron font-medium text-white mb-2">
-                      Mensagem *
-                    </label>
-                    <textarea
-                      id="message"
-                      name="message"
-                      value={formData.message}
-                      onChange={handleChange}
-                      required
-                      rows={6}
-                      maxLength={5000}
-                      className={`w-full px-4 py-3 bg-primary-dark border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all resize-none ${
-                        errors.message 
-                          ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
-                          : 'border-neon-purple/30 focus:border-lime-green focus:ring-lime-green/20'
-                      }`}
-                      placeholder="Descreva sua mensagem detalhadamente..."
-                    />
-                    <div className="flex justify-between items-center mt-1">
-                      {errors.message ? (
-                        <p className="text-sm text-red-500">{errors.message}</p>
-                      ) : (
-                        <p className="text-sm text-futuristic-gray">
-                          Mínimo 10 caracteres
-                        </p>
-                      )}
-                      <p className="text-sm text-futuristic-gray">
-                        {formData.message.length}/5000
-                      </p>
-                    </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-neon-gradient hover:bg-neon-gradient-hover text-white font-orbitron font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                  >
-                    {loading ? (
-                      <div className="flex items-center justify-center space-x-2">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Enviando...</span>
+              {/* Support Topics */}
+              <Card className="glass-effect">
+                <div className="p-8">
+                  <h2 className="text-2xl font-orbitron font-bold text-white mb-6 flex items-center">
+                    <Headphones className="w-6 h-6 mr-2 text-neon-purple" aria-hidden="true" />
+                    Como Podemos Ajudar
+                  </h2>
+                  
+                  <div className="space-y-4" role="list" aria-label="Tópicos de suporte disponíveis">
+                    {supportTopics.map((topic, index) => (
+                      <div key={index} className="flex items-start space-x-4 p-4 rounded-lg hover:bg-primary-dark/50 transition-colors group">
+                        <div className="flex-shrink-0 w-10 h-10 bg-lime-green/20 rounded-lg flex items-center justify-center group-hover:bg-lime-green/30 transition-colors">
+                          <topic.icon className="w-5 h-5 text-lime-green" aria-hidden="true" />
+                        </div>
+                        <div>
+                          <h3 className="font-orbitron font-semibold text-white mb-1">
+                            {topic.title}
+                          </h3>
+                          <p className="text-futuristic-gray font-roboto text-sm leading-relaxed">
+                            {topic.description}
+                          </p>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="flex items-center justify-center space-x-2">
-                        <Send className="w-5 h-5" />
-                        <span>Enviar Mensagem</span>
-                      </div>
-                    )}
-                  </Button>
-                </form>
-              </div>
-            </Card>
-          </div>
-        </div>
-      </div>
-
-      {/* FAQ Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <Card className="p-8 md:p-12 glass-effect">
-            <h2 className="text-3xl md:text-4xl font-orbitron font-bold text-center mb-8 text-white">
-              Perguntas <span className="gradient-text">Frequentes</span>
-            </h2>
-            <div className="space-y-6">
-              <div className="border-b border-neon-purple/20 pb-6">
-                <h3 className="text-lg font-orbitron font-semibold text-lime-green mb-2">
-                  Quanto tempo leva para receber uma resposta?
-                </h3>
-                <p className="text-futuristic-gray font-roboto">
-                  Garantimos resposta em até 24 horas para emails. Para questões urgentes, 
-                  utilize nosso chat online ou WhatsApp durante o horário comercial.
-                </p>
-              </div>
-              <div className="border-b border-neon-purple/20 pb-6">
-                <h3 className="text-lg font-orbitron font-semibold text-lime-green mb-2">
-                  Vocês oferecem consultoria personalizada?
-                </h3>
-                <p className="text-futuristic-gray font-roboto">
-                  Sim! Oferecemos consultoria especializada em IA para empresas e profissionais. 
-                  Entre em contato para discutir suas necessidades específicas.
-                </p>
-              </div>
-              <div>
-                <h3 className="text-lg font-orbitron font-semibold text-lime-green mb-2">
-                  Como posso colaborar com o AIMindset?
-                </h3>
-                <p className="text-futuristic-gray font-roboto">
-                  Estamos sempre abertos a parcerias! Seja para guest posts, colaborações técnicas 
-                  ou projetos conjuntos, envie sua proposta detalhada através do formulário.
-                </p>
-              </div>
+                    ))}
+                  </div>
+                </div>
+              </Card>
             </div>
-          </Card>
+
+            {/* Contact Form */}
+            <div>
+              <Card className="glass-effect">
+                <div className="p-8">
+                  <h2 className="text-2xl font-orbitron font-bold text-white mb-6 flex items-center">
+                    <Send className="w-6 h-6 mr-2 text-lime-green" aria-hidden="true" />
+                    Envie sua Mensagem
+                  </h2>
+
+                  {isSubmitted && (
+                    <div className="mb-6 p-4 bg-lime-green/20 border border-lime-green/30 rounded-lg flex items-center space-x-3">
+                      <CheckCircle className="w-5 h-5 text-lime-green" />
+                      <div>
+                        <p className="text-lime-green font-roboto font-medium">
+                          Mensagem enviada com sucesso!
+                        </p>
+                        <p className="text-lime-green/80 text-sm">
+                          Entraremos em contato em até 24 horas.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {rateLimitError && (
+                    <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg flex items-center space-x-3">
+                      <Shield className="w-5 h-5 text-red-500" />
+                      <p className="text-red-500 font-roboto font-medium">
+                        {rateLimitError}
+                      </p>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label htmlFor="name" className="block text-sm font-orbitron font-medium text-white mb-2">
+                          Nome Completo *
+                        </label>
+                        <input
+                          type="text"
+                          id="name"
+                          name="name"
+                          value={formData.name}
+                          onChange={handleChange}
+                          required
+                          maxLength={100}
+                          className={`w-full px-4 py-3 bg-primary-dark border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all ${
+                            errors.name 
+                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
+                              : 'border-neon-purple/30 focus:border-lime-green focus:ring-lime-green/20'
+                          }`}
+                          placeholder="Seu nome completo"
+                        />
+                        {errors.name && (
+                          <p className="mt-1 text-sm text-red-500">{errors.name}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label htmlFor="email" className="block text-sm font-orbitron font-medium text-white mb-2">
+                          Email *
+                        </label>
+                        <input
+                          type="email"
+                          id="email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleChange}
+                          required
+                          maxLength={255}
+                          className={`w-full px-4 py-3 bg-primary-dark border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all ${
+                            errors.email 
+                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
+                              : 'border-neon-purple/30 focus:border-lime-green focus:ring-lime-green/20'
+                          }`}
+                          placeholder="seu@email.com"
+                        />
+                        {errors.email && (
+                          <p className="mt-1 text-sm text-red-500">{errors.email}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="subject" className="block text-sm font-orbitron font-medium text-white mb-2">
+                        Assunto *
+                      </label>
+                      <select
+                        id="subject"
+                        name="subject"
+                        value={formData.subject}
+                        onChange={handleChange}
+                        required
+                        className={`w-full px-4 py-3 bg-primary-dark border rounded-lg text-white focus:outline-none focus:ring-2 transition-all ${
+                          errors.subject 
+                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
+                            : 'border-neon-purple/30 focus:border-lime-green focus:ring-lime-green/20'
+                        }`}
+                      >
+                        <option value="">Selecione um assunto</option>
+                        <option value="Parceria">Parceria & Colaboração</option>
+                        <option value="Suporte">Suporte Técnico</option>
+                        <option value="Feedback">Feedback & Sugestões</option>
+                        <option value="Privacidade">Questões de Privacidade</option>
+                        <option value="Geral">Assunto Geral</option>
+                      </select>
+                      {errors.subject && (
+                        <p className="mt-1 text-sm text-red-500">{errors.subject}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label htmlFor="message" className="block text-sm font-orbitron font-medium text-white mb-2">
+                        Mensagem *
+                      </label>
+                      <textarea
+                        id="message"
+                        name="message"
+                        value={formData.message}
+                        onChange={handleChange}
+                        required
+                        rows={6}
+                        maxLength={5000}
+                        className={`w-full px-4 py-3 bg-primary-dark border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all resize-none ${
+                          errors.message 
+                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
+                            : 'border-neon-purple/30 focus:border-lime-green focus:ring-lime-green/20'
+                        }`}
+                        placeholder="Descreva sua mensagem detalhadamente..."
+                      />
+                      <div className="flex justify-between items-center mt-1">
+                        {errors.message ? (
+                          <p className="text-sm text-red-500">{errors.message}</p>
+                        ) : (
+                          <p className="text-sm text-futuristic-gray">
+                            Mínimo 10 caracteres
+                          </p>
+                        )}
+                        <p className="text-sm text-futuristic-gray">
+                          {formData.message.length}/5000
+                        </p>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full bg-neon-gradient hover:bg-neon-gradient-hover text-white font-orbitron font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    >
+                      {loading ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Enviando...</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center space-x-2">
+                          <Send className="w-5 h-5" />
+                          <span>Enviar Mensagem</span>
+                        </div>
+                      )}
+                    </Button>
+                  </form>
+                </div>
+              </Card>
+            </div>
+          </div>
         </div>
-      </section>
-    </div>
+
+        {/* FAQ Section */}
+        <section className="py-16 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto">
+            <Card className="p-8 md:p-12 glass-effect">
+              <h2 className="text-3xl md:text-4xl font-orbitron font-bold text-center mb-8 text-white">
+                Perguntas <span className="gradient-text">Frequentes</span>
+              </h2>
+              <div className="space-y-6">
+                <div className="border-b border-neon-purple/20 pb-6">
+                  <h3 className="text-lg font-orbitron font-semibold text-lime-green mb-2">
+                    Quanto tempo leva para receber uma resposta?
+                  </h3>
+                  <p className="text-futuristic-gray font-roboto">
+                    Garantimos resposta em até 24 horas para emails. Para questões urgentes, 
+                    utilize nosso chat online ou WhatsApp durante o horário comercial.
+                  </p>
+                </div>
+                <div className="border-b border-neon-purple/20 pb-6">
+                  <h3 className="text-lg font-orbitron font-semibold text-lime-green mb-2">
+                    Vocês oferecem consultoria personalizada?
+                  </h3>
+                  <p className="text-futuristic-gray font-roboto">
+                    Sim! Oferecemos consultoria especializada em IA para empresas e profissionais. 
+                    Entre em contato para discutir suas necessidades específicas.
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-lg font-orbitron font-semibold text-lime-green mb-2">
+                    Como posso colaborar com o AIMindset?
+                  </h3>
+                  <p className="text-futuristic-gray font-roboto">
+                    Estamos sempre abertos a parcerias! Seja para guest posts, colaborações técnicas 
+                    ou projetos conjuntos, envie sua proposta detalhada através do formulário.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </section>
+      </div>
+    </>
   );
 };
 

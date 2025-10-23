@@ -6,25 +6,31 @@ import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
 import { useArticles } from '../hooks/useArticles';
 import { useReadingTime } from '../hooks/useReadingTime';
+import { useSEO } from '../hooks/useSEO';
 import { mockCategories } from '../data/mockData';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
-import { ReadingProgressBar } from '../components/ReadingProgressBar';
-import { TableOfContents } from '../components/TableOfContents';
-import { ArticleNavigation } from '../components/ArticleNavigation';
-import { FeedbackSection } from '../components/Feedback/FeedbackSection';
-import { CommentSection } from '../components/Comments/CommentSection';
+import SEOManager from '../components/SEO/SEOManager';
+import PreloadManager from '../components/Performance/PreloadManager';
+import LazyImage from '../components/Performance/LazyImage';
+import { 
+  ReadingProgressBarLazy,
+  TableOfContentsLazy,
+  ArticleNavigationLazy,
+  FeedbackSectionLazy,
+  CommentSectionLazy
+} from '../components/LazyComponents';
 
 const Article: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const { articles, categories, loading, error, refreshArticles } = useArticles();
   
   // Debug logs para investigar o problema
-  console.log('🔍 Article.tsx - Renderizando página do artigo');
-  console.log('🔍 Article.tsx - Slug recebido:', slug);
-  console.log('🔍 Article.tsx - Artigos carregados:', articles?.length || 0);
-  console.log('🔍 Article.tsx - Loading:', loading);
-  console.log('🔍 Article.tsx - Error:', error);
+  // console.log('🔍 Article.tsx - Renderizando página do artigo');
+  // console.log('🔍 Article.tsx - Slug recebido:', slug);
+  // console.log('🔍 Article.tsx - Artigos carregados:', articles?.length || 0);
+  // console.log('🔍 Article.tsx - Loading:', loading);
+  // console.log('🔍 Article.tsx - Error:', error);
   
   useEffect(() => {
     refreshArticles();
@@ -33,7 +39,17 @@ const Article: React.FC = () => {
   const article = (articles || []).find(art => art?.slug === slug && art.published);
   const articleCategory = categories.find(cat => cat.id === article?.category_id);
   
-  console.log('🔍 Article.tsx - Artigo encontrado:', article ? `ID: ${article.id}, Título: ${article.title}` : 'NENHUM ARTIGO ENCONTRADO');
+  // SEO Hook
+  const seoHook = useSEO({
+    pageType: 'article',
+    pageSlug: slug,
+    fallbackTitle: article?.title || 'Artigo - AIMindset',
+    fallbackDescription: article?.excerpt || 'Descubra insights sobre IA e tecnologia no AIMindset.'
+  });
+
+  const metadata = seoHook.getMetadata();
+  
+  // console.log('🔍 Article.tsx - Artigo encontrado:', article ? `ID: ${article.id}, Título: ${article.title}` : 'NENHUM ARTIGO ENCONTRADO');
   
   // Calculate dynamic reading time
   const dynamicReadingTime = useReadingTime(article?.content || '');
@@ -48,7 +64,7 @@ const Article: React.FC = () => {
     .slice(0, 3);
 
   if (loading) {
-    console.log('🔍 Article.tsx - Mostrando loading...');
+    // console.log('🔍 Article.tsx - Mostrando loading...');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -60,7 +76,7 @@ const Article: React.FC = () => {
   }
 
   if (error) {
-    console.log('🔍 Article.tsx - Mostrando erro:', error);
+    // console.log('🔍 Article.tsx - Mostrando erro:', error);
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -72,7 +88,7 @@ const Article: React.FC = () => {
   }
 
   if (!article) {
-    console.log('🔍 Article.tsx - Artigo não encontrado, mostrando 404');
+    // console.log('🔍 Article.tsx - Artigo não encontrado, mostrando 404');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -90,7 +106,7 @@ const Article: React.FC = () => {
     );
   }
 
-  console.log('🔍 Article.tsx - Renderizando artigo completo, incluindo CommentSection');
+  // console.log('🔍 Article.tsx - Renderizando artigo completo, incluindo CommentSection');
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Data não disponível';
@@ -136,8 +152,11 @@ const Article: React.FC = () => {
 
   return (
     <>
+      {/* SEO Manager */}
+      <SEOManager metadata={metadata} />
+      
       {/* Reading Progress Bar */}
-      <ReadingProgressBar target="article-content" />
+      <ReadingProgressBarLazy target="article-content" />
       
       <div className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -145,7 +164,7 @@ const Article: React.FC = () => {
             {/* Sidebar - Table of Contents */}
             <aside className="lg:w-64 order-2 lg:order-1">
               <div className="lg:sticky lg:top-20 lg:h-screen lg:overflow-y-auto lg:pb-20">
-                <TableOfContents />
+                <TableOfContentsLazy />
               </div>
             </aside>
 
@@ -197,6 +216,7 @@ const Article: React.FC = () => {
                       onClick={() => handleShare('copy')}
                       className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 hover-lift"
                       title="Copiar link"
+                      aria-label="Copiar link do artigo"
                     >
                       <Share2 className="h-4 w-4" />
                     </button>
@@ -204,6 +224,7 @@ const Article: React.FC = () => {
                       onClick={() => handleShare('twitter')}
                       className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 hover-lift"
                       title="Compartilhar no Twitter"
+                      aria-label="Compartilhar artigo no Twitter"
                     >
                       <Twitter className="h-4 w-4" />
                     </button>
@@ -211,6 +232,7 @@ const Article: React.FC = () => {
                       onClick={() => handleShare('linkedin')}
                       className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 hover-lift"
                       title="Compartilhar no LinkedIn"
+                      aria-label="Compartilhar artigo no LinkedIn"
                     >
                       <Linkedin className="h-4 w-4" />
                     </button>
@@ -218,6 +240,7 @@ const Article: React.FC = () => {
                       onClick={() => handleShare('facebook')}
                       className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 hover-lift"
                       title="Compartilhar no Facebook"
+                      aria-label="Compartilhar artigo no Facebook"
                     >
                       <Facebook className="h-4 w-4" />
                     </button>
@@ -225,14 +248,13 @@ const Article: React.FC = () => {
                 </div>
     
                 <div className="relative w-full max-h-[400px] sm:max-h-[500px] lg:max-h-[600px] bg-darker-surface rounded-lg overflow-hidden flex items-center justify-center">
-                  <img
+                  <LazyImage
                     src={article.image_url || '/placeholder-image.jpg'}
                     alt={article.title}
                     className="w-full h-auto max-h-full object-contain transition-transform duration-300 hover:scale-105"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = 'https://via.placeholder.com/1200x600/1a1a2e/ffffff?text=Imagem+Indisponível';
-                    }}
+                    width={1200}
+                    height={600}
+                    loading="eager"
                   />
                 </div>
               </header>
@@ -281,7 +303,7 @@ const Article: React.FC = () => {
                     if (!tags) return null;
                     
                     // Se for string, dividir por vírgula
-                    if (typeof tags === 'string') {
+                    if (typeof tags === 'string' && tags.length > 0) {
                       return tags.split(',').map((tag, index) => (
                         <span
                           key={index}
@@ -293,14 +315,18 @@ const Article: React.FC = () => {
                     }
                     
                     // Se for array
-                    return tags.map((tag, index) => (
-                      <span
-                        key={tag?.id || index}
-                        className="px-3 py-1 text-sm font-roboto bg-lime-green/10 text-lime-green rounded-md hover:bg-lime-green/20 transition-colors duration-300"
-                      >
-                        {typeof tag === 'string' ? tag : tag?.name || 'Tag'}
-                      </span>
-                    ));
+                    if (Array.isArray(tags) && tags.length > 0) {
+                      return tags.map((tag, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1 text-sm font-roboto bg-lime-green/10 text-lime-green rounded-md hover:bg-lime-green/20 transition-colors duration-300"
+                        >
+                          {typeof tag === 'string' ? tag : String(tag)}
+                        </span>
+                      ));
+                    }
+                    
+                    return null;
                   })()}
                 </div>
               </div>
@@ -317,12 +343,12 @@ const Article: React.FC = () => {
                       <Card key={relatedArticle.id} variant="glass" className="overflow-hidden group">
                         <Link to={`/artigo/${relatedArticle.slug}`} className="block relative w-full aspect-[3/2] overflow-hidden cursor-pointer">
                           <img
-                            src={relatedArticle.image_url || 'https://via.placeholder.com/400x200/1a1a2e/ffffff?text=Sem+Imagem'}
+                            src={relatedArticle.image_url || '/placeholder-image.svg'}
                             alt={relatedArticle.title}
                             className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement;
-                              target.src = 'https://via.placeholder.com/400x200/1a1a2e/ffffff?text=Sem+Imagem';
+                              target.src = '/placeholder-image.svg';
                             }}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-primary-dark/80 to-transparent"></div>
@@ -335,7 +361,7 @@ const Article: React.FC = () => {
     
                           <div className="flex items-center text-xs text-futuristic-gray mb-3">
                             <Clock className="h-3 w-3 mr-1" />
-                            {relatedArticle.read_time || '5'} min
+                            {relatedArticle.reading_time || '5'} min
                           </div>
     
                           <Link
@@ -353,17 +379,17 @@ const Article: React.FC = () => {
               )}
     
                {/* Article Navigation */}
-               <ArticleNavigation 
+               <ArticleNavigationLazy 
                  currentSlug={article.slug} 
                  categoryId={article.category_id}
                  className="mb-12"
                />
      
                {/* Feedback Section */}
-               <FeedbackSection articleId={article.id} />
+               <FeedbackSectionLazy articleId={article.id} />
 
                {/* Comments Section */}
-               <CommentSection articleId={article.id} />
+               <CommentSectionLazy articleId={article.id} />
              </div>
            </div>
          </div>

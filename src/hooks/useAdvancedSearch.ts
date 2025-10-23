@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useArticles } from './useArticles';
-import { Article } from '../types';
+import { Article } from '../lib/supabase';
 
 interface SearchFilters {
   query: string;
@@ -71,11 +71,11 @@ export const useAdvancedSearch = () => {
       // Tags (peso 2)
       if (article.tags) {
         let tagsArray: string[] = [];
-        if (typeof article.tags === 'string') {
+        if (typeof article.tags === 'string' && article.tags.length > 0) {
           tagsArray = article.tags.split(',').map(tag => tag.trim());
-        } else if (Array.isArray(article.tags)) {
+        } else if (Array.isArray(article.tags) && article.tags.length > 0) {
           tagsArray = article.tags.map(tag => 
-            typeof tag === 'string' ? tag : tag.name || tag.slug || ''
+            typeof tag === 'string' ? tag : String(tag)
           );
         }
         
@@ -126,9 +126,7 @@ export const useAdvancedSearch = () => {
 
       // Filtro por categoria
       if (filters.category !== 'all') {
-        const articleCategory = typeof article.category === 'string' 
-          ? article.category 
-          : article.category?.slug;
+        const articleCategory = (typeof article.category === 'object' && article.category?.name) || article.category_id;
         if (articleCategory !== filters.category) return false;
       }
 
@@ -137,11 +135,11 @@ export const useAdvancedSearch = () => {
         if (!article.tags) return false;
         
         let tagsArray: string[] = [];
-        if (typeof article.tags === 'string') {
+        if (typeof article.tags === 'string' && article.tags.length > 0) {
           tagsArray = article.tags.split(',').map(tag => tag.trim());
-        } else if (Array.isArray(article.tags)) {
+        } else if (Array.isArray(article.tags) && article.tags.length > 0) {
           tagsArray = article.tags.map(tag => 
-            typeof tag === 'string' ? tag : tag.name || tag.slug || ''
+            typeof tag === 'string' ? tag : String(tag)
           );
         }
         
@@ -208,14 +206,14 @@ export const useAdvancedSearch = () => {
     articles.forEach(article => {
       if (article.tags) {
         // Verificar se tags é um array
-        if (Array.isArray(article.tags)) {
+        if (Array.isArray(article.tags) && article.tags.length > 0) {
           article.tags.forEach(tag => {
-            const tagName = typeof tag === 'string' ? tag : tag.name;
+            const tagName = typeof tag === 'string' ? tag : String(tag);
             if (tagName.toLowerCase().includes(query)) {
               suggestions.add(tagName);
             }
           });
-        } else if (typeof article.tags === 'string') {
+        } else if (typeof article.tags === 'string' && article.tags.length > 0) {
           // Se tags é uma string, dividir por vírgula
           const tagArray = article.tags.split(',').map(t => t.trim());
           tagArray.forEach(tag => {

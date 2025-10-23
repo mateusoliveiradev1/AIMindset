@@ -2386,11 +2386,15 @@ export const Admin: React.FC = () => {
                       .trim(),
                     excerpt: articleData.excerpt,
                     content: articleData.content,
-                    image_url: articleData.featuredImage || '',
+                    featured_image: articleData.featuredImage || '',
                     category_id: selectedCategory?.id || categories[0]?.id || '',
                     author_id: user?.id || '',
                     published: articleData.published,
-                    tags: articleData.tags || ''
+                    tags: typeof articleData.tags === 'string' ? articleData.tags.split(',').map(t => t.trim()) : articleData.tags || [],
+                    meta_description: articleData.excerpt || '',
+                    meta_title: articleData.title || null,
+                    reading_time: Math.ceil(articleData.content.split(' ').length / 200),
+                    views: 0
                   };
 
                   console.log('📝 Dados do artigo para salvar:', supabaseArticle);

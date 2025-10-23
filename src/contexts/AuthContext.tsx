@@ -39,7 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const savedUser = localStorage.getItem(USER_STORAGE_KEY);
       const userData = savedUser ? JSON.parse(savedUser) : null;
-      console.log('🔍 INICIALIZAÇÃO - USER DO LOCALSTORAGE:', userData?.email || 'NENHUM');
+      // console.log('🔍 INICIALIZAÇÃO - USER DO LOCALSTORAGE:', userData?.email || 'NENHUM');
       return userData;
     } catch {
       console.log('❌ ERRO AO RECUPERAR USER DO LOCALSTORAGE');
@@ -52,7 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const savedSupabaseUser = localStorage.getItem(SUPABASE_USER_STORAGE_KEY);
       const supabaseUserData = savedSupabaseUser ? JSON.parse(savedSupabaseUser) : null;
-      console.log('🔍 INICIALIZAÇÃO - SUPABASE USER DO LOCALSTORAGE:', supabaseUserData?.email || 'NENHUM');
+      // console.log('🔍 INICIALIZAÇÃO - SUPABASE USER DO LOCALSTORAGE:', supabaseUserData?.email || 'NENHUM');
       return supabaseUserData;
     } catch {
       console.log('❌ ERRO AO RECUPERAR SUPABASE USER DO LOCALSTORAGE');
@@ -65,8 +65,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const savedUser = localStorage.getItem(USER_STORAGE_KEY);
     const savedSupabaseUser = localStorage.getItem(SUPABASE_USER_STORAGE_KEY);
     const hasStoredData = savedUser && savedSupabaseUser;
-    console.log('🔍 INICIALIZAÇÃO - TEM DADOS SALVOS:', !!hasStoredData);
-    console.log('🔍 INICIALIZAÇÃO - ISLOADING SERÁ:', !hasStoredData);
+    // console.log('🔍 INICIALIZAÇÃO - TEM DADOS SALVOS:', !!hasStoredData);
+    // console.log('🔍 INICIALIZAÇÃO - ISLOADING SERÁ:', !hasStoredData);
     return !hasStoredData; // Se tem dados salvos, não precisa loading
   });
   
@@ -74,7 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // 🔥 FUNÇÃO PARA SALVAR USER NO LOCALSTORAGE
   const saveUserToStorage = (userData: User | null) => {
-    console.log('💾 SALVANDO USER NO LOCALSTORAGE:', userData?.email);
+    // console.log('💾 SALVANDO USER NO LOCALSTORAGE:', userData?.email);
     if (userData) {
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
     } else {
@@ -85,7 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // 🔥 FUNÇÃO PARA SALVAR SUPABASE USER NO LOCALSTORAGE
   const saveSupabaseUserToStorage = (supabaseUserData: SupabaseUser | null) => {
-    console.log('💾 SALVANDO SUPABASE USER NO LOCALSTORAGE:', supabaseUserData?.email);
+    // console.log('💾 SALVANDO SUPABASE USER NO LOCALSTORAGE:', supabaseUserData?.email);
     if (supabaseUserData) {
       localStorage.setItem(SUPABASE_USER_STORAGE_KEY, JSON.stringify(supabaseUserData));
     } else {
@@ -97,26 +97,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Função simplificada para verificar admin
   const checkAdminUser = async (email: string): Promise<User | null> => {
     try {
-      console.log('🔍 BUSCANDO ADMIN NO DB:', email);
+      // console.log('🔍 BUSCANDO ADMIN NO DB:', email);
       const { data: adminUser, error } = await supabase
         .from('admin_users')
         .select('*')
         .eq('email', email)
         .single();
 
-      console.log('📊 RESULTADO QUERY:', { adminUser: !!adminUser, error: error?.message });
+      // console.log('📊 RESULTADO QUERY:', { adminUser: !!adminUser, error: error?.message });
 
       if (error) {
-        console.log('❌ ERRO NA QUERY:', error.message);
+        // console.log('❌ ERRO NA QUERY:', error.message);
         return null;
       }
 
       if (!adminUser) {
-        console.log('❌ ADMIN NÃO ENCONTRADO');
+        // console.log('❌ ADMIN NÃO ENCONTRADO');
         return null;
       }
 
-      console.log('✅ ADMIN ENCONTRADO:', adminUser.email, adminUser.role);
+      // console.log('✅ ADMIN ENCONTRADO:', adminUser.email, adminUser.role);
       return {
         id: adminUser.id,
         email: adminUser.email,
@@ -135,14 +135,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const initAuth = async () => {
       try {
-        console.log('🚀 INICIALIZANDO AUTH...');
+        // console.log('🚀 INICIALIZANDO AUTH...');
         
         // Verificar se já temos dados salvos
         const savedUser = localStorage.getItem(USER_STORAGE_KEY);
         const savedSupabaseUser = localStorage.getItem(SUPABASE_USER_STORAGE_KEY);
         
         if (savedUser && savedSupabaseUser) {
-          console.log('💾 DADOS ENCONTRADOS NO LOCALSTORAGE - RESTAURANDO...');
+          // console.log('💾 DADOS ENCONTRADOS NO LOCALSTORAGE - RESTAURANDO...');
           const userData = JSON.parse(savedUser);
           const supabaseUserData = JSON.parse(savedSupabaseUser);
           
@@ -150,7 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(userData);
             setSupabaseUser(supabaseUserData);
             setIsLoading(false);
-            console.log('✅ ESTADO RESTAURADO DO LOCALSTORAGE:', userData.email);
+            // console.log('✅ ESTADO RESTAURADO DO LOCALSTORAGE:', userData.email);
             return;
           }
         }
@@ -161,7 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!isMounted) return;
 
         if (session?.user) {
-          console.log('📡 SESSÃO SUPABASE ENCONTRADA:', session.user.email);
+          // console.log('📡 SESSÃO SUPABASE ENCONTRADA:', session.user.email);
           saveSupabaseUserToStorage(session.user);
           
           // Verificar se é admin
@@ -189,7 +189,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       async (event, session) => {
         if (!isMounted) return;
         
-        console.log('🔄 AUTH STATE CHANGE:', event, session?.user?.email);
+        // console.log('🔄 AUTH STATE CHANGE:', event, session?.user?.email);
         
         if (session?.user) {
           saveSupabaseUserToStorage(session.user);
@@ -202,7 +202,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
         } else {
-          console.log('🚪 LOGOUT DETECTADO - LIMPANDO STORAGE...');
+          // console.log('🚪 LOGOUT DETECTADO - LIMPANDO STORAGE...');
           saveSupabaseUserToStorage(null);
           saveUserToStorage(null);
         }
@@ -221,7 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      console.log('🚀 INICIANDO LOGIN:', email);
+      // console.log('🚀 INICIANDO LOGIN:', email);
       setIsLoading(true);
       
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -229,7 +229,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password
       });
 
-      console.log('📡 RESPOSTA SUPABASE:', { data: !!data.user, error: !!error });
+      // console.log('📡 RESPOSTA SUPABASE:', { data: !!data.user, error: !!error });
 
       if (error) {
         console.error('❌ ERRO SUPABASE:', error.message);
@@ -238,22 +238,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data.user) {
-        console.log('✅ USUÁRIO LOGADO:', data.user.email);
+        // console.log('✅ USUÁRIO LOGADO:', data.user.email);
         saveSupabaseUserToStorage(data.user);
         
         // Verificar admin imediatamente
-        console.log('🔍 VERIFICANDO ADMIN...');
+        // console.log('🔍 VERIFICANDO ADMIN...');
         const adminUser = await checkAdminUser(data.user.email!);
-        console.log('👤 RESULTADO ADMIN:', !!adminUser);
+        // console.log('👤 RESULTADO ADMIN:', !!adminUser);
         
         if (adminUser) {
-          console.log('✅ ADMIN CONFIRMADO, SALVANDO NO STORAGE...');
+          // console.log('✅ ADMIN CONFIRMADO, SALVANDO NO STORAGE...');
           saveUserToStorage(adminUser);
           setIsLoading(false);
-          console.log('🎯 LOGIN COMPLETO - ESTADO PERSISTIDO - RETORNANDO TRUE');
+          // console.log('🎯 LOGIN COMPLETO - ESTADO PERSISTIDO - RETORNANDO TRUE');
           return true;
         } else {
-          console.log('❌ NÃO É ADMIN - FAZENDO LOGOUT...');
+          // console.log('❌ NÃO É ADMIN - FAZENDO LOGOUT...');
           await supabase.auth.signOut();
           saveSupabaseUserToStorage(null);
           saveUserToStorage(null);
@@ -262,7 +262,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      console.log('❌ NENHUM USUÁRIO RETORNADO');
+      // console.log('❌ NENHUM USUÁRIO RETORNADO');
       setIsLoading(false);
       return false;
     } catch (error) {
@@ -274,11 +274,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      console.log('🚪 FAZENDO LOGOUT...');
+      // console.log('🚪 FAZENDO LOGOUT...');
       await supabase.auth.signOut();
       saveUserToStorage(null);
       saveSupabaseUserToStorage(null);
-      console.log('✅ LOGOUT COMPLETO - STORAGE LIMPO');
+      // console.log('✅ LOGOUT COMPLETO - STORAGE LIMPO');
     } catch (error) {
       console.error('💥 ERRO NO LOGOUT:', error);
     }
@@ -286,16 +286,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const isAuthenticated = !!user && !!supabaseUser;
   
-  // 🔥 LOG DE DEBUG PARA MONITORAR ESTADO
-  useEffect(() => {
-    console.log('🔍 ESTADO AUTH ATUAL:', {
-      user: !!user,
-      supabaseUser: !!supabaseUser,
-      isAuthenticated,
-      userEmail: user?.email,
-      isLoading
-    });
-  }, [user, supabaseUser, isAuthenticated, isLoading]);
+  // 🔥 LOG DE DEBUG PARA MONITORAR ESTADO - DESABILITADO
+  // useEffect(() => {
+  //   console.log('🔍 ESTADO AUTH ATUAL:', {
+  //     user: !!user,
+  //     supabaseUser: !!supabaseUser,
+  //     isAuthenticated,
+  //     userEmail: user?.email,
+  //     isLoading
+  //   });
+  // }, [user, supabaseUser, isAuthenticated, isLoading]);
 
   const value = {
     user,

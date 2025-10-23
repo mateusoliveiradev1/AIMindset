@@ -3,8 +3,10 @@ import { useParams } from 'react-router-dom';
 import { Calendar, Clock, Tag, ArrowRight, Grid } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useArticles } from '../hooks/useArticles';
+import { useSEO } from '../hooks/useSEO';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
+import SEOManager from '../components/SEO/SEOManager';
 
 const Category: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -19,6 +21,21 @@ const Category: React.FC = () => {
     article.published && 
     article.category_id === category?.id
   );
+
+  // SEO específico para a categoria
+  const seoHook = useSEO({
+    pageType: 'category',
+    pageSlug: slug,
+    fallbackTitle: category ? `${category.name} | AIMindset` : 'Categoria | AIMindset',
+    fallbackDescription: category 
+      ? `Explore artigos sobre ${category.name}. Descubra conteúdos relacionados a ${category.name} no AIMindset.`
+      : 'Explore artigos por categoria no AIMindset.',
+    fallbackKeywords: category 
+      ? [category.name, 'categoria', 'artigos', 'inteligência artificial', 'IA', 'produtividade']
+      : ['categoria', 'artigos', 'inteligência artificial']
+  });
+
+  const metadata = seoHook.getMetadata();
 
   if (loading) {
     return (
@@ -53,8 +70,10 @@ const Category: React.FC = () => {
   };
 
   return (
-    <div className="py-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <>
+      <SEOManager metadata={metadata} />
+      <div className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Category Header */}
         <div className="text-center mb-16">
           <div className="inline-flex items-center space-x-2 bg-neon-purple/10 backdrop-blur-sm border border-neon-purple/20 rounded-full px-4 py-2 mb-6">
@@ -92,9 +111,9 @@ const Category: React.FC = () => {
             {categoryArticles.map((article) => (
               <Card key={article.id} variant="glass" className="overflow-hidden group">
                 <Link to={`/artigo/${article.slug}`} className="block relative w-full aspect-[4/3] sm:aspect-[16/9] overflow-hidden cursor-pointer">
-                  {article.image_url ? (
+                  {(article.image_url || article.featured_image) ? (
                     <img
-                      src={article.image_url}
+                      src={article.image_url || article.featured_image}
                       alt={article.title}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
@@ -135,7 +154,7 @@ const Category: React.FC = () => {
                       if (!tags) return null;
                       
                       // Se for string, dividir por vírgula
-                      if (typeof tags === 'string') {
+                      if (typeof tags === 'string' && tags.length > 0) {
                         return tags.split(',').map(t => t.trim()).filter(t => t).slice(0, 3).map((tag, index) => (
                           <span
                             key={index}
@@ -146,15 +165,19 @@ const Category: React.FC = () => {
                         ));
                       }
                       
-                      // Se for array
-                      return tags.slice(0, 3).map((tag, index) => (
-                        <span
-                          key={tag?.id || index}
-                          className="px-2 py-1 text-xs font-roboto bg-lime-green/10 text-lime-green rounded-md"
-                        >
-                          {typeof tag === 'string' ? tag : tag?.name || 'Tag'}
-                        </span>
-                      ));
+                      // Se for array de strings
+                      if (Array.isArray(tags) && tags.length > 0) {
+                        return tags.slice(0, 3).map((tag, index) => (
+                          <span
+                            key={index}
+                            className="px-2 py-1 text-xs font-roboto bg-lime-green/10 text-lime-green rounded-md"
+                          >
+                            {typeof tag === 'string' ? tag : String(tag)}
+                          </span>
+                        ));
+                      }
+                      
+                      return null;
                     })()}
                   </div>
 
@@ -184,8 +207,9 @@ const Category: React.FC = () => {
             </div>
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

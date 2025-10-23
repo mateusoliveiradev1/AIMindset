@@ -31,7 +31,7 @@ export const useComments = (articleId: string) => {
 
   // Se comentários estão desabilitados, retornar estado vazio
   if (COMMENTS_DISABLED) {
-    console.log('🚫 [INFO] Sistema de comentários desabilitado - articleId:', articleId);
+    // console.log('🚫 [INFO] Sistema de comentários desabilitado - articleId:', articleId);
     return {
       comments: [],
       loading: false,
@@ -39,23 +39,23 @@ export const useComments = (articleId: string) => {
       hasMore: false,
       error: null,
       loadMore: () => {
-        console.log('🚫 [INFO] loadMore desabilitado');
+        // console.log('🚫 [INFO] loadMore desabilitado');
       },
       submitComment: async () => {
-        console.log('🚫 [INFO] submitComment desabilitado');
+        // console.log('🚫 [INFO] submitComment desabilitado');
         toast.info('Sistema de comentários temporariamente desabilitado');
         return false;
       },
       refreshComments: () => {
-        console.log('🚫 [INFO] refreshComments desabilitado');
+        // console.log('🚫 [INFO] refreshComments desabilitado');
       },
       loadMoreComments: () => {
-        console.log('🚫 [INFO] loadMoreComments desabilitado');
+        // console.log('🚫 [INFO] loadMoreComments desabilitado');
       }
     };
   }
 
-  console.log('✅ [INFO] Sistema de comentários ativo - articleId:', articleId);
+  // console.log('✅ [INFO] Sistema de comentários ativo - articleId:', articleId);
 
   // Carregar comentários
   const loadComments = useCallback(async (pageNum: number = 0, append: boolean = false) => {
@@ -76,11 +76,10 @@ export const useComments = (articleId: string) => {
         setLoading(true);
       }
 
-      console.log(`💬 [DEBUG] Carregando comentários - página ${pageNum}, append: ${append}`);
-
+      // console.log(`💬 [DEBUG] Carregando comentários - página ${pageNum}, append: ${append}`);
       // Verificar se a requisição foi cancelada antes de fazer a query
       if (currentController.signal.aborted) {
-        console.log('💬 [DEBUG] Requisição cancelada antes da query');
+        // console.log('💬 [DEBUG] Requisição cancelada antes da query');
         return;
       }
 
@@ -94,7 +93,7 @@ export const useComments = (articleId: string) => {
 
       // Verificar se a requisição foi cancelada após a query
       if (currentController.signal.aborted) {
-        console.log('💬 [DEBUG] Requisição cancelada após a query');
+        // console.log('💬 [DEBUG] Requisição cancelada após a query');
         return;
       }
 
@@ -103,7 +102,7 @@ export const useComments = (articleId: string) => {
       }
 
       const newComments = data || [];
-      console.log(`💬 [DEBUG] Comentários carregados: ${newComments.length}, total: ${count}`);
+      // console.log(`💬 [DEBUG] Comentários carregados: ${newComments.length}, total: ${count}`);
 
       if (append) {
         setComments(prev => [...prev, ...newComments]);
@@ -123,7 +122,7 @@ export const useComments = (articleId: string) => {
         setError(`Erro ao carregar comentários: ${err.message}`);
         toast.error('Erro ao carregar comentários');
       } else {
-        console.log('💬 [DEBUG] Requisição cancelada (AbortError) - normal');
+        // console.log('💬 [DEBUG] Requisição cancelada (AbortError) - normal');
       }
     } finally {
       // Só atualizar loading se a requisição não foi cancelada
@@ -154,7 +153,7 @@ export const useComments = (articleId: string) => {
       setSubmitting(true);
       setError(null);
 
-      console.log('💬 [DEBUG] Submetendo comentário:', formData);
+      // console.log('💬 [DEBUG] Submetendo comentário:', formData);
 
       const { error: insertError } = await supabase
         .from('comments')
@@ -168,7 +167,7 @@ export const useComments = (articleId: string) => {
         throw insertError;
       }
 
-      console.log('✅ [DEBUG] Comentário submetido com sucesso');
+      // console.log('✅ [DEBUG] Comentário submetido com sucesso');
       toast.success('Comentário enviado com sucesso!');
       
       // Recarregar comentários

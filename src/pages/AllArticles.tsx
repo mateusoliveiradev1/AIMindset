@@ -188,7 +188,7 @@ const AllArticles: React.FC = () => {
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
-                          target.src = 'https://via.placeholder.com/400x200/1a1a2e/ffffff?text=Imagem+Indisponível';
+                          target.src = '/placeholder-image.svg';
                         }}
                       />
                     </Link>

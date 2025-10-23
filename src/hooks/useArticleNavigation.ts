@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useArticles } from './useArticles';
 
 export interface NavigationArticle {
-  id: number;
+  id: string;
   title: string;
   slug: string;
   image_url?: string;

@@ -57,7 +57,7 @@ const FeaturedArticles: React.FC = () => {
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        target.src = 'https://via.placeholder.com/600x400/1a1a2e/ffffff?text=Sem+Imagem';
+                        target.src = '/placeholder-image.svg';
                       }}
                     />
                   ) : (
@@ -102,7 +102,7 @@ const FeaturedArticles: React.FC = () => {
                   {article.tags && Array.isArray(article.tags) && article.tags.length > 0 ? (
                     article.tags.slice(0, 3).map((tag, tagIndex) => (
                       <span key={tagIndex} className="px-2 py-1 text-xs font-roboto bg-lime-green/10 text-lime-green rounded-md">
-                        {typeof tag === 'string' ? tag : tag.name}
+                        {typeof tag === 'string' ? tag : (typeof tag === 'object' && tag && 'name' in tag ? (tag as any).name : String(tag))}
                       </span>
                     ))
                   ) : article.tags && typeof article.tags === 'string' && article.tags.trim() ? (
