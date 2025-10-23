@@ -129,6 +129,36 @@
     scrollbar-color: #6A0DAD #0D1B2A;
   }
 
+  /* Custom scrollbar para seções do dashboard */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(13, 27, 42, 0.3);
+    border-radius: 3px;
+    margin: 4px 0;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, rgba(106, 13, 173, 0.6), rgba(50, 205, 50, 0.6));
+    border-radius: 3px;
+    border: 1px solid rgba(13, 27, 42, 0.2);
+    transition: all 0.3s ease;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, rgba(106, 13, 173, 0.8), rgba(50, 205, 50, 0.8));
+    box-shadow: 0 0 8px rgba(106, 13, 173, 0.3);
+  }
+
+  /* Firefox custom scrollbar para seções do dashboard */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(106, 13, 173, 0.6) rgba(13, 27, 42, 0.3);
+  }
+
   /* Import newsletter animations */
   @import './styles/newsletter-animations.css';
 

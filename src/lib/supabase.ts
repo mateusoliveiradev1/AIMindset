@@ -8,31 +8,57 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
+// Singleton instances para evitar múltiplas instâncias GoTrueClient
+let supabaseInstance: any = null;
+let supabaseServiceInstance: any = null;
+
 // Singleton instance for regular client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = (() => {
+  if (!supabaseInstance) {
+    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+        storageKey: 'supabase.auth.token'
+      },
+      global: {
+        headers: {
+          'x-client-info': 'supabase-main'
+        }
+      }
+    });
+  }
+  return supabaseInstance;
+})();
 
 // Singleton instance for service role client com configurações otimizadas para payloads grandes
-export const supabaseServiceClient = createClient(supabaseUrl, supabaseServiceKey, {
-  db: {
-    schema: 'public'
-  },
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  },
-  global: {
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    }
-  },
-  // Configurações para suportar payloads grandes
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    }
+export const supabaseServiceClient = (() => {
+  if (!supabaseServiceInstance) {
+    supabaseServiceInstance = createClient(supabaseUrl, supabaseServiceKey, {
+      db: {
+        schema: 'public'
+      },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        storage: undefined // Evita conflitos de storage
+      },
+      global: {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'x-client-info': 'supabase-service'
+        }
+      },
+      // Configurações para realtime
+      realtime: {
+        params: {
+          eventsPerSecond: 10
+        }
+      }
+    });
   }
-});
+  return supabaseServiceInstance;
+})();
 
 export interface Contact {
   id: string;

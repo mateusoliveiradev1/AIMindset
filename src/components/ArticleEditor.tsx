@@ -139,13 +139,8 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
         fileType: file.type
       });
 
-      // SOLUÇÃO EMERGENCIAL: Upload público sem autenticação
-      // Usar cliente com service role para garantir que funcione
-      const { createClient } = await import('@supabase/supabase-js');
-      const publicClient = createClient(
-        'https://jywjqzhqynhnhetidzsa.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5d2pxemhxeW5obmhldGlkenNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5MjkxMzQsImV4cCI6MjA3NjUwNTEzNH0.oTZ6B-77NGBSqa_lN2YWCtnKwKc0glWnwfuN9xQjDl0'
-      );
+      // Usar cliente singleton existente para evitar múltiplas instâncias GoTrueClient
+      const { supabase: publicClient } = await import('../lib/supabase');
 
       // Upload para o Supabase Storage (bucket público)
       const { data, error } = await publicClient.storage

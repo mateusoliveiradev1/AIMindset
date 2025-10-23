@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, supabaseServiceClient } from '../lib/supabase';
+import { supabaseAdmin } from '../lib/supabase-admin';
 import type { Article, Category } from '../lib/supabase';
 
 export type { Article, Category };
@@ -93,18 +94,45 @@ export const useArticles = (): UseArticlesReturn => {
         throw new Error('Supabase não está configurado');
       }
 
-      const { data, error: fetchError } = await supabase
-        .from('articles')
-        .select(`
-          *,
-          category:categories (
-            id,
-            name,
-            slug,
-            description
-          )
-        `)
-        .order('created_at', { ascending: false });
+      // Tentar primeiro com cliente normal, depois com admin se necessário
+      let data, fetchError;
+      
+      try {
+        const result = await supabase
+          .from('articles')
+          .select(`
+            *,
+            category:categories (
+              id,
+              name,
+              slug,
+              description
+            )
+          `)
+          .order('created_at', { ascending: false });
+        
+        data = result.data;
+        fetchError = result.error;
+      } catch (networkError) {
+        console.warn('⚠️ Erro de rede com cliente normal, tentando com admin...', networkError);
+        
+        // Fallback para cliente admin
+        const adminResult = await supabaseAdmin
+          .from('articles')
+          .select(`
+            *,
+            category:categories (
+              id,
+              name,
+              slug,
+              description
+            )
+          `)
+          .order('created_at', { ascending: false });
+        
+        data = adminResult.data;
+        fetchError = adminResult.error;
+      }
 
       if (fetchError) {
         console.error('❌ Error fetching articles:', fetchError);
@@ -137,10 +165,29 @@ export const useArticles = (): UseArticlesReturn => {
 
   const fetchCategories = useCallback(async () => {
     try {
-      const { data, error: fetchError } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name', { ascending: true });
+      // Tentar primeiro com cliente normal, depois com admin se necessário
+      let data, fetchError;
+      
+      try {
+        const result = await supabase
+          .from('categories')
+          .select('*')
+          .order('name', { ascending: true });
+        
+        data = result.data;
+        fetchError = result.error;
+      } catch (networkError) {
+        console.warn('⚠️ Erro de rede com cliente normal para categories, tentando com admin...', networkError);
+        
+        // Fallback para cliente admin
+        const adminResult = await supabaseAdmin
+          .from('categories')
+          .select('*')
+          .order('name', { ascending: true });
+        
+        data = adminResult.data;
+        fetchError = adminResult.error;
+      }
 
       if (fetchError) {
         console.error('Error fetching categories:', fetchError);

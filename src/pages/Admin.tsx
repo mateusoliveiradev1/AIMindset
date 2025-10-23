@@ -5,7 +5,12 @@ import Button from '../components/UI/Button';
 import { useAuth } from '../contexts/AuthContext';
 import { useArticles } from '../hooks/useArticles';
 import { useNewsletter } from '../hooks/useNewsletter';
+import { useNewsletterSubscribers } from '../hooks/useNewsletterSubscribers';
+import { useNewsletterCampaigns } from '../hooks/useNewsletterCampaigns';
+import { useEmailAutomations } from '../hooks/useEmailAutomations';
 import { useContacts } from '../hooks/useContacts';
+import { useUsers } from '../hooks/useUsers';
+import { useDashboardStats } from '../hooks/useDashboardStats';
 import { toast } from 'sonner';
 import { 
   PlusCircle, 
@@ -30,22 +35,86 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
-  MessageSquare
+  MessageSquare,
+  Zap,
+  Bell,
+  MousePointer,
+  AlertTriangle
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import ArticleEditor from '../components/ArticleEditor';
 import { FeedbackDashboard } from '../components/Admin/FeedbackDashboard';
+import { CampaignEditor } from '../components/Admin/CampaignEditor';
+import { CampaignHistory } from '../components/Admin/CampaignHistory';
+import { EmailAutomations } from '../components/Admin/EmailAutomations';
+import { EmailTemplates } from '../components/Admin/EmailTemplates';
+import { NotificationCenter } from '../components/Admin/NotificationCenter';
+import NewsletterLogs from '../components/Admin/NewsletterLogs';
 
 
 export const Admin: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'articles' | 'categories' | 'editor' | 'newsletter' | 'users' | 'feedback'>('dashboard');
   const { logout, user } = useAuth();
   const { articles, categories, loading: loadingArticles, refreshArticles, createArticle, createCategory, updateCategory, deleteCategory, updateArticle, deleteArticle } = useArticles();
-  const { subscribers, loading: loadingSubscribers, refreshData: refreshNewsletter } = useNewsletter();
+  const { refreshData: refreshNewsletter, ...newsletterHook } = useNewsletter();
   const { contacts, loading: loadingContacts, refreshContacts } = useContacts();
+  
+  // Hooks para newsletter com dados reais
+  const subscribersHook = useNewsletterSubscribers();
+  const campaignsHook = useNewsletterCampaigns();
+  const automationsHook = useEmailAutomations();
+  
+  // Hook para gerenciar usuários reais
+  const { 
+    users, 
+    stats: userStats, 
+    loading: loadingUsers, 
+    error: usersError,
+    updateUserStatus,
+    filterUsers,
+    refreshUsers 
+  } = useUsers();
+
+  // Hook para estatísticas do dashboard com dados reais
+  const { 
+    stats: dashboardStats, 
+    weeklyData, 
+    recentActivities, 
+    loading: loadingDashboard, 
+    error: dashboardError,
+    refreshStats 
+  } = useDashboardStats();
   
   // Estados para edição de artigos
   const [editingArticle, setEditingArticle] = useState<any>(null);
+  
+  // Estado para controlar loading de operações
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Estado para controlar o editor de campanhas
+  const [showCampaignEditor, setShowCampaignEditor] = useState(false);
+  
+  // Estado para controlar as sub-abas da newsletter
+  const [newsletterTab, setNewsletterTab] = useState('overview');
+  const [showNotificationCenter, setShowNotificationCenter] = useState(false);
+  
+  // Estados para filtros da newsletter
+  const [subscriberSearchTerm, setSubscriberSearchTerm] = useState('');
+  const [subscriberStatusFilter, setSubscriberStatusFilter] = useState('all');
+  const [subscriberDateFilter, setSubscriberDateFilter] = useState('all');
+  
+  // Aplicar filtros automaticamente quando mudarem
+  useEffect(() => {
+    const delayedSearch = setTimeout(() => {
+      subscribersHook.fetchSubscribers({
+        search: subscriberSearchTerm,
+        status: subscriberStatusFilter !== 'all' ? subscriberStatusFilter : undefined,
+        dateRange: subscriberDateFilter !== 'all' ? subscriberDateFilter : undefined
+      }, 1);
+    }, 500); // Debounce de 500ms
+
+    return () => clearTimeout(delayedSearch);
+  }, [subscriberSearchTerm, subscriberStatusFilter, subscriberDateFilter]);
   
   // Ref para controlar se já carregou os dados
   const hasLoadedData = useRef<Set<string>>(new Set());
@@ -191,85 +260,21 @@ export const Admin: React.FC = () => {
     publishedArticles: articles.filter(a => a.published).length,
     totalCategories: categories.length,
     totalViews: 0, // Será implementado com analytics reais
-    subscribersCount: subscribers.length,
+    subscribersCount: newsletterHook.stats.totalSubscribers,
     totalUsers: contacts.length, // Usando dados reais de contatos
-    weeklyGrowth: subscribers.length > 0 ? Math.round((subscribers.filter(s => s.status === 'active').length / subscribers.length) * 100) : 0,
+    weeklyGrowth: newsletterHook.stats.weeklyGrowth,
     dailyViews: 0 // Será implementado com analytics reais
   };
 
-  // Dados reais para gráficos baseados nos artigos, inscritos e atividades
-  const weeklyData = React.useMemo(() => {
-    console.log('📊 CALCULANDO DADOS REAIS DOS GRÁFICOS');
-    
-    // Dias da semana
-    const daysOfWeek = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-    
-    // Inicializar dados para cada dia da semana
-    const realData = daysOfWeek.map(day => ({
-      name: day,
-      inscritos: 0,
-      visitas: 0,
-      artigos: 0
-    }));
-    
-    // Calcular artigos publicados por dia da semana
-    if (articles && articles.length > 0) {
-      articles.forEach(article => {
-        if (article.created_at && article.published) {
-          const articleDate = new Date(article.created_at);
-          const dayOfWeek = articleDate.getDay(); // 0 = Domingo, 1 = Segunda, etc.
-          realData[dayOfWeek].artigos += 1;
-          // Estimar visitas baseadas nos artigos (cada artigo gera entre 10-50 visitas)
-          realData[dayOfWeek].visitas += Math.floor(Math.random() * 40) + 10;
-        }
-      });
-    }
-    
-    // Calcular inscritos por dia da semana
-    if (subscribers && subscribers.length > 0) {
-      subscribers.forEach(subscriber => {
-        if (subscriber.created_at) {
-          const subDate = new Date(subscriber.created_at);
-          const dayOfWeek = subDate.getDay();
-          realData[dayOfWeek].inscritos += 1;
-        }
-      });
-    }
-    
-    // Adicionar visitas baseadas em contatos (cada contato representa interesse)
-    if (contacts && contacts.length > 0) {
-      contacts.forEach(contact => {
-        if (contact.created_at) {
-          const contactDate = new Date(contact.created_at);
-          const dayOfWeek = contactDate.getDay();
-          realData[dayOfWeek].visitas += Math.floor(Math.random() * 15) + 5;
-        }
-      });
-    }
-    
-    console.log('📊 DADOS REAIS CALCULADOS:', realData);
-    console.log('📊 Total de artigos processados:', articles?.length || 0);
-    console.log('📊 Total de inscritos processados:', subscribers?.length || 0);
-    console.log('📊 Total de contatos processados:', contacts?.length || 0);
-    
-    return realData;
-  }, [articles, subscribers, contacts]);
 
-  // Estatísticas da newsletter baseadas nos dados reais
-  const newsletterStats = React.useMemo(() => ({
-    totalSubscribers: subscribers.length,
-    activeSubscribers: subscribers.filter(s => s.status === 'active').length,
-    unsubscribed: subscribers.filter(s => s.status === 'unsubscribed').length,
-    openRate: subscribers.length > 0 ? ((subscribers.filter(s => s.status === 'active').length / subscribers.length) * 100).toFixed(1) : '0.0',
-    clickRate: subscribers.length > 0 ? ((subscribers.filter(s => s.status === 'active').length / subscribers.length) * 15).toFixed(1) : '0.0',
-    lastCampaign: articles.length > 0 ? `Newsletter - ${articles[0].title}` : 'Nenhuma campanha',
-    lastSent: articles.length > 0 ? new Date(articles[0].created_at).toLocaleDateString('pt-BR') : 'N/A'
-  }), [subscribers, articles]);
+
+  // Usar as estatísticas do hook da newsletter
+  const newsletterStats = newsletterHook.stats;
 
   // Additional states for new tabs
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [showNewCampaignModal, setShowNewCampaignModal] = useState(false);
+
   const [showNewCategoryModal, setShowNewCategoryModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [categorySearchTerm, setCategorySearchTerm] = useState('');
@@ -278,11 +283,7 @@ export const Admin: React.FC = () => {
   const [categoryToDelete, setCategoryToDelete] = useState(null);
 
   // Estados para os modais
-  const [newCampaignData, setNewCampaignData] = useState({
-    subject: '',
-    content: '',
-    segment: 'all'
-  });
+
 
   const [newCategoryData, setNewCategoryData] = useState({
     name: '',
@@ -307,133 +308,36 @@ export const Admin: React.FC = () => {
     }
   };
 
-  // Atividades recentes baseadas nos dados reais - MELHORADO
-  const recentActivities = React.useMemo(() => {
-    const activities = [];
-    
-    // Adicionar atividades de novos inscritos (últimos 5)
-    const recentSubscribers = subscribers
-      .filter(sub => sub.created_at) // Filtrar apenas com data válida
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 3);
-    
-    recentSubscribers.forEach(sub => {
-      const timeAgo = getTimeAgo(sub.created_at);
-      activities.push({
-        type: 'new_subscriber',
-        message: `Novo inscrito: ${sub.email}`,
-        time: timeAgo,
-        timestamp: new Date(sub.created_at).getTime()
-      });
-    });
 
-    // Adicionar atividades de artigos publicados (últimos 3)
-    const recentArticles = articles
-      .filter(article => article.created_at && article.published) // Apenas artigos publicados com data
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 3);
-    
-    recentArticles.forEach(article => {
-      const timeAgo = getTimeAgo(article.created_at);
-      activities.push({
-        type: 'article_published',
-        message: `Artigo "${article.title.substring(0, 30)}${article.title.length > 30 ? '...' : ''}" foi publicado`,
-        time: timeAgo,
-        timestamp: new Date(article.created_at).getTime()
-      });
-    });
-
-    // Adicionar atividades de novos contatos
-    const recentContacts = contacts
-      .filter(contact => contact.created_at)
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 2);
-    
-    recentContacts.forEach(contact => {
-      const timeAgo = getTimeAgo(contact.created_at);
-      activities.push({
-        type: 'new_contact',
-        message: `Novo contato: ${contact.name}`,
-        time: timeAgo,
-        timestamp: new Date(contact.created_at).getTime()
-      });
-    });
-
-    // Ordenar por timestamp mais recente e limitar a 6 atividades
-    const sortedActivities = activities
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, 6);
-
-    console.log('📋 Atividades recentes calculadas:', sortedActivities);
-    return sortedActivities;
-  }, [subscribers, articles, contacts]);
-
-  // Artigos recentes com melhor filtragem
-  const recentArticles = React.useMemo(() => {
-    const filtered = articles
-      .filter(article => article.created_at) // Apenas com data válida
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, 6);
-    
-    console.log('📰 Artigos recentes calculados:', filtered.length);
-    return filtered;
-  }, [articles]);
 
   // Estados para paginação e filtros
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Estados para usuários (usando dados reais dos contatos)
-  const [users, setUsers] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // Estados para usuários (agora usando dados reais do Supabase Auth)
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [userStatusFilter, setUserStatusFilter] = useState('all');
+  const [currentUserPage, setCurrentUserPage] = useState(1);
+  const usersPerPage = 10;
 
-  // Carregar usuários dos contatos ao montar o componente
-  useEffect(() => {
-    if (contacts.length > 0) {
-      const usersFromContacts = contacts.map((contact, index) => ({
-        id: contact.id || index + 1,
-        name: contact.name,
-        email: contact.email,
-        status: 'active', // Assumir que contatos são usuários ativos
-        createdAt: contact.created_at || new Date().toISOString(),
-        role: 'user'
-      }));
-      setUsers(usersFromContacts);
-    }
-  }, [contacts]);
+  // Filtrar usuários baseado na busca e filtro
+  const filteredUsers = filterUsers(userSearchTerm, userStatusFilter);
+  
+  // Paginação de usuários
+  const totalUserPages = Math.ceil(filteredUsers.length / usersPerPage);
+  const paginatedUsers = filteredUsers.slice(
+    (currentUserPage - 1) * usersPerPage,
+    currentUserPage * usersPerPage
+  );
 
   const handleLogout = () => {
     logout();
   };
 
-  // Função para exportar CSV
+  // Função para exportar CSV (removida - agora usa o hook)
   const exportCSV = () => {
-    setIsLoading(true);
-    
-    // Criar conteúdo CSV com dados reais dos inscritos
-    const csvContent = [
-      ['Email', 'Nome', 'Data de Inscrição', 'Status'],
-      ...subscribers.map(sub => [
-        sub.email, 
-        sub.name || 'N/A', 
-        new Date(sub.created_at).toLocaleDateString('pt-BR'), 
-        sub.status
-      ])
-    ].map(row => row.join(',')).join('\n');
-
-    // Criar e baixar arquivo
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `newsletter_subscribers_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    setIsLoading(false);
-    toast.success('CSV exportado com sucesso!');
+    // Esta função foi movida para o hook useNewsletter
+    newsletterHook.exportCSV();
   };
 
   // Funções para gerenciar usuários
@@ -487,21 +391,7 @@ export const Admin: React.FC = () => {
   };
 
   // Função para gerenciar campanhas
-  const handleCreateCampaign = () => {
-    if (!newCampaignData.subject.trim() || !newCampaignData.content.trim()) {
-      toast.error('Assunto e conteúdo são obrigatórios!');
-      return;
-    }
 
-    // Simular envio da campanha
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setNewCampaignData({ subject: '', content: '', segment: 'all' });
-      setShowNewCampaignModal(false);
-      toast.success('Campanha criada e enviada com sucesso!');
-    }, 2000);
-  };
 
   const handleEditCategory = async (categoryData: { name: string; description: string; slug: string }) => {
     if (!editingCategory) return;
@@ -542,25 +432,20 @@ export const Admin: React.FC = () => {
     setShowDeleteConfirmModal(true);
   };
 
-  // Função para nova campanha
-  const handleNewCampaign = (campaignData: { subject: string; content: string; segment: string }) => {
-    console.log('Nova campanha:', campaignData);
-    setShowNewCampaignModal(false);
-    toast.success('Campanha criada e enviada com sucesso!');
-  };
 
-  // Filtrar usuários
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = (user.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (user.email || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || user.status === filterStatus;
-    return matchesSearch && matchesFilter;
-  });
 
-  // Paginação
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
+  // Filtrar usuários (removido - agora usando o hook useUsers)
+  // const filteredUsers = users.filter(user => {
+  //   const matchesSearch = (user.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //                        (user.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+  //   const matchesFilter = filterStatus === 'all' || user.status === filterStatus;
+  //   return matchesSearch && matchesFilter;
+  // });
+
+  // Paginação (removido - agora usando o hook useUsers)
+  // const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  // const startIndex = (currentPage - 1) * itemsPerPage;
+  // const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-dark via-dark-surface to-darker-surface">
@@ -639,23 +524,62 @@ export const Admin: React.FC = () => {
         {/* Dashboard Tab */}
         {activeTab === 'dashboard' && (
             <div className="space-y-8">
+              {/* Dashboard Header */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-orbitron font-bold text-white">Dashboard</h2>
+                  <p className="text-futuristic-gray text-sm">
+                    Última atualização: {dashboardStats?.lastUpdated ? new Date(dashboardStats.lastUpdated).toLocaleString('pt-BR') : 'Carregando...'}
+                  </p>
+                </div>
+                <Button
+                  onClick={refreshStats}
+                  disabled={loadingDashboard}
+                  className="bg-neon-gradient hover:bg-neon-gradient/80 disabled:opacity-50"
+                >
+                  {loadingDashboard ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  ) : (
+                    <Activity className="w-4 h-4 mr-2" />
+                  )}
+                  Atualizar
+                </Button>
+              </div>
+
               {/* Loading State */}
-              {(loadingArticles || loadingSubscribers || loadingContacts) && (
+              {loadingDashboard && (
                 <div className="flex items-center justify-center py-12">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neon-purple"></div>
-                  <span className="ml-3 text-futuristic-gray">Carregando dados...</span>
+                  <span className="ml-3 text-futuristic-gray">Carregando dados em tempo real...</span>
                 </div>
               )}
 
-              {/* Stats Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
-                <Card className="glass-effect hover-lift">
+              {/* Error State */}
+              {dashboardError && (
+                <Card className="glass-effect border-red-500/20">
+                  <div className="p-6 text-center">
+                    <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+                    <p className="text-red-400 mb-2">Erro ao carregar dados do dashboard</p>
+                    <p className="text-futuristic-gray text-sm">{dashboardError}</p>
+                    <Button onClick={refreshStats} className="mt-4 bg-red-500 hover:bg-red-600">
+                      Tentar Novamente
+                    </Button>
+                  </div>
+                </Card>
+              )}
+
+              {/* Stats Cards - Principais Métricas */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6">
+                <Card className="glass-effect hover-lift transition-all duration-300 hover:scale-105">
                   <div className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-futuristic-gray text-xs sm:text-sm">Total de Artigos</p>
                         <p className="text-xl sm:text-2xl font-orbitron font-bold text-white">
-                          {loadingArticles ? '...' : stats.totalArticles}
+                          {loadingDashboard ? '...' : dashboardStats?.totalArticles?.toLocaleString() || '0'}
+                        </p>
+                        <p className="text-xs text-lime-green">
+                          {dashboardStats?.publishedArticles || 0} publicados
                         </p>
                       </div>
                       <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-neon-purple" />
@@ -663,13 +587,16 @@ export const Admin: React.FC = () => {
                   </div>
                 </Card>
 
-                <Card className="glass-effect hover-lift">
+                <Card className="glass-effect hover-lift transition-all duration-300 hover:scale-105">
                   <div className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-futuristic-gray text-xs sm:text-sm">Usuários</p>
                         <p className="text-xl sm:text-2xl font-orbitron font-bold text-white">
-                          {loadingContacts ? '...' : stats.totalUsers.toLocaleString()}
+                          {loadingDashboard ? '...' : dashboardStats?.totalUsers?.toLocaleString() || '0'}
+                        </p>
+                        <p className="text-xs text-lime-green">
+                          +{dashboardStats?.weeklyGrowth || 0}% esta semana
                         </p>
                       </div>
                       <Users className="w-6 h-6 sm:w-8 sm:h-8 text-neon-purple" />
@@ -677,13 +604,16 @@ export const Admin: React.FC = () => {
                   </div>
                 </Card>
 
-                <Card className="glass-effect hover-lift">
+                <Card className="glass-effect hover-lift transition-all duration-300 hover:scale-105">
                   <div className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-futuristic-gray text-xs sm:text-sm">Inscritos</p>
                         <p className="text-xl sm:text-2xl font-orbitron font-bold text-white">
-                          {loadingSubscribers ? '...' : stats.subscribersCount.toLocaleString()}
+                          {loadingDashboard ? '...' : dashboardStats?.totalSubscribers?.toLocaleString() || '0'}
+                        </p>
+                        <p className="text-xs text-lime-green">
+                          +{dashboardStats?.monthlyGrowth || 0}% este mês
                         </p>
                       </div>
                       <Mail className="w-6 h-6 sm:w-8 sm:h-8 text-lime-green" />
@@ -691,182 +621,456 @@ export const Admin: React.FC = () => {
                   </div>
                 </Card>
 
-                <Card className="glass-effect hover-lift">
+                <Card className="glass-effect hover-lift transition-all duration-300 hover:scale-105">
                   <div className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-futuristic-gray text-xs sm:text-sm">Categorias</p>
+                        <p className="text-futuristic-gray text-xs sm:text-sm">Comentários</p>
                         <p className="text-xl sm:text-2xl font-orbitron font-bold text-white">
-                          {loadingArticles ? '...' : categories.length}
+                          {loadingDashboard ? '...' : dashboardStats?.totalComments?.toLocaleString() || '0'}
+                        </p>
+                        <p className="text-xs text-blue-400">
+                          {dashboardStats?.avgCommentsPerArticle?.toFixed(1) || '0'} por artigo
                         </p>
                       </div>
-                      <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-lime-green" />
+                      <MessageSquare className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400" />
                     </div>
                   </div>
                 </Card>
 
-                <Card className="glass-effect hover-lift">
+                <Card className="glass-effect hover-lift transition-all duration-300 hover:scale-105">
                   <div className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-futuristic-gray text-xs sm:text-sm">Crescimento</p>
+                        <p className="text-futuristic-gray text-xs sm:text-sm">Feedback</p>
                         <p className="text-xl sm:text-2xl font-orbitron font-bold text-white">
-                          {loadingSubscribers ? '...' : `+${Math.round((subscribers.filter(s => s.status === 'active').length / Math.max(subscribers.length, 1)) * 100)}%`}
+                          {loadingDashboard ? '...' : dashboardStats?.totalFeedback?.toLocaleString() || '0'}
+                        </p>
+                        <p className="text-xs text-yellow-400">
+                          {dashboardStats?.positiveFeedbackRate?.toFixed(1) || '0'}% positivo
                         </p>
                       </div>
-                      <Activity className="w-6 h-6 sm:w-8 sm:h-8 text-neon-purple" />
+                      <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-400" />
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="glass-effect hover-lift transition-all duration-300 hover:scale-105">
+                  <div className="p-4 sm:p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-futuristic-gray text-xs sm:text-sm">Campanhas</p>
+                        <p className="text-xl sm:text-2xl font-orbitron font-bold text-white">
+                          {loadingDashboard ? '...' : dashboardStats?.totalCampaigns?.toLocaleString() || '0'}
+                        </p>
+                        <p className="text-xs text-purple-400">
+                          {dashboardStats?.engagementRate?.toFixed(1) || '0'}% engajamento
+                        </p>
+                      </div>
+                      <Send className="w-6 h-6 sm:w-8 sm:h-8 text-purple-400" />
                     </div>
                   </div>
                 </Card>
               </div>
 
-              {/* Gráficos de Crescimento */}
+              {/* Gráficos de Crescimento e Métricas Avançadas */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 <Card className="glass-effect">
                   <div className="p-4 sm:p-6">
-                    <h3 className="text-base sm:text-lg font-orbitron font-bold text-white mb-4">
-                      Crescimento Semanal
-                    </h3>
-                    <div style={{ width: '100%', height: '300px', minWidth: '400px' }}>
-                      <LineChart 
-                        width={500}
-                        height={300}
-                        data={weeklyData} 
-                        margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                        <XAxis dataKey="name" stroke="#9CA3AF" fontSize={12} />
-                        <YAxis stroke="#9CA3AF" fontSize={12} />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: '#1F2937', 
-                            border: '1px solid #6366F1',
-                            borderRadius: '8px',
-                            fontSize: '12px'
-                          }}
-                        />
-                        <Line type="monotone" dataKey="inscritos" stroke="#10B981" strokeWidth={2} name="Inscritos" />
-                        <Line type="monotone" dataKey="visitas" stroke="#6366F1" strokeWidth={2} name="Visitas" />
-                      </LineChart>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-base sm:text-lg font-orbitron font-bold text-white">
+                        Crescimento Semanal
+                      </h3>
+                      {loadingDashboard && (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-neon-purple"></div>
+                      )}
+                    </div>
+                    {/* Container com dimensões FIXAS - SEM ResponsiveContainer para evitar width(-1) height(-1) */}
+                    <div style={{ width: '100%', height: '320px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                      {loadingDashboard ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neon-purple"></div>
+                          <span className="ml-2 text-gray-400">Carregando gráfico...</span>
+                        </div>
+                      ) : (
+                        <LineChart 
+                          width={400}
+                          height={300}
+                          data={weeklyData && weeklyData.length > 0 ? weeklyData : [
+                            { name: 'Seg', subscribers: 0, users: 0, comments: 0 },
+                            { name: 'Ter', subscribers: 0, users: 0, comments: 0 },
+                            { name: 'Qua', subscribers: 0, users: 0, comments: 0 },
+                            { name: 'Qui', subscribers: 0, users: 0, comments: 0 },
+                            { name: 'Sex', subscribers: 0, users: 0, comments: 0 },
+                            { name: 'Sáb', subscribers: 0, users: 0, comments: 0 },
+                            { name: 'Dom', subscribers: 0, users: 0, comments: 0 }
+                          ]} 
+                          margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                        >
+                          <defs>
+                            <linearGradient id="subscribersGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="#10B981" stopOpacity={0.2}/>
+                            </linearGradient>
+                            <linearGradient id="usersGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#6366F1" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="#6366F1" stopOpacity={0.2}/>
+                            </linearGradient>
+                            <linearGradient id="commentsGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="#F59E0B" stopOpacity={0.2}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+                          <XAxis 
+                            dataKey="name" 
+                            stroke="#9CA3AF" 
+                            fontSize={12} 
+                            fontWeight={500}
+                            tick={{ fill: '#D1D5DB' }}
+                          />
+                          <YAxis 
+                            stroke="#9CA3AF" 
+                            fontSize={12} 
+                            fontWeight={500}
+                            tick={{ fill: '#D1D5DB' }}
+                          />
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'rgba(17, 24, 39, 0.95)', 
+                              border: '1px solid #6366F1',
+                              borderRadius: '12px',
+                              fontSize: '13px',
+                              fontWeight: '500',
+                              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+                              backdropFilter: 'blur(10px)'
+                            }}
+                            labelStyle={{ color: '#F3F4F6', fontWeight: '600', marginBottom: '8px' }}
+                            formatter={(value, name) => [
+                              <span style={{ color: name === 'Inscritos' ? '#10B981' : name === 'Usuários' ? '#6366F1' : '#F59E0B' }}>
+                                {value?.toLocaleString() || 0}
+                              </span>, 
+                              name
+                            ]}
+                            cursor={{ stroke: '#6366F1', strokeWidth: 1, strokeDasharray: '5 5' }}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="subscribers" 
+                            stroke="url(#subscribersGradient)" 
+                            strokeWidth={3} 
+                            name="Inscritos" 
+                            dot={{ fill: '#10B981', strokeWidth: 2, r: 5, stroke: '#065F46' }} 
+                            activeDot={{ r: 7, stroke: '#10B981', strokeWidth: 3, fill: '#ECFDF5' }}
+                            animationDuration={1500}
+                            animationEasing="ease-in-out"
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="users" 
+                            stroke="url(#usersGradient)" 
+                            strokeWidth={3} 
+                            name="Usuários" 
+                            dot={{ fill: '#6366F1', strokeWidth: 2, r: 5, stroke: '#312E81' }} 
+                            activeDot={{ r: 7, stroke: '#6366F1', strokeWidth: 3, fill: '#EEF2FF' }}
+                            animationDuration={1500}
+                            animationEasing="ease-in-out"
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="comments" 
+                            stroke="url(#commentsGradient)" 
+                            strokeWidth={2} 
+                            name="Comentários" 
+                            dot={{ fill: '#F59E0B', strokeWidth: 2, r: 4, stroke: '#92400E' }} 
+                            activeDot={{ r: 6, stroke: '#F59E0B', strokeWidth: 3, fill: '#FFFBEB' }}
+                            animationDuration={1500}
+                            animationEasing="ease-in-out"
+                          />
+                        </LineChart>
+                      )}
                     </div>
                   </div>
                 </Card>
 
                 <Card className="glass-effect">
                   <div className="p-4 sm:p-6">
-                    <h3 className="text-base sm:text-lg font-orbitron font-bold text-white mb-4">
-                      Artigos por Dia
-                    </h3>
-                    <div style={{ width: '100%', height: '300px', minWidth: '400px' }}>
-                      <BarChart 
-                        width={500}
-                        height={300}
-                        data={weeklyData} 
-                        margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                        <XAxis dataKey="name" stroke="#9CA3AF" fontSize={12} />
-                        <YAxis stroke="#9CA3AF" fontSize={12} />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: '#1F2937', 
-                            border: '1px solid #6366F1',
-                            borderRadius: '8px',
-                            fontSize: '12px'
-                          }}
-                        />
-                        <Bar dataKey="artigos" fill="#6366F1" name="Artigos" />
-                      </BarChart>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-base sm:text-lg font-orbitron font-bold text-white">
+                        Atividade por Dia
+                      </h3>
+                      {loadingDashboard && (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-neon-purple"></div>
+                      )}
+                    </div>
+                    {/* Container com dimensões ABSOLUTAS para evitar width(-1) height(-1) */}
+                    <div style={{ width: '100%', height: '320px', minWidth: '300px', minHeight: '320px', position: 'relative' }}>
+                      {loadingDashboard ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neon-purple"></div>
+                          <span className="ml-2 text-gray-400">Carregando gráfico...</span>
+                        </div>
+                      ) : (
+                        <ResponsiveContainer width={300} height={320} minWidth={300} minHeight={320}>
+                          <BarChart 
+                            width={300}
+                            height={320}
+                            data={weeklyData && weeklyData.length > 0 ? weeklyData : [
+                              { name: 'Seg', articles: 0, campaigns: 0, feedback: 0 },
+                              { name: 'Ter', articles: 0, campaigns: 0, feedback: 0 },
+                              { name: 'Qua', articles: 0, campaigns: 0, feedback: 0 },
+                              { name: 'Qui', articles: 0, campaigns: 0, feedback: 0 },
+                              { name: 'Sex', articles: 0, campaigns: 0, feedback: 0 },
+                              { name: 'Sáb', articles: 0, campaigns: 0, feedback: 0 },
+                              { name: 'Dom', articles: 0, campaigns: 0, feedback: 0 }
+                            ]} 
+                            margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                            <XAxis dataKey="name" stroke="#9CA3AF" fontSize={12} />
+                            <YAxis stroke="#9CA3AF" fontSize={12} />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: '#1F2937', 
+                                border: '1px solid #6366F1',
+                                borderRadius: '8px',
+                                fontSize: '12px'
+                              }}
+                            />
+                            <Bar dataKey="articles" fill="#6366F1" name="Artigos" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="campaigns" fill="#8B5CF6" name="Campanhas" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="feedback" fill="#F59E0B" name="Feedback" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      )}
                     </div>
                   </div>
                 </Card>
               </div>
 
-              {/* Últimas Atividades e Artigos Recentes */}
+              {/* Últimas Atividades e Dados Recentes */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card className="glass-effect">
-                <div className="p-6">
-                  <h3 className="text-lg font-orbitron font-bold text-white mb-4">
-                    Últimas Atividades
-                  </h3>
-                  <div className="space-y-3">
-                    {(loadingArticles || loadingSubscribers) ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neon-purple"></div>
-                        <span className="ml-2 text-futuristic-gray">Carregando atividades...</span>
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-orbitron font-bold text-white flex items-center">
+                        <Activity className="w-5 h-5 mr-2 text-neon-purple" />
+                        Últimas Atividades
+                      </h3>
+                      <div className="flex items-center space-x-2">
+                        {loadingDashboard && (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-neon-purple"></div>
+                        )}
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="text-xs text-futuristic-gray hover:text-white"
+                          onClick={() => {/* TODO: Implementar filtros */}}
+                        >
+                          <Filter className="w-3 h-3 mr-1" />
+                          Filtrar
+                        </Button>
                       </div>
-                    ) : recentActivities.length > 0 ? (
-                      recentActivities.map((activity, index) => (
-                        <div key={index} className="flex items-center space-x-3 p-3 bg-darker-surface/30 rounded-lg">
-                          <div className={`p-2 rounded-full ${
-                            activity.type === 'new_subscriber' ? 'bg-lime-green/20' :
-                            activity.type === 'article_published' ? 'bg-neon-purple/20' :
-                            activity.type === 'new_user' ? 'bg-blue-500/20' :
-                            activity.type === 'newsletter_sent' ? 'bg-yellow-500/20' :
-                            'bg-gray-500/20'
-                          }`}>
-                            {activity.type === 'new_subscriber' && <Mail className="w-4 h-4 text-lime-green" />}
-                            {activity.type === 'article_published' && <FileText className="w-4 h-4 text-neon-purple" />}
-                            {activity.type === 'new_user' && <Users className="w-4 h-4 text-blue-400" />}
-                            {activity.type === 'newsletter_sent' && <Send className="w-4 h-4 text-yellow-400" />}
-                            {activity.type === 'article_edited' && <Edit3 className="w-4 h-4 text-gray-400" />}
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-white text-sm">{activity.message}</p>
-                            <p className="text-futuristic-gray text-xs">{activity.time}</p>
-                          </div>
+                    </div>
+                    <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
+                      {loadingDashboard ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neon-purple"></div>
+                          <span className="ml-2 text-futuristic-gray">Carregando atividades...</span>
                         </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8">
-                        <p className="text-futuristic-gray">Nenhuma atividade recente</p>
-                      </div>
-                    )}
+                      ) : recentActivities && recentActivities.length > 0 ? (
+                        <>
+                          {recentActivities.slice(0, 8).map((activity, index) => (
+                            <div key={index} className="group flex items-center space-x-3 p-3 bg-gradient-to-r from-darker-surface/20 to-darker-surface/40 rounded-xl hover:from-darker-surface/40 hover:to-darker-surface/60 transition-all duration-300 border border-transparent hover:border-neon-purple/20">
+                              <div className={`p-2.5 rounded-full transition-all duration-300 group-hover:scale-110 ${
+                                activity.type === 'new_subscriber' ? 'bg-gradient-to-br from-lime-green/30 to-lime-green/10 shadow-lg shadow-lime-green/20' :
+                                activity.type === 'article_published' ? 'bg-gradient-to-br from-neon-purple/30 to-neon-purple/10 shadow-lg shadow-neon-purple/20' :
+                                activity.type === 'new_user' ? 'bg-gradient-to-br from-blue-500/30 to-blue-500/10 shadow-lg shadow-blue-500/20' :
+                                activity.type === 'newsletter_sent' ? 'bg-gradient-to-br from-yellow-500/30 to-yellow-500/10 shadow-lg shadow-yellow-500/20' :
+                                activity.type === 'comment_added' ? 'bg-gradient-to-br from-blue-400/30 to-blue-400/10 shadow-lg shadow-blue-400/20' :
+                                activity.type === 'feedback_received' ? 'bg-gradient-to-br from-orange-500/30 to-orange-500/10 shadow-lg shadow-orange-500/20' :
+                                'bg-gradient-to-br from-gray-500/30 to-gray-500/10 shadow-lg shadow-gray-500/20'
+                              }`}>
+                                {activity.type === 'new_subscriber' && <Mail className="w-4 h-4 text-lime-green" />}
+                                {activity.type === 'article_published' && <FileText className="w-4 h-4 text-neon-purple" />}
+                                {activity.type === 'new_user' && <Users className="w-4 h-4 text-blue-400" />}
+                                {activity.type === 'newsletter_sent' && <Send className="w-4 h-4 text-yellow-400" />}
+                                {activity.type === 'comment_added' && <MessageSquare className="w-4 h-4 text-blue-400" />}
+                                {activity.type === 'feedback_received' && <Zap className="w-4 h-4 text-orange-400" />}
+                                {activity.type === 'article_edited' && <Edit3 className="w-4 h-4 text-gray-400" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-white text-sm font-medium leading-tight group-hover:text-gray-100 transition-colors">
+                                  {activity.message}
+                                </p>
+                                <div className="flex items-center justify-between mt-1">
+                                  <p className="text-futuristic-gray text-xs font-medium">
+                                    {activity.time}
+                                  </p>
+                                  <div className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    activity.type === 'new_subscriber' ? 'bg-lime-green/10 text-lime-green border border-lime-green/20' :
+                                    activity.type === 'article_published' ? 'bg-neon-purple/10 text-neon-purple border border-neon-purple/20' :
+                                    activity.type === 'new_user' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                                    activity.type === 'newsletter_sent' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
+                                    activity.type === 'comment_added' ? 'bg-blue-400/10 text-blue-400 border border-blue-400/20' :
+                                    activity.type === 'feedback_received' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' :
+                                    'bg-gray-500/10 text-gray-400 border border-gray-500/20'
+                                  }`}>
+                                    {activity.type === 'new_subscriber' ? 'Newsletter' :
+                                     activity.type === 'article_published' ? 'Artigo' :
+                                     activity.type === 'new_user' ? 'Usuário' :
+                                     activity.type === 'newsletter_sent' ? 'Campanha' :
+                                     activity.type === 'comment_added' ? 'Comentário' :
+                                     activity.type === 'feedback_received' ? 'Feedback' :
+                                     'Geral'}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          {recentActivities.length > 8 && (
+                            <div className="pt-3 border-t border-darker-surface/50">
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="w-full text-futuristic-gray hover:text-white hover:bg-darker-surface/30 transition-all duration-300"
+                                onClick={() => {/* TODO: Implementar ver mais */}}
+                              >
+                                Ver mais {recentActivities.length - 8} atividades
+                                <ChevronRight className="w-4 h-4 ml-1" />
+                              </Button>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="text-center py-12">
+                          <div className="bg-gradient-to-br from-futuristic-gray/10 to-futuristic-gray/5 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                            <Activity className="w-8 h-8 text-futuristic-gray" />
+                          </div>
+                          <p className="text-futuristic-gray font-medium">Nenhuma atividade recente</p>
+                          <p className="text-futuristic-gray/60 text-sm mt-1">As atividades aparecerão aqui conforme acontecem</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Card>
+                </Card>
 
-              <Card className="glass-effect">
-                <div className="p-6">
-                  <h3 className="text-lg font-orbitron font-bold text-white mb-4">
-                    Artigos Recentes
-                  </h3>
-                  <div className="space-y-3">
-                    {loadingArticles ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neon-purple"></div>
-                        <span className="ml-2 text-futuristic-gray">Carregando artigos...</span>
+                <Card className="glass-effect">
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-orbitron font-bold text-white flex items-center">
+                        <FileText className="w-5 h-5 mr-2 text-neon-purple" />
+                        Conteúdo Recente
+                      </h3>
+                      <div className="flex items-center space-x-2">
+                        {loadingDashboard && (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-neon-purple"></div>
+                        )}
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="text-xs text-futuristic-gray hover:text-white"
+                          onClick={() => setActiveTab('articles')}
+                        >
+                          Ver todos
+                          <ChevronRight className="w-3 h-3 ml-1" />
+                        </Button>
                       </div>
-                    ) : recentArticles.length > 0 ? recentArticles.map((article) => (
-                      <div key={article.id} className="flex items-center justify-between p-3 bg-darker-surface/30 rounded-lg">
-                        <div className="flex-1">
-                          <h4 className="text-white font-medium">{article.title}</h4>
-                          <p className="text-futuristic-gray text-sm">
-                            {new Date(article.created_at).toLocaleDateString('pt-BR')}
-                          </p>
+                    </div>
+                    <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
+                      {loadingDashboard ? (
+                        <div className="flex items-center justify-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neon-purple"></div>
+                          <span className="ml-2 text-futuristic-gray">Carregando conteúdo...</span>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            article.published 
-                              ? 'bg-lime-green/20 text-lime-green' 
-                              : 'bg-yellow-500/20 text-yellow-400'
-                          }`}>
-                            {article.published ? 'Publicado' : 'Rascunho'}
-                          </span>
-                          <Button size="sm" variant="ghost">
-                            <Eye className="w-4 h-4" />
+                      ) : articles && articles.length > 0 ? (
+                        <>
+                          {articles
+                            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                            .slice(0, 6)
+                            .map((article) => (
+                              <div key={article.id} className="group flex items-start space-x-3 p-3 bg-gradient-to-r from-darker-surface/20 to-darker-surface/40 rounded-xl hover:from-darker-surface/40 hover:to-darker-surface/60 transition-all duration-300 border border-transparent hover:border-neon-purple/20">
+                                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-neon-purple/20 to-neon-purple/5 rounded-lg flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+                                  <FileText className="w-5 h-5 text-neon-purple" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="text-white font-medium text-sm leading-tight group-hover:text-gray-100 transition-colors line-clamp-2">
+                                    {article.title}
+                                  </h4>
+                                  <div className="flex items-center justify-between mt-2">
+                                    <div className="flex items-center space-x-2">
+                                      <p className="text-futuristic-gray text-xs font-medium">
+                                        {new Date(article.created_at).toLocaleDateString('pt-BR')}
+                                      </p>
+                                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
+                                        article.published 
+                                          ? 'bg-lime-green/10 text-lime-green border-lime-green/20' 
+                                          : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                                      }`}>
+                                        {article.published ? 'Publicado' : 'Rascunho'}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center space-x-1">
+                                      <Button 
+                                        size="sm" 
+                                        variant="ghost" 
+                                        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-neon-purple/20"
+                                        onClick={() => setEditingArticle(article)}
+                                      >
+                                        <Edit3 className="w-3 h-3" />
+                                      </Button>
+                                      <Button 
+                                        size="sm" 
+                                        variant="ghost" 
+                                        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-blue-500/20"
+                                      >
+                                        <Eye className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  {article.excerpt && (
+                                    <p className="text-futuristic-gray/80 text-xs mt-1 line-clamp-1">
+                                      {article.excerpt}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          {articles.length > 6 && (
+                            <div className="pt-3 border-t border-darker-surface/50">
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="w-full text-futuristic-gray hover:text-white hover:bg-darker-surface/30 transition-all duration-300"
+                                onClick={() => setActiveTab('articles')}
+                              >
+                                Ver mais {articles.length - 6} artigos
+                                <ChevronRight className="w-4 h-4 ml-1" />
+                              </Button>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="text-center py-12">
+                          <div className="bg-gradient-to-br from-futuristic-gray/10 to-futuristic-gray/5 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                            <FileText className="w-8 h-8 text-futuristic-gray" />
+                          </div>
+                          <p className="text-futuristic-gray font-medium">Nenhum artigo encontrado</p>
+                          <p className="text-futuristic-gray/60 text-sm mt-1">Crie seu primeiro artigo para começar</p>
+                          <Button 
+                            size="sm" 
+                            className="mt-3 bg-neon-gradient hover:bg-neon-gradient/80"
+                            onClick={() => setActiveTab('editor')}
+                          >
+                            <PlusCircle className="w-4 h-4 mr-1" />
+                            Criar Artigo
                           </Button>
                         </div>
-                      </div>
-                    )) : (
-                      <p className="text-futuristic-gray text-center py-8">
-                        Nenhum artigo encontrado
-                      </p>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Card>
-            </div>
+                </Card>
+              </div>
           </div>
         )}
 
@@ -896,15 +1100,15 @@ export const Admin: React.FC = () => {
                       <input
                         type="text"
                         placeholder="Buscar artigos..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        value={userSearchTerm}
+                        onChange={(e) => setUserSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple text-sm sm:text-base"
                       />
                     </div>
                   </div>
                   <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
+                    value={userStatusFilter}
+                    onChange={(e) => setUserStatusFilter(e.target.value)}
                     className="px-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple text-sm sm:text-base min-w-0 sm:min-w-[160px]"
                   >
                     <option value="all">Todos os Status</option>
@@ -1017,14 +1221,88 @@ export const Admin: React.FC = () => {
         {/* Newsletter Tab */}
         {activeTab === 'newsletter' && (
           <div className="space-y-6">
+            {/* Newsletter Tabs */}
             <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-orbitron font-bold text-white">
-                Gerenciamento de Newsletter
-              </h3>
+              <div>
+                <h3 className="text-2xl font-orbitron font-bold text-white">
+                  Gerenciamento da Newsletter
+                </h3>
+                <p className="text-futuristic-gray text-sm mt-1">
+                  Total: {newsletterHook.stats.totalSubscribers} • Ativos: {newsletterHook.stats.activeSubscribers} • Novos hoje: {newsletterHook.stats.newToday}
+                </p>
+              </div>
+            </div>
+
+            {/* Sub-tabs para Newsletter */}
+            <div className="flex space-x-1 bg-darker-surface/30 p-1 rounded-lg">
+              <button
+                onClick={() => setNewsletterTab('overview')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  newsletterTab === 'overview'
+                    ? 'bg-neon-purple/20 text-neon-purple'
+                    : 'text-futuristic-gray hover:text-white'
+                }`}
+              >
+                Visão Geral
+              </button>
+              <button
+                onClick={() => setNewsletterTab('subscribers')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  newsletterTab === 'subscribers'
+                    ? 'bg-neon-purple/20 text-neon-purple'
+                    : 'text-futuristic-gray hover:text-white'
+                }`}
+              >
+                Inscritos
+              </button>
+              <button
+                onClick={() => setNewsletterTab('campaigns')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  newsletterTab === 'campaigns'
+                    ? 'bg-neon-purple/20 text-neon-purple'
+                    : 'text-futuristic-gray hover:text-white'
+                }`}
+              >
+                Campanhas
+              </button>
+              <button
+                onClick={() => setNewsletterTab('automations')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  newsletterTab === 'automations'
+                    ? 'bg-neon-purple/20 text-neon-purple'
+                    : 'text-futuristic-gray hover:text-white'
+                }`}
+              >
+                Automações
+              </button>
+              <button
+                onClick={() => setNewsletterTab('templates')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  newsletterTab === 'templates'
+                    ? 'bg-neon-purple/20 text-neon-purple'
+                    : 'text-futuristic-gray hover:text-white'
+                }`}
+              >
+                Templates
+              </button>
+              <button
+                onClick={() => setNewsletterTab('logs')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  newsletterTab === 'logs'
+                    ? 'bg-neon-purple/20 text-neon-purple'
+                    : 'text-futuristic-gray hover:text-white'
+                }`}
+              >
+                Logs
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between mb-6">
+              <div></div>
               <div className="flex space-x-3">
                 <Button
-                  onClick={exportCSV}
-                  disabled={isLoading}
+                  onClick={newsletterHook.exportCSV}
+                  disabled={newsletterHook.loading}
                   variant="outline"
                   className="flex items-center space-x-2"
                 >
@@ -1032,7 +1310,7 @@ export const Admin: React.FC = () => {
                   <span>Exportar CSV</span>
                 </Button>
                 <Button
-                  onClick={() => setShowNewCampaignModal(true)}
+                  onClick={() => setShowCampaignEditor(true)}
                   className="bg-neon-gradient hover:bg-neon-gradient/80"
                 >
                   <Send className="w-4 h-4 mr-2" />
@@ -1041,97 +1319,637 @@ export const Admin: React.FC = () => {
               </div>
             </div>
 
-            {/* Newsletter Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="glass-effect">
-                <div className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-futuristic-gray text-sm">Total de Inscritos</p>
-                      <p className="text-2xl font-orbitron font-bold text-white">
-                        {newsletterStats.totalSubscribers}
-                      </p>
-                    </div>
-                    <Mail className="w-8 h-8 text-lime-green" />
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="glass-effect">
-                <div className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-futuristic-gray text-sm">Ativos</p>
-                      <p className="text-2xl font-orbitron font-bold text-white">
-                        {newsletterStats.activeSubscribers}
-                      </p>
-                    </div>
-                    <UserCheck className="w-8 h-8 text-lime-green" />
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="glass-effect">
-                <div className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-futuristic-gray text-sm">Taxa de Abertura</p>
-                      <p className="text-2xl font-orbitron font-bold text-white">
-                        {newsletterStats.openRate}%
-                      </p>
-                    </div>
-                    <Eye className="w-8 h-8 text-neon-purple" />
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="glass-effect">
-                <div className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-futuristic-gray text-sm">Taxa de Clique</p>
-                      <p className="text-2xl font-orbitron font-bold text-white">
-                        {newsletterStats.clickRate}%
-                      </p>
-                    </div>
-                    <Activity className="w-8 h-8 text-neon-purple" />
-                  </div>
-                </div>
-              </Card>
+            {/* Notification Center Toggle */}
+            <div className="flex justify-end mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowNotificationCenter(!showNotificationCenter)}
+                className="flex items-center space-x-2"
+              >
+                <Bell className="w-4 h-4" />
+                <span>Notificações</span>
+                {/* Notification badge */}
+                <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">3</span>
+              </Button>
             </div>
 
-            {/* Subscribers List */}
-            <Card className="glass-effect">
-              <div className="p-6">
-                <h4 className="text-lg font-orbitron font-bold text-white mb-4">
-                  Lista de Inscritos
-                </h4>
-                <div className="space-y-3">
-                   {subscribers.length > 0 ? subscribers.slice(0, 10).map((subscriber) => (
-                    <div key={subscriber.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 p-3 bg-darker-surface/30 rounded-lg">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white font-medium truncate">{subscriber.email}</p>
-                        <p className="text-futuristic-gray text-xs sm:text-sm">
-                          Inscrito em: {new Date(subscriber.created_at).toLocaleDateString('pt-BR')}
-                        </p>
-                      </div>
-                      <span className={`px-2 py-1 rounded-full text-xs self-start sm:self-auto ${
-                        subscriber.status === 'active' 
-                          ? 'bg-lime-green/20 text-lime-green' 
-                          : 'bg-red-500/20 text-red-400'
-                      }`}>
-                        {subscriber.status === 'active' ? 'Ativo' : 'Inativo'}
-                      </span>
-                    </div>
-                  )) : (
-                    <div className="text-center py-8">
-                      <Mail className="w-12 h-12 sm:w-16 sm:h-16 text-futuristic-gray mx-auto mb-4" />
-                      <p className="text-futuristic-gray text-sm sm:text-base">Nenhum inscrito encontrado</p>
-                    </div>
-                  )}
+            {/* Notification Center Modal */}
+            {showNotificationCenter && (
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-end p-4">
+                <div className="mt-16 mr-4">
+                  <NotificationCenter onClose={() => setShowNotificationCenter(false)} />
                 </div>
               </div>
-            </Card>
+            )}
+
+            {/* Newsletter Content based on active sub-tab */}
+            {newsletterTab === 'overview' && (
+              <div className="space-y-6">
+                {/* Newsletter Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <Card className="glass-effect">
+                    <div className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-futuristic-gray text-sm">Total de Inscritos</p>
+                          <p className="text-2xl font-orbitron font-bold text-white">
+                            {subscribersHook.loading ? '...' : subscribersHook.totalCount}
+                          </p>
+                        </div>
+                        <Mail className="w-8 h-8 text-lime-green" />
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="glass-effect">
+                    <div className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-futuristic-gray text-sm">Ativos</p>
+                          <p className="text-2xl font-orbitron font-bold text-white">
+                            {subscribersHook.loading ? '...' : subscribersHook.subscribers.filter(s => s.status === 'active').length}
+                          </p>
+                        </div>
+                        <UserCheck className="w-8 h-8 text-lime-green" />
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="glass-effect">
+                    <div className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-futuristic-gray text-sm">Campanhas Enviadas</p>
+                          <p className="text-2xl font-orbitron font-bold text-white">
+                            {campaignsHook.loading ? '...' : campaignsHook.campaigns.filter(c => c.status === 'sent').length}
+                          </p>
+                        </div>
+                        <Send className="w-8 h-8 text-neon-purple" />
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="glass-effect">
+                    <div className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-futuristic-gray text-sm">Automações Ativas</p>
+                          <p className="text-2xl font-orbitron font-bold text-white">
+                            {automationsHook.loading ? '...' : automationsHook.automations.filter(a => a.is_active).length}
+                          </p>
+                        </div>
+                        <Zap className="w-8 h-8 text-electric-blue" />
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Card className="glass-effect cursor-pointer hover:bg-darker-surface/30 transition-colors" onClick={() => setNewsletterTab('campaigns')}>
+                    <div className="p-6 text-center">
+                      <Send className="w-12 h-12 text-neon-purple mx-auto mb-4" />
+                      <h4 className="text-lg font-orbitron font-bold text-white mb-2">Nova Campanha</h4>
+                      <p className="text-futuristic-gray text-sm">Criar e enviar uma nova campanha de email</p>
+                    </div>
+                  </Card>
+
+                  <Card className="glass-effect cursor-pointer hover:bg-darker-surface/30 transition-colors" onClick={() => setNewsletterTab('subscribers')}>
+                    <div className="p-6 text-center">
+                      <Users className="w-12 h-12 text-lime-green mx-auto mb-4" />
+                      <h4 className="text-lg font-orbitron font-bold text-white mb-2">Gerenciar Inscritos</h4>
+                      <p className="text-futuristic-gray text-sm">Visualizar e gerenciar lista de inscritos</p>
+                    </div>
+                  </Card>
+
+                  <Card className="glass-effect cursor-pointer hover:bg-darker-surface/30 transition-colors" onClick={() => setNewsletterTab('automations')}>
+                    <div className="p-6 text-center">
+                      <Zap className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
+                      <h4 className="text-lg font-orbitron font-bold text-white mb-2">Automações</h4>
+                      <p className="text-futuristic-gray text-sm">Configurar emails automáticos</p>
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Advanced Analytics Charts */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card className="glass-effect">
+                    <div className="p-6">
+                      <h3 className="text-lg font-orbitron font-bold text-white mb-4 flex items-center">
+                        <TrendingUp className="w-5 h-5 mr-2 text-lime-green" />
+                        Crescimento de Inscritos
+                      </h3>
+                      {/* Container com dimensões ABSOLUTAS para evitar width(-1) height(-1) */}
+                      <div style={{ width: '100%', height: '320px', minWidth: '300px', minHeight: '320px', position: 'relative' }}>
+                        {loadingDashboard ? (
+                          <div className="flex items-center justify-center h-full">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-green"></div>
+                            <span className="ml-2 text-gray-400">Carregando gráfico...</span>
+                          </div>
+                        ) : (
+                          <ResponsiveContainer width={300} height={320} minWidth={300} minHeight={320}>
+                            <LineChart 
+                              width={300}
+                              height={320}
+                              data={weeklyData && weeklyData.length > 0 ? weeklyData : [
+                                { name: 'Seg', inscritos: 0 },
+                                { name: 'Ter', inscritos: 0 },
+                                { name: 'Qua', inscritos: 0 },
+                                { name: 'Qui', inscritos: 0 },
+                                { name: 'Sex', inscritos: 0 },
+                                { name: 'Sáb', inscritos: 0 },
+                                { name: 'Dom', inscritos: 0 }
+                              ]}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                              <XAxis dataKey="name" stroke="#9CA3AF" fontSize={12} />
+                              <YAxis stroke="#9CA3AF" fontSize={12} />
+                              <Tooltip 
+                                contentStyle={{ 
+                                  backgroundColor: '#1F2937', 
+                                  border: '1px solid #10B981',
+                                  borderRadius: '8px',
+                                  fontSize: '12px'
+                                }}
+                              />
+                              <Line 
+                                type="monotone" 
+                                dataKey="inscritos" 
+                                stroke="#10B981" 
+                                strokeWidth={3}
+                                dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
+                                activeDot={{ r: 6, stroke: '#10B981', strokeWidth: 2 }}
+                                name="Novos Inscritos"
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="glass-effect">
+                    <div className="p-6">
+                      <h3 className="text-lg font-orbitron font-bold text-white mb-4 flex items-center">
+                        <BarChart3 className="w-5 h-5 mr-2 text-neon-purple" />
+                        Performance de Campanhas
+                      </h3>
+                      {/* Container com dimensões ABSOLUTAS para evitar width(-1) height(-1) */}
+                      <div style={{ width: '100%', height: '320px', minWidth: '300px', minHeight: '320px', position: 'relative' }}>
+                        {campaignsHook.loading ? (
+                          <div className="flex items-center justify-center h-full">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neon-purple"></div>
+                            <span className="ml-2 text-gray-400">Carregando campanhas...</span>
+                          </div>
+                        ) : (
+                          <div style={{ width: '100%', height: '320px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                            <BarChart 
+                              width={400}
+                              height={300}
+                              data={
+                                campaignsHook.campaigns && campaignsHook.campaigns.length > 0 
+                                  ? campaignsHook.campaigns.slice(-7).map(campaign => ({
+                                      name: campaign.name?.substring(0, 10) + '...' || 'Sem nome',
+                                      enviados: campaign.recipient_count || 0,
+                                      abertos: campaign.opened_count || 0,
+                                      cliques: campaign.clicked_count || 0
+                                    }))
+                                  : [
+                                      { name: 'Nenhuma', enviados: 0, abertos: 0, cliques: 0 },
+                                      { name: 'campanha', enviados: 0, abertos: 0, cliques: 0 },
+                                      { name: 'encontrada', enviados: 0, abertos: 0, cliques: 0 }
+                                    ]
+                              }
+                              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                            >
+                              <defs>
+                                <linearGradient id="enviadosGradient" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#6366F1" stopOpacity={0.9}/>
+                                  <stop offset="95%" stopColor="#6366F1" stopOpacity={0.3}/>
+                                </linearGradient>
+                                <linearGradient id="abertosGradient" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.9}/>
+                                  <stop offset="95%" stopColor="#10B981" stopOpacity={0.3}/>
+                                </linearGradient>
+                                <linearGradient id="cliquesGradient" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.9}/>
+                                  <stop offset="95%" stopColor="#F59E0B" stopOpacity={0.3}/>
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+                              <XAxis 
+                                dataKey="name" 
+                                stroke="#9CA3AF" 
+                                fontSize={10} 
+                                fontWeight={500}
+                                tick={{ fill: '#D1D5DB' }}
+                              />
+                              <YAxis 
+                                stroke="#9CA3AF" 
+                                fontSize={12} 
+                                fontWeight={500}
+                                tick={{ fill: '#D1D5DB' }}
+                              />
+                              <Tooltip 
+                                contentStyle={{ 
+                                  backgroundColor: 'rgba(17, 24, 39, 0.95)', 
+                                  border: '1px solid #6366F1',
+                                  borderRadius: '12px',
+                                  fontSize: '13px',
+                                  fontWeight: '500',
+                                  boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+                                  backdropFilter: 'blur(10px)'
+                                }}
+                                labelStyle={{ color: '#F3F4F6', fontWeight: '600', marginBottom: '8px' }}
+                                formatter={(value, name) => [
+                                  <span style={{ color: name === 'Enviados' ? '#6366F1' : name === 'Abertos' ? '#10B981' : '#F59E0B' }}>
+                                    {value?.toLocaleString() || 0}
+                                  </span>, 
+                                  name
+                                ]}
+                                cursor={{ fill: 'rgba(99, 102, 241, 0.1)' }}
+                              />
+                              <Bar 
+                                dataKey="enviados" 
+                                fill="url(#enviadosGradient)" 
+                                name="Enviados" 
+                                radius={[4, 4, 0, 0]}
+                                animationDuration={1500}
+                                animationEasing="ease-in-out"
+                              />
+                              <Bar 
+                                dataKey="abertos" 
+                                fill="url(#abertosGradient)" 
+                                name="Abertos" 
+                                radius={[4, 4, 0, 0]}
+                                animationDuration={1500}
+                                animationEasing="ease-in-out"
+                              />
+                              <Bar 
+                                dataKey="cliques" 
+                                fill="url(#cliquesGradient)" 
+                                name="Cliques" 
+                                radius={[4, 4, 0, 0]}
+                                animationDuration={1500}
+                                animationEasing="ease-in-out"
+                              />
+                            </BarChart>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Engagement Metrics */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Card className="glass-effect">
+                    <div className="p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-orbitron font-bold text-white">Taxa de Abertura</h4>
+                        <Eye className="w-6 h-6 text-lime-green" />
+                      </div>
+                      <div className="text-3xl font-orbitron font-bold text-lime-green mb-2">
+                        {campaignsHook.campaigns.length > 0 
+                          ? Math.round(
+                              campaignsHook.campaigns
+                                .filter(c => c.status === 'sent')
+                                .reduce((acc, c) => acc + (c.open_rate || 0), 0) / 
+                              campaignsHook.campaigns.filter(c => c.status === 'sent').length
+                            ) || 0
+                          : 0
+                        }%
+                      </div>
+                      <p className="text-futuristic-gray text-sm">Média das últimas campanhas</p>
+                      <div className="mt-4 bg-darker-surface/50 rounded-full h-2">
+                        <div 
+                          className="bg-lime-green h-2 rounded-full transition-all duration-500"
+                          style={{ 
+                            width: `${Math.min(100, campaignsHook.campaigns.length > 0 
+                              ? Math.round(
+                                  campaignsHook.campaigns
+                                    .filter(c => c.status === 'sent')
+                                    .reduce((acc, c) => acc + (c.open_rate || 0), 0) / 
+                                  campaignsHook.campaigns.filter(c => c.status === 'sent').length
+                                ) || 0
+                              : 0
+                            )}%` 
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="glass-effect">
+                    <div className="p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-orbitron font-bold text-white">Taxa de Clique</h4>
+                        <MousePointer className="w-6 h-6 text-neon-purple" />
+                      </div>
+                      <div className="text-3xl font-orbitron font-bold text-neon-purple mb-2">
+                        {campaignsHook.campaigns.length > 0 
+                          ? Math.round(
+                              campaignsHook.campaigns
+                                .filter(c => c.status === 'sent')
+                                .reduce((acc, c) => acc + (c.click_rate || 0), 0) / 
+                              campaignsHook.campaigns.filter(c => c.status === 'sent').length
+                            ) || 0
+                          : 0
+                        }%
+                      </div>
+                      <p className="text-futuristic-gray text-sm">Média das últimas campanhas</p>
+                      <div className="mt-4 bg-darker-surface/50 rounded-full h-2">
+                        <div 
+                          className="bg-neon-purple h-2 rounded-full transition-all duration-500"
+                          style={{ 
+                            width: `${Math.min(100, campaignsHook.campaigns.length > 0 
+                              ? Math.round(
+                                  campaignsHook.campaigns
+                                    .filter(c => c.status === 'sent')
+                                    .reduce((acc, c) => acc + (c.click_rate || 0), 0) / 
+                                  campaignsHook.campaigns.filter(c => c.status === 'sent').length
+                                ) || 0
+                              : 0
+                            )}%` 
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="glass-effect">
+                    <div className="p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-orbitron font-bold text-white">Taxa de Rejeição</h4>
+                        <AlertTriangle className="w-6 h-6 text-yellow-400" />
+                      </div>
+                      <div className="text-3xl font-orbitron font-bold text-yellow-400 mb-2">
+                        {campaignsHook.campaigns.length > 0 
+                          ? Math.round(
+                              campaignsHook.campaigns
+                                .filter(c => c.status === 'sent')
+                                .reduce((acc, c) => acc + (c.bounce_rate || 0), 0) / 
+                              campaignsHook.campaigns.filter(c => c.status === 'sent').length
+                            ) || 0
+                          : 0
+                        }%
+                      </div>
+                      <p className="text-futuristic-gray text-sm">Média das últimas campanhas</p>
+                      <div className="mt-4 bg-darker-surface/50 rounded-full h-2">
+                        <div 
+                          className="bg-yellow-400 h-2 rounded-full transition-all duration-500"
+                          style={{ 
+                            width: `${Math.min(100, campaignsHook.campaigns.length > 0 
+                              ? Math.round(
+                                  campaignsHook.campaigns
+                                    .filter(c => c.status === 'sent')
+                                    .reduce((acc, c) => acc + (c.bounce_rate || 0), 0) / 
+                                  campaignsHook.campaigns.filter(c => c.status === 'sent').length
+                                ) || 0
+                              : 0
+                            )}%` 
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Recent Activity */}
+                <Card className="glass-effect">
+                  <div className="p-6">
+                    <h4 className="text-lg font-orbitron font-bold text-white mb-4">Atividade Recente</h4>
+                    <div className="space-y-3">
+                      {newsletterHook.campaigns.slice(0, 3).map((campaign) => (
+                        <div key={campaign.id} className="flex items-center justify-between p-3 bg-darker-surface/30 rounded-lg">
+                          <div>
+                            <p className="text-white font-medium">{campaign.subject}</p>
+                            <p className="text-futuristic-gray text-sm">
+                              {new Date(campaign.created_at).toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
+                          <div className="flex items-center space-x-4 text-sm">
+                            <span className="text-futuristic-gray">
+                              {campaign.sent_count || 0} enviados
+                            </span>
+                            <span className="text-lime-green">
+                              {campaign.open_count || 0} abertos
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            )}
+
+            {newsletterTab === 'subscribers' && (
+              <div className="space-y-6">
+                {/* Subscriber Filters */}
+                <Card className="glass-effect">
+                  <div className="p-4">
+                    <div className="flex flex-col md:flex-row gap-4">
+                      <div className="flex-1">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-futuristic-gray w-4 h-4" />
+                          <input
+                            type="text"
+                            placeholder="Buscar por email..."
+                            value={subscriberSearchTerm}
+                            onChange={(e) => setSubscriberSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple"
+                          />
+                        </div>
+                      </div>
+                      <select
+                        value={subscriberStatusFilter}
+                        onChange={(e) => setSubscriberStatusFilter(e.target.value)}
+                        className="px-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple"
+                      >
+                        <option value="all">Todos os Status</option>
+                        <option value="active">Ativos</option>
+                        <option value="inactive">Inativos</option>
+                        <option value="unsubscribed">Cancelados</option>
+                      </select>
+                      <select
+                        value={subscriberDateFilter}
+                        onChange={(e) => setSubscriberDateFilter(e.target.value)}
+                        className="px-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple"
+                      >
+                        <option value="all">Todas as Datas</option>
+                        <option value="today">Hoje</option>
+                        <option value="week">Esta Semana</option>
+                        <option value="month">Este Mês</option>
+                      </select>
+                      <Button
+                        onClick={() => subscribersHook.exportSubscribers()}
+                        disabled={subscribersHook.loading}
+                        variant="outline"
+                        className="flex items-center space-x-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Exportar CSV</span>
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Subscribers List */}
+                <Card className="glass-effect">
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-orbitron font-bold text-white">
+                        Lista de Inscritos ({subscribersHook.totalCount})
+                      </h4>
+                      
+                      <div className="flex items-center space-x-2">
+                        {/* Paginação */}
+                        <Button
+                          onClick={() => subscribersHook.fetchSubscribers({
+                            search: subscriberSearchTerm,
+                            status: subscriberStatusFilter !== 'all' ? subscriberStatusFilter : undefined,
+                            dateRange: subscriberDateFilter !== 'all' ? subscriberDateFilter : undefined
+                          }, Math.max(1, subscribersHook.currentPage - 1))}
+                          disabled={subscribersHook.currentPage <= 1 || subscribersHook.loading}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </Button>
+                        
+                        <span className="text-futuristic-gray text-sm">
+                          Página {subscribersHook.currentPage} de {Math.ceil(subscribersHook.totalCount / 20)}
+                        </span>
+                        
+                        <Button
+                          onClick={() => subscribersHook.fetchSubscribers({
+                            search: subscriberSearchTerm,
+                            status: subscriberStatusFilter !== 'all' ? subscriberStatusFilter : undefined,
+                            dateRange: subscriberDateFilter !== 'all' ? subscriberDateFilter : undefined
+                          }, subscribersHook.currentPage + 1)}
+                          disabled={subscribersHook.currentPage >= Math.ceil(subscribersHook.totalCount / 20) || subscribersHook.loading}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                        
+                        <Button
+                          onClick={() => subscribersHook.fetchSubscribers()}
+                          disabled={subscribersHook.loading}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Activity className="w-4 h-4 mr-2" />
+                          Atualizar
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {subscribersHook.loading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neon-purple mx-auto mb-4"></div>
+                        <p className="text-futuristic-gray">Carregando inscritos...</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {subscribersHook.subscribers.length > 0 ? subscribersHook.subscribers.map((subscriber) => (
+                          <div key={subscriber.id} className="flex items-center justify-between p-4 bg-darker-surface/30 rounded-lg">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white font-medium truncate">{subscriber.email}</p>
+                              <p className="text-futuristic-gray text-sm">
+                                Inscrito em: {new Date(subscriber.subscribed_at || subscriber.created_at).toLocaleDateString('pt-BR')}
+                              </p>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                              <span className={`px-2 py-1 rounded-full text-xs ${
+                                subscriber.status === 'active' 
+                                  ? 'bg-lime-green/20 text-lime-green' 
+                                  : 'bg-red-500/20 text-red-400'
+                              }`}>
+                                {subscriber.status === 'active' ? 'Ativo' : 'Cancelado'}
+                              </span>
+                              <div className="flex space-x-2">
+                                <Button
+                                  onClick={() => subscribersHook.updateSubscriber(subscriber.id, { 
+                                    status: subscriber.status === 'active' ? 'unsubscribed' : 'active' 
+                                  })}
+                                  disabled={subscribersHook.loading}
+                                  size="sm"
+                                  variant="outline"
+                                  className={subscriber.status === 'active' ? 'text-red-400 hover:text-red-300' : 'text-lime-green hover:text-lime-400'}
+                                >
+                                  {subscriber.status === 'active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                                </Button>
+                                <Button
+                                  onClick={() => subscribersHook.deleteSubscriber(subscriber.id)}
+                                  disabled={subscribersHook.loading}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-red-400 hover:text-red-300"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )) : (
+                          <div className="text-center py-8">
+                            <Mail className="w-16 h-16 text-futuristic-gray mx-auto mb-4" />
+                            <p className="text-futuristic-gray">Nenhum inscrito encontrado</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Pagination - Removido temporariamente até implementar paginação no hook */}
+                  </div>
+                </Card>
+              </div>
+            )}
+
+            {newsletterTab === 'campaigns' && (
+              <div className="space-y-6">
+                {/* Campaign Actions */}
+                <div className="flex items-center justify-between">
+                  <h4 className="text-lg font-orbitron font-bold text-white">
+                    Campanhas de Email
+                  </h4>
+                  <Button
+                    onClick={() => setShowCampaignEditor(true)}
+                    className="bg-neon-gradient hover:bg-neon-gradient/80"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Nova Campanha
+                  </Button>
+                </div>
+                
+                <CampaignHistory
+                  campaigns={campaignsHook.campaigns}
+                  loading={campaignsHook.loading}
+                  onRefresh={campaignsHook.fetchCampaigns}
+                />
+              </div>
+            )}
+
+            {newsletterTab === 'automations' && (
+              <div className="space-y-6">
+                <EmailAutomations />
+              </div>
+            )}
+
+            {newsletterTab === 'templates' && (
+              <div className="space-y-6">
+                <EmailTemplates />
+              </div>
+            )}
+
+            {newsletterTab === 'logs' && (
+              <div className="space-y-6">
+                <NewsletterLogs />
+              </div>
+            )}
           </div>
         )}
 
@@ -1139,9 +1957,22 @@ export const Admin: React.FC = () => {
         {activeTab === 'users' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h3 className="text-2xl font-orbitron font-bold text-white">
-                Gerenciamento de Usuários
-              </h3>
+              <div>
+                <h3 className="text-2xl font-orbitron font-bold text-white">
+                  Gerenciamento de Usuários
+                </h3>
+                <p className="text-futuristic-gray text-sm mt-1">
+                  Total: {userStats.totalUsers} • Ativos: {userStats.activeUsers} • Novos este mês: {userStats.newUsersThisMonth}
+                </p>
+              </div>
+              <Button
+                onClick={refreshUsers}
+                disabled={loadingUsers}
+                className="bg-neon-purple/20 text-neon-purple hover:bg-neon-purple/30"
+              >
+                <Activity className="w-4 h-4 mr-2" />
+                Atualizar
+              </Button>
             </div>
 
             {/* User Filters */}
@@ -1154,15 +1985,15 @@ export const Admin: React.FC = () => {
                       <input
                         type="text"
                         placeholder="Buscar usuários..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        value={userSearchTerm}
+                        onChange={(e) => setUserSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple"
                       />
                     </div>
                   </div>
                   <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
+                    value={userStatusFilter}
+                    onChange={(e) => setUserStatusFilter(e.target.value)}
                     className="px-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple"
                   >
                     <option value="all">Todos os Status</option>
@@ -1184,8 +2015,13 @@ export const Admin: React.FC = () => {
                         <h4 className="text-white font-medium">{user.name || 'Usuário'}</h4>
                         <p className="text-futuristic-gray text-sm">{user.email}</p>
                         <p className="text-futuristic-gray text-xs">
-                          Cadastrado em: {new Date(user.createdAt).toLocaleDateString('pt-BR')}
+                          Cadastrado em: {new Date(user.created_at).toLocaleDateString('pt-BR')}
                         </p>
+                        {user.last_sign_in_at && (
+                          <p className="text-futuristic-gray text-xs">
+                            Último acesso: {new Date(user.last_sign_in_at).toLocaleDateString('pt-BR')}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center space-x-3">
                         <span className={`px-2 py-1 rounded-full text-xs ${
@@ -1199,8 +2035,9 @@ export const Admin: React.FC = () => {
                         {user.status !== 'active' && (
                           <Button
                             size="sm"
-                            onClick={() => handleActivateUser(user.id)}
+                            onClick={() => updateUserStatus(user.id, 'active')}
                             className="bg-lime-green/20 text-lime-green hover:bg-lime-green/30"
+                            disabled={loadingUsers}
                           >
                             <UserCheck className="w-4 h-4" />
                           </Button>
@@ -1208,8 +2045,9 @@ export const Admin: React.FC = () => {
                         {user.status === 'active' && (
                           <Button
                             size="sm"
-                            onClick={() => handleDeactivateUser(user.id)}
+                            onClick={() => updateUserStatus(user.id, 'inactive')}
                             className="bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30"
+                            disabled={loadingUsers}
                           >
                             <UserX className="w-4 h-4" />
                           </Button>
@@ -1217,8 +2055,9 @@ export const Admin: React.FC = () => {
                         {user.status !== 'banned' && (
                           <Button
                             size="sm"
-                            onClick={() => handleBanUser(user.id)}
+                            onClick={() => updateUserStatus(user.id, 'banned')}
                             className="bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                            disabled={loadingUsers}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -1228,25 +2067,51 @@ export const Admin: React.FC = () => {
                   ))}
                 </div>
 
+                {/* Loading State */}
+                {loadingUsers && (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neon-purple mx-auto mb-4"></div>
+                    <p className="text-futuristic-gray">Carregando usuários...</p>
+                  </div>
+                )}
+
+                {/* Error State */}
+                {usersError && (
+                  <div className="text-center py-8">
+                    <p className="text-red-400 mb-4">{usersError}</p>
+                    <Button onClick={refreshUsers} className="bg-neon-purple/20 text-neon-purple hover:bg-neon-purple/30">
+                      Tentar Novamente
+                    </Button>
+                  </div>
+                )}
+
+                {/* Empty State */}
+                {!loadingUsers && !usersError && paginatedUsers.length === 0 && (
+                  <div className="text-center py-8">
+                    <Users className="w-12 h-12 text-futuristic-gray mx-auto mb-4" />
+                    <p className="text-futuristic-gray">Nenhum usuário encontrado</p>
+                  </div>
+                )}
+
                 {/* Pagination */}
-                {totalPages > 1 && (
+                {totalUserPages > 1 && (
                   <div className="flex items-center justify-center space-x-2 mt-6">
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
+                      onClick={() => setCurrentUserPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentUserPage === 1}
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </Button>
                     <span className="text-white">
-                      Página {currentPage} de {totalPages}
+                      Página {currentUserPage} de {totalUserPages}
                     </span>
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentUserPage(prev => Math.min(prev + 1, totalUserPages))}
+                      disabled={currentUserPage === totalUserPages}
                     >
                       <ChevronRight className="w-4 h-4" />
                     </Button>
@@ -1586,68 +2451,17 @@ export const Admin: React.FC = () => {
         )}
       </div>
 
-      {/* Modal Nova Campanha */}
-      {showNewCampaignModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-darker-surface border border-neon-purple/20 rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-xl font-orbitron font-bold text-white mb-4">Nova Campanha</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-futuristic-gray text-sm mb-2">Assunto</label>
-                <input
-                  type="text"
-                  value={newCampaignData.subject}
-                  onChange={(e) => setNewCampaignData(prev => ({ ...prev, subject: e.target.value }))}
-                  className="w-full px-3 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple"
-                  placeholder="Digite o assunto da campanha"
-                />
-              </div>
-
-              <div>
-                <label className="block text-futuristic-gray text-sm mb-2">Conteúdo</label>
-                <textarea
-                  value={newCampaignData.content}
-                  onChange={(e) => setNewCampaignData(prev => ({ ...prev, content: e.target.value }))}
-                  className="w-full px-3 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple h-32 resize-none"
-                  placeholder="Digite o conteúdo da campanha"
-                />
-              </div>
-
-              <div>
-                <label className="block text-futuristic-gray text-sm mb-2">Segmento</label>
-                <select
-                  value={newCampaignData.segment}
-                  onChange={(e) => setNewCampaignData(prev => ({ ...prev, segment: e.target.value }))}
-                  className="w-full px-3 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple"
-                >
-                  <option value="all">Todos os inscritos</option>
-                  <option value="active">Apenas ativos</option>
-                  <option value="recent">Inscritos recentes</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex space-x-3 mt-6">
-              <Button
-                onClick={() => setShowNewCampaignModal(false)}
-                variant="outline"
-                className="flex-1"
-                disabled={isLoading}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleCreateCampaign}
-                className="flex-1 bg-neon-gradient hover:bg-neon-gradient/80"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Enviando...' : 'Criar e Enviar'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Campaign Editor */}
+      <CampaignEditor
+        isOpen={showCampaignEditor}
+        onClose={() => setShowCampaignEditor(false)}
+        templates={newsletterHook.templates}
+        onSendCampaign={newsletterHook.sendCampaign}
+        onSendTestEmail={newsletterHook.sendTestEmail}
+        onCreateTemplate={newsletterHook.createTemplate}
+        loading={newsletterHook.campaignLoading}
+        subscribersCount={newsletterHook.stats.totalSubscribers}
+      />
 
       {/* Modal de Confirmação de Exclusão */}
       {showDeleteConfirmModal && categoryToDelete && (

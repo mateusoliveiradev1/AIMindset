@@ -13,6 +13,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+  const [screenSize, setScreenSize] = useState<'large' | 'medium' | 'small'>('large');
   
   // Refs para controle de performance
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -22,7 +23,17 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
   // Detectar tamanho da tela
   useEffect(() => {
     const checkScreenSize = () => {
-      setIsDesktop(window.innerWidth >= 1024);
+      const width = window.innerWidth;
+      setIsDesktop(width >= 1024);
+      
+      // Definir tamanho da tela para responsividade progressiva
+      if (width >= 1400) {
+        setScreenSize('large');
+      } else if (width >= 1200) {
+        setScreenSize('medium');
+      } else {
+        setScreenSize('small');
+      }
     };
 
     checkScreenSize();
@@ -90,17 +101,34 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
   // Impedir scroll do body quando modal estiver aberto
   useEffect(() => {
     if (isModalOpen && !isDesktop) {
+      // Salvar o valor atual do scroll antes de bloquear
+      const scrollY = window.scrollY;
       document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
     } else {
+      // Restaurar o scroll quando fechar o modal
+      const scrollY = document.body.style.top;
       document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
     }
 
     return () => {
+      // Cleanup para garantir que o body volte ao normal
       document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
     };
   }, [isModalOpen, isDesktop]);
 
-  // Handler otimizado para cliques
+  // Handler otimizado para cliques e touch
   const handleScrollToHeading = useCallback((headingId: string, closeModal: boolean = false) => {
     try {
       // Prevenir múltiplos cliques
@@ -115,20 +143,65 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
         setIsModalOpen(false);
       }
       
-      // Aguardar um frame antes de fazer scroll
-      requestAnimationFrame(() => {
-        scrollToHeading(headingId);
-        
-        // Reset flag após scroll
-        setTimeout(() => {
-          isScrollingRef.current = false;
-        }, 500);
-      });
+      // Aguardar um pouco mais em dispositivos móveis para garantir que o modal feche
+      const delay = closeModal ? 100 : 0;
+      
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          scrollToHeading(headingId);
+          
+          // Reset flag após scroll - tempo maior para dispositivos móveis
+          setTimeout(() => {
+            isScrollingRef.current = false;
+          }, 800);
+        });
+      }, delay);
     } catch (error) {
       console.warn('Erro ao navegar para heading:', error);
       isScrollingRef.current = false;
     }
   }, [scrollToHeading]);
+
+  // Gerenciar eventos touch para dispositivos móveis (non-passive)
+  useEffect(() => {
+    if (!isDesktop && isModalOpen) {
+      let touchStartTarget = null;
+      
+      const handleTouchStart = (e) => {
+        // Verificar se o toque foi em um botão do índice
+        const button = e.target.closest('button[data-heading-id]');
+        if (button) {
+          touchStartTarget = button;
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      };
+      
+      const handleTouchEnd = (e) => {
+        // Verificar se o toque terminou no mesmo botão que começou
+        const button = e.target.closest('button[data-heading-id]');
+        if (button && button === touchStartTarget) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          const headingId = button.getAttribute('data-heading-id');
+          if (headingId) {
+            handleScrollToHeading(headingId, true);
+          }
+        }
+        touchStartTarget = null;
+      };
+      
+      // Registrar eventos como non-passive
+      document.addEventListener('touchstart', handleTouchStart, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd, { passive: false });
+      
+      return () => {
+        document.removeEventListener('touchstart', handleTouchStart);
+        document.removeEventListener('touchend', handleTouchEnd);
+      };
+    }
+  }, [isDesktop, isModalOpen, handleScrollToHeading]);
 
   // Early return se não há itens
   if (!toc || !Array.isArray(toc) || toc.length === 0) {
@@ -209,6 +282,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
                           }`}
                           style={{ paddingLeft: `${(item.level - 1) * 12 + 12}px` }}
                           type="button"
+                          data-heading-id={item.id}
                         >
                           {item.text}
                         </button>
@@ -229,13 +303,28 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
       {/* Sidebar para desktop */}
       {isDesktop && (
         <div 
-          className={`fixed top-20 left-6 w-80 max-h-[calc(100vh-120px)] z-[9998] bg-darker-surface/90 backdrop-blur-md border border-futuristic-gray/20 rounded-lg shadow-2xl transition-all duration-500 ${
+          className={`fixed top-20 left-6 ${
+            screenSize === 'large' ? 'w-80' : 
+            screenSize === 'medium' ? 'w-64' : 'w-48'
+          } max-h-[calc(100vh-120px)] z-[9998] bg-darker-surface/90 backdrop-blur-md border border-futuristic-gray/20 rounded-lg shadow-2xl transition-all duration-500 ${
             isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8 pointer-events-none'
           }`}
         >
-          <div className="p-6">
-            <h3 className="font-orbitron font-semibold text-white mb-4 flex items-center sticky top-0 bg-darker-surface/90 backdrop-blur-sm -mx-6 -mt-6 px-6 pt-6 pb-4 border-b border-futuristic-gray/10">
-              <List className="h-4 w-4 mr-2" />
+          <div className={`${
+            screenSize === 'large' ? 'p-6' : 
+            screenSize === 'medium' ? 'p-4' : 'p-3'
+          }`}>
+            <h3 className={`font-orbitron font-semibold text-white mb-4 flex items-center sticky top-0 bg-darker-surface/90 backdrop-blur-sm ${
+              screenSize === 'large' ? '-mx-6 -mt-6 px-6 pt-6 pb-4' : 
+              screenSize === 'medium' ? '-mx-4 -mt-4 px-4 pt-4 pb-3' : '-mx-3 -mt-3 px-3 pt-3 pb-2'
+            } border-b border-futuristic-gray/10 ${
+              screenSize === 'large' ? 'text-base' : 
+              screenSize === 'medium' ? 'text-sm' : 'text-xs'
+            }`}>
+              <List className={`${
+                screenSize === 'large' ? 'h-4 w-4' : 
+                screenSize === 'medium' ? 'h-3 w-3' : 'h-3 w-3'
+              } mr-2`} />
               Índice
             </h3>
             
@@ -251,12 +340,20 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
                             e.stopPropagation();
                             handleScrollToHeading(item.id);
                           }}
-                          className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-300 text-sm ${
+                          className={`w-full text-left ${
+                            screenSize === 'large' ? 'px-3 py-2' : 
+                            screenSize === 'medium' ? 'px-2 py-1.5' : 'px-2 py-1'
+                          } rounded-lg transition-all duration-300 ${
+                            screenSize === 'large' ? 'text-sm' : 
+                            screenSize === 'medium' ? 'text-xs' : 'text-xs'
+                          } ${
                             activeId === item.id
                               ? 'bg-neon-purple/20 text-neon-purple border-l-2 border-neon-purple shadow-sm'
                               : 'text-futuristic-gray hover:text-white hover:bg-futuristic-gray/10'
                           }`}
-                          style={{ paddingLeft: `${(item.level - 1) * 12 + 12}px` }}
+                          style={{ 
+                            paddingLeft: `${(item.level - 1) * (screenSize === 'large' ? 12 : screenSize === 'medium' ? 8 : 6) + (screenSize === 'large' ? 12 : screenSize === 'medium' ? 8 : 6)}px` 
+                          }}
                           type="button"
                         >
                           {item.text}
@@ -266,7 +363,10 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
                   </ul>
                 </nav>
               ) : (
-                <p className="text-futuristic-gray text-sm text-center py-8">
+                <p className={`text-futuristic-gray text-center py-8 ${
+                  screenSize === 'large' ? 'text-sm' : 
+                  screenSize === 'medium' ? 'text-xs' : 'text-xs'
+                }`}>
                   Nenhum cabeçalho encontrado no artigo.
                 </p>
               )}
