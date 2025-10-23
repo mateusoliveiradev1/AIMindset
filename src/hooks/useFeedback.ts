@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 export interface Feedback {
   id: string;
-  article_id: number;
+  article_id: string;
   useful: boolean;
   created_at: string;
 }
@@ -18,14 +18,14 @@ interface UseFeedbackReturn {
   checkSubmissionStatus: () => boolean;
 }
 
-export const useFeedback = (articleId: number): UseFeedbackReturn => {
+export const useFeedback = (articleId: string): UseFeedbackReturn => {
   const [submitting, setSubmitting] = useState(false);
-  const [hasSubmitted, setHasSubmitted] = useState(() => hasAlreadySubmittedFeedback(articleId.toString()));
+  const [hasSubmitted, setHasSubmitted] = useState(() => hasAlreadySubmittedFeedback(articleId));
   const [error, setError] = useState<string | null>(null);
 
   // Verificar status de submissão
   const checkSubmissionStatus = useCallback(() => {
-    const status = hasAlreadySubmittedFeedback(articleId.toString());
+    const status = hasAlreadySubmittedFeedback(articleId);
     setHasSubmitted(status);
     return status;
   }, [articleId]);
@@ -37,7 +37,7 @@ export const useFeedback = (articleId: number): UseFeedbackReturn => {
       setError(null);
 
       // Verificar se já foi enviado
-      if (hasAlreadySubmittedFeedback(articleId.toString())) {
+      if (hasAlreadySubmittedFeedback(articleId)) {
         setError('Você já avaliou este artigo');
         toast.error('Você já avaliou este artigo');
         setHasSubmitted(true);
@@ -54,19 +54,22 @@ export const useFeedback = (articleId: number): UseFeedbackReturn => {
       }
 
       // Inserir no banco
+      console.log('📝 [DEBUG] Enviando feedback para articleId:', articleId, 'useful:', useful);
       const { error: insertError } = await supabase
         .from('feedback')
         .insert({
           article_id: articleId,
           useful: useful
         });
+      
+      console.log('📝 [DEBUG] Resultado da inserção:', { insertError });
 
       if (insertError) {
         throw insertError;
       }
 
       // Marcar como enviado no localStorage
-      markFeedbackAsSubmitted(articleId.toString());
+      markFeedbackAsSubmitted(articleId);
       setHasSubmitted(true);
       
       // Mostrar mensagem de sucesso

@@ -1,9 +1,9 @@
-import React from 'react';
-import { TrendingUp, MessageCircle, ThumbsUp, ThumbsDown, Eye } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { TrendingUp, MessageCircle, ThumbsUp, ThumbsDown, Eye, RefreshCw } from 'lucide-react';
 import { Article } from '../../hooks/useArticles';
 
 interface ArticleMetrics {
-  article_id: number;
+  article_id: string | number;
   positive_feedback: number;
   negative_feedback: number;
   total_comments: number;
@@ -21,28 +21,86 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
   metrics,
   onArticleClick
 }) => {
+  const [updatingArticles, setUpdatingArticles] = useState<Set<number>>(new Set());
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+
+  // Detectar mudanças nas métricas para mostrar indicadores visuais
+  useEffect(() => {
+    console.log('📊 [METRICS-TABLE] Métricas recebidas:', metrics);
+    console.log('📊 [METRICS-TABLE] Número de métricas:', metrics?.length || 0);
+    console.log('📊 [METRICS-TABLE] Artigos disponíveis:', articles?.length || 0);
+    
+    setLastUpdate(new Date());
+    
+    // Simular indicador de atualização
+    if (metrics && metrics.length > 0) {
+      const articleIds = metrics.map(m => m.article_id);
+      console.log('🔄 [METRICS-TABLE] Atualizando indicadores para artigos:', articleIds);
+      setUpdatingArticles(new Set(articleIds));
+      
+      // Remover indicador após 2 segundos
+      const timer = setTimeout(() => {
+        console.log('✅ [METRICS-TABLE] Removendo indicadores de atualização');
+        setUpdatingArticles(new Set());
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [metrics]);
+
   const getMetricsForArticle = (articleId: number): ArticleMetrics => {
-    return metrics.find(m => m.article_id === articleId) || {
+    // Converter articleId para string para comparação
+    const articleIdStr = articleId.toString();
+    
+    console.log(`🔍 [METRICS-TABLE] Buscando métricas para artigo ${articleId} (string: ${articleIdStr})`);
+    console.log(`🔍 [METRICS-TABLE] Métricas disponíveis:`, metrics?.map(m => ({ 
+      id: m.article_id, 
+      type: typeof m.article_id,
+      positive: m.positive_feedback,
+      negative: m.negative_feedback,
+      comments: m.total_comments
+    })));
+    
+    const found = metrics?.find(m => {
+      const match = m.article_id === articleIdStr;
+      console.log(`🔍 [METRICS-TABLE] Comparando ${m.article_id} === ${articleIdStr}: ${match}`);
+      return match;
+    });
+    
+    const result = found || {
       article_id: articleId,
       positive_feedback: 0,
       negative_feedback: 0,
       total_comments: 0,
       approval_rate: 0
     };
+    
+    console.log(`📊 [METRICS-TABLE] Resultado final para artigo ${articleId}:`, result);
+    return result;
   };
 
   const formatApprovalRate = (rate: number): string => {
-    return `${Math.round(rate)}%`;
+    const safeRate = Number(rate) || 0;
+    return isNaN(safeRate) ? '0%' : `${Math.round(safeRate)}%`;
   };
 
   const getApprovalRateColor = (rate: number): string => {
-    if (rate >= 80) return 'text-lime-green';
-    if (rate >= 60) return 'text-yellow-400';
+    const safeRate = Number(rate) || 0;
+    if (isNaN(safeRate)) return 'text-gray-400';
+    if (safeRate >= 80) return 'text-lime-green';
+    if (safeRate >= 60) return 'text-yellow-400';
     return 'text-red-400';
   };
 
   return (
     <div className="bg-darker-surface/30 rounded-lg overflow-hidden">
+      <div className="px-6 py-4 border-b border-darker-surface/50 flex justify-between items-center">
+        <h3 className="text-lg font-medium text-white">Métricas dos Artigos</h3>
+        <div className="flex items-center space-x-2 text-sm text-futuristic-gray">
+          <RefreshCw className="h-4 w-4" />
+          <span>Última atualização: {lastUpdate.toLocaleTimeString()}</span>
+        </div>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-darker-surface/50">
@@ -85,7 +143,12 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
               return (
                 <tr 
                   key={article.id}
-                  className="hover:bg-darker-surface/20 transition-colors duration-200"
+                  onClick={() => onArticleClick(article)}
+                  className={`hover:bg-darker-surface/50 cursor-pointer transition-all duration-300 ${
+                    updatingArticles.has(article.id) 
+                      ? 'bg-futuristic-blue/10 border-l-4 border-futuristic-blue animate-pulse' 
+                      : ''
+                  }`}
                 >
                   <td className="px-4 py-4">
                     <div className="flex items-start">
@@ -101,28 +164,47 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <span className="text-sm font-medium text-lime-green">
+                      <span className={`text-sm font-medium transition-all duration-300 ${
+                        updatingArticles.has(article.id) 
+                          ? 'text-futuristic-blue animate-pulse' 
+                          : 'text-lime-green'
+                      }`}>
                         {articleMetrics.positive_feedback}
                       </span>
                     </div>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <span className="text-sm font-medium text-red-400">
+                      <span className={`text-sm font-medium transition-all duration-300 ${
+                        updatingArticles.has(article.id) 
+                          ? 'text-futuristic-blue animate-pulse' 
+                          : 'text-red-400'
+                      }`}>
                         {articleMetrics.negative_feedback}
                       </span>
+                      {updatingArticles.has(article.id) && (
+                        <RefreshCw className="h-3 w-3 ml-2 text-futuristic-blue animate-spin" />
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <span className="text-sm font-medium text-blue-400">
+                      <span className={`text-sm font-medium transition-all duration-300 ${
+                        updatingArticles.has(article.id) 
+                          ? 'text-futuristic-blue animate-pulse' 
+                          : 'text-blue-400'
+                      }`}>
                         {articleMetrics.total_comments}
                       </span>
                     </div>
                   </td>
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <span className={`text-sm font-medium ${getApprovalRateColor(articleMetrics.approval_rate)}`}>
+                      <span className={`text-sm font-medium transition-all duration-300 ${
+                        updatingArticles.has(article.id) 
+                          ? 'text-futuristic-blue animate-pulse' 
+                          : getApprovalRateColor(articleMetrics.approval_rate)
+                      }`}>
                         {formatApprovalRate(articleMetrics.approval_rate)}
                       </span>
                     </div>

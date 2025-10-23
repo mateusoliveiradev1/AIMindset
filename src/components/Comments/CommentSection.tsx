@@ -4,7 +4,7 @@ import { CommentForm } from './CommentForm';
 import { useComments } from '../../hooks/useComments';
 
 interface CommentSectionProps {
-  articleId: number;
+  articleId: string;
 }
 
 export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => {

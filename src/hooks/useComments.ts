@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '../lib/supabase';
-import { validateComment, sanitizeUserName, sanitizeCommentContent } from '../utils/commentValidation';
 import { toast } from 'sonner';
+import { supabase } from '../lib/supabase';
+
+// ✅ COMENTÁRIOS REATIVADOS - Sistema funcionando normalmente
+const COMMENTS_DISABLED = false;
 
 export interface Comment {
   id: string;
-  article_id: number;
+  article_id: string;
   user_name: string;
   content: string;
   created_at: string;
@@ -16,232 +18,186 @@ export interface CommentFormData {
   content: string;
 }
 
-const COMMENTS_PER_PAGE = 10;
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000;
-
-export const useComments = (articleId: number) => {
-  console.log('🎯 [DEBUG] useComments hook iniciado com articleId:', articleId);
-  
+export const useComments = (articleId: string) => {
   const [comments, setComments] = useState<Comment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [offset, setOffset] = useState(0);
-  
-  // Ref para verificar se o componente ainda está montado
-  const mountedRef = useRef(true);
-  const loadingRef = useRef(false);
+  const [page, setPage] = useState(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Função para carregar comentários
-  const loadComments = useCallback(async (reset = false, retryCount = 0) => {
-    console.log('🚀 [DEBUG] Iniciando loadComments - reset:', reset, 'retryCount:', retryCount);
-    
-    // Verificar se o componente ainda está montado
-    if (!mountedRef.current) {
-      console.log('⚠️ [DEBUG] Componente não montado - cancelando loadComments');
-      return;
-    }
+  const COMMENTS_PER_PAGE = 10;
 
-    // Evitar requisições simultâneas
-    if (loadingRef.current) {
-      console.log('⚠️ [DEBUG] Requisição já em andamento - cancelando loadComments');
-      return;
-    }
+  // Se comentários estão desabilitados, retornar estado vazio
+  if (COMMENTS_DISABLED) {
+    console.log('🚫 [INFO] Sistema de comentários desabilitado - articleId:', articleId);
+    return {
+      comments: [],
+      loading: false,
+      submitting: false,
+      hasMore: false,
+      error: null,
+      loadMore: () => {
+        console.log('🚫 [INFO] loadMore desabilitado');
+      },
+      submitComment: async () => {
+        console.log('🚫 [INFO] submitComment desabilitado');
+        toast.info('Sistema de comentários temporariamente desabilitado');
+        return false;
+      },
+      refreshComments: () => {
+        console.log('🚫 [INFO] refreshComments desabilitado');
+      },
+      loadMoreComments: () => {
+        console.log('🚫 [INFO] loadMoreComments desabilitado');
+      }
+    };
+  }
 
-    if (reset) {
-      console.log('🔄 [DEBUG] Reset ativado - limpando estado');
-      setComments([]);
-      setOffset(0);
-      setError(null);
-    }
+  console.log('✅ [INFO] Sistema de comentários ativo - articleId:', articleId);
 
-    loadingRef.current = true;
-    setLoading(true);
-    console.log('🔄 [DEBUG] setLoading(true) executado');
+  // Carregar comentários
+  const loadComments = useCallback(async (pageNum: number = 0, append: boolean = false) => {
+    if (!articleId) return;
 
     try {
-      console.log('📡 [DEBUG] Fazendo requisição ao Supabase para articleId:', articleId);
+      // Cancelar requisição anterior apenas se ainda estiver ativa
+      if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
+        abortControllerRef.current.abort();
+      }
+
+      // Criar novo AbortController para esta requisição
+      const currentController = new AbortController();
+      abortControllerRef.current = currentController;
       
-      const { data, error: supabaseError } = await supabase
+      setError(null);
+      if (!append) {
+        setLoading(true);
+      }
+
+      console.log(`💬 [DEBUG] Carregando comentários - página ${pageNum}, append: ${append}`);
+
+      // Verificar se a requisição foi cancelada antes de fazer a query
+      if (currentController.signal.aborted) {
+        console.log('💬 [DEBUG] Requisição cancelada antes da query');
+        return;
+      }
+
+      const { data, error: fetchError, count } = await supabase
         .from('comments')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('article_id', articleId)
         .order('created_at', { ascending: false })
-        .range(reset ? 0 : offset, reset ? COMMENTS_PER_PAGE - 1 : offset + COMMENTS_PER_PAGE - 1);
+        .range(pageNum * COMMENTS_PER_PAGE, (pageNum + 1) * COMMENTS_PER_PAGE - 1)
+        .abortSignal(currentController.signal);
 
-      console.log('📊 [DEBUG] Resposta do Supabase:', { data, error: supabaseError });
-      console.log('📊 [DEBUG] mountedRef.current após requisição:', mountedRef.current);
-
-      // Verificar se o componente ainda está montado após a requisição
-      if (!mountedRef.current) {
-        console.log('⚠️ [DEBUG] Componente desmontado durante requisição');
+      // Verificar se a requisição foi cancelada após a query
+      if (currentController.signal.aborted) {
+        console.log('💬 [DEBUG] Requisição cancelada após a query');
         return;
       }
 
-      if (supabaseError) {
-        console.error('❌ [DEBUG] Erro do Supabase:', supabaseError);
-        throw supabaseError;
+      if (fetchError) {
+        throw fetchError;
       }
 
-      // CORREÇÃO: Sempre processar a resposta, mesmo se data for null ou array vazio
-      const commentsData = data || [];
-      console.log(`📊 [DEBUG] Processando ${commentsData.length} comentários`);
-      
-      if (reset) {
-        setComments(commentsData);
-        setOffset(COMMENTS_PER_PAGE);
+      const newComments = data || [];
+      console.log(`💬 [DEBUG] Comentários carregados: ${newComments.length}, total: ${count}`);
+
+      if (append) {
+        setComments(prev => [...prev, ...newComments]);
       } else {
-        setComments(prev => [...prev, ...commentsData]);
-        setOffset(prev => prev + COMMENTS_PER_PAGE);
+        setComments(newComments);
       }
-      
-      setHasMore(commentsData.length === COMMENTS_PER_PAGE);
-      console.log(`✅ [DEBUG] Estado atualizado - hasMore: ${commentsData.length === COMMENTS_PER_PAGE}`);
-      console.log(`✅ [DEBUG] Total de comentários carregados: ${reset ? commentsData.length : comments.length + commentsData.length}`);
-      
+
+      // Verificar se há mais comentários
+      const totalLoaded = append ? comments.length + newComments.length : newComments.length;
+      setHasMore((count || 0) > totalLoaded);
+      setPage(pageNum);
+
     } catch (err: any) {
-      console.log('🚨 [DEBUG] Entrando no catch - erro:', err);
-      
-      // Verificar se o componente ainda está montado
-      if (!mountedRef.current) {
-        console.log('⚠️ [DEBUG] Componente não montado no catch - retornando');
-        return;
-      }
-
-      // Ignorar erros de abort
-      if (err.name === 'AbortError' || err.message?.includes('aborted')) {
-        console.log('⚠️ [DEBUG] Erro de abort ignorado');
-        return;
-      }
-
-      // Retry logic para erros de rede
-      if (retryCount < MAX_RETRIES && (
-        err.message?.includes('NetworkError') ||
-        err.message?.includes('INSUFFICIENT_RESOURCES') ||
-        err.message?.includes('Failed to fetch')
-      )) {
-        console.log(`🔄 [DEBUG] Tentativa ${retryCount + 1}/${MAX_RETRIES} em ${RETRY_DELAY * (retryCount + 1)}ms...`);
-        setTimeout(() => {
-          if (mountedRef.current) {
-            loadComments(reset, retryCount + 1);
-          }
-        }, RETRY_DELAY * (retryCount + 1));
-        return;
-      }
-
-      // Se todas as tentativas falharam ou erro não é de rede
-      console.error('❌ [DEBUG] Erro final ao carregar comentários:', err);
-      setError(err.message || 'Erro ao carregar comentários');
-      
-    } finally {
-      console.log('🏁 [DEBUG] Entrando no finally - mountedRef.current:', mountedRef.current);
-      if (mountedRef.current) {
-        loadingRef.current = false;
-        setLoading(false);
-        console.log('🏁 [DEBUG] Finalizando loading - setLoading(false) executado');
+      // Só mostrar erro se não for AbortError
+      if (err.name !== 'AbortError') {
+        console.error('❌ Erro ao carregar comentários:', err);
+        setError(`Erro ao carregar comentários: ${err.message}`);
+        toast.error('Erro ao carregar comentários');
       } else {
-        console.log('⚠️ [DEBUG] Componente não montado no finally - não executando setLoading(false)');
+        console.log('💬 [DEBUG] Requisição cancelada (AbortError) - normal');
+      }
+    } finally {
+      // Só atualizar loading se a requisição não foi cancelada
+      if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
+        setLoading(false);
       }
     }
-  }, [articleId, offset]);
+  }, [articleId, comments.length]);
 
-  // Função para carregar mais comentários
+  // Carregar mais comentários
   const loadMoreComments = useCallback(() => {
     if (!loading && hasMore) {
-      loadComments(false);
+      loadComments(page + 1, true);
     }
-  }, [loading, hasMore, loadComments]);
+  }, [loading, hasMore, page, loadComments]);
 
-  // Função para atualizar comentários
+  // Atualizar comentários
   const refreshComments = useCallback(() => {
-    loadComments(true);
+    setPage(0);
+    loadComments(0, false);
   }, [loadComments]);
 
-  // Função para enviar comentário
+  // Submeter novo comentário
   const submitComment = useCallback(async (formData: CommentFormData): Promise<boolean> => {
-    if (!mountedRef.current) return false;
-
-    setSubmitting(true);
-    setError(null);
+    if (!articleId) return false;
 
     try {
-      // Validar dados
-      const validation = validateComment(formData);
-      if (!validation.isValid) {
-        toast.error(validation.errors.join(', '));
-        return false;
-      }
+      setSubmitting(true);
+      setError(null);
 
-      // Sanitizar dados
-      const sanitizedData = {
-        article_id: articleId,
-        user_name: sanitizeUserName(formData.user_name),
-        content: sanitizeCommentContent(formData.content)
-      };
+      console.log('💬 [DEBUG] Submetendo comentário:', formData);
 
-      const { error: supabaseError } = await supabase
+      const { error: insertError } = await supabase
         .from('comments')
-        .insert([sanitizedData]);
+        .insert({
+          article_id: articleId,
+          user_name: formData.user_name.trim(),
+          content: formData.content.trim()
+        });
 
-      if (supabaseError) {
-        throw supabaseError;
+      if (insertError) {
+        throw insertError;
       }
 
-      // Recarregar comentários após inserção bem-sucedida
-      await loadComments(true);
-      
+      console.log('✅ [DEBUG] Comentário submetido com sucesso');
       toast.success('Comentário enviado com sucesso!');
+      
+      // Recarregar comentários
+      refreshComments();
+      
       return true;
-
     } catch (err: any) {
-      console.error('Erro ao enviar comentário:', err);
-      const errorMessage = err.message || 'Erro ao enviar comentário';
+      console.error('❌ Erro ao submeter comentário:', err);
+      const errorMessage = `Erro ao enviar comentário: ${err.message}`;
       setError(errorMessage);
       toast.error(errorMessage);
       return false;
     } finally {
-      if (mountedRef.current) {
-        setSubmitting(false);
-      }
+      setSubmitting(false);
     }
-  }, [articleId, loadComments]);
+  }, [articleId, refreshComments]);
 
-  // Carregar comentários iniciais quando o articleId muda
+  // Carregar comentários iniciais
   useEffect(() => {
-    console.log('🔄 [DEBUG] useEffect disparado - articleId:', articleId);
-    
-    if (!articleId) {
-      console.log('⚠️ [DEBUG] articleId inválido, não carregando comentários');
-      setLoading(false);
-      return;
+    if (articleId) {
+      loadComments(0, false);
     }
 
-    // Reset do estado
-    console.log('🔄 [DEBUG] Resetando estado...');
-    setComments([]);
-    setOffset(0);
-    setError(null);
-    setHasMore(false);
-
-    // Carregar comentários diretamente sem timeout
-    console.log('🚀 [DEBUG] Carregando comentários diretamente');
-    loadComments(true);
-
-  }, [articleId]); // REMOVIDO loadComments da dependência
-
-  // Cleanup quando o componente é desmontado
-  useEffect(() => {
-    // Garantir que o componente está montado no início
-    mountedRef.current = true;
-    console.log('🔧 [DEBUG] Componente montado - mountedRef.current:', mountedRef.current);
-    
     return () => {
-      console.log('🧹 [DEBUG] Componente desmontado - cleanup');
-      mountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
-  }, []);
+  }, [articleId, loadComments]);
 
   return {
     comments,
@@ -249,8 +205,9 @@ export const useComments = (articleId: number) => {
     submitting,
     hasMore,
     error,
+    loadMore: loadMoreComments,
     submitComment,
-    loadMoreComments,
-    refreshComments
+    refreshComments,
+    loadMoreComments
   };
 };

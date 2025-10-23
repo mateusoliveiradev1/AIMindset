@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTableOfContents } from '../hooks/useTableOfContents';
 import { List, X } from 'lucide-react';
 
@@ -6,34 +6,18 @@ interface TableOfContentsProps {
   className?: string;
 }
 
-// Utility function for throttling scroll events
-const throttle = (func: Function, delay: number) => {
-  let timeoutId: NodeJS.Timeout | null = null;
-  let lastExecTime = 0;
-  
-  return (...args: any[]) => {
-    const currentTime = Date.now();
-    
-    if (currentTime - lastExecTime > delay) {
-      func(...args);
-      lastExecTime = currentTime;
-    } else {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        func(...args);
-        lastExecTime = Date.now();
-      }, delay - (currentTime - lastExecTime));
-    }
-  };
-};
-
 export const TableOfContents: React.FC<TableOfContentsProps> = ({ 
   className = '' 
 }) => {
   const { toc, activeId, scrollToHeading } = useTableOfContents('[data-article-content]');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
-  const [isVisible, setIsVisible] = useState(true); // Estado de visibilidade
+  const [isVisible, setIsVisible] = useState(true);
+  
+  // Refs para controle de performance
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastScrollTimeRef = useRef<number>(0);
+  const isScrollingRef = useRef<boolean>(false);
 
   // Detectar tamanho da tela
   useEffect(() => {
@@ -46,29 +30,60 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
-  // Lógica de detecção de scroll para esconder/mostrar o índice
+  // Lógica otimizada de detecção de scroll
   useEffect(() => {
-    const handleScroll = throttle(() => {
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const windowHeight = window.innerHeight;
-      const documentHeight = document.documentElement.scrollHeight;
+    const handleScroll = () => {
+      const now = Date.now();
       
-      // Calcular porcentagem de scroll
-      const scrollPercentage = (scrollTop + windowHeight) / documentHeight;
+      // Throttle manual mais eficiente
+      if (now - lastScrollTimeRef.current < 150) {
+        return;
+      }
       
-      // Esconder índice quando próximo ao final (90% da página foi rolada)
-      const shouldHide = scrollPercentage >= 0.9;
+      lastScrollTimeRef.current = now;
       
-      setIsVisible(!shouldHide);
-    }, 100);
+      // Usar requestAnimationFrame para melhor performance
+      if (scrollTimeoutRef.current) {
+        cancelAnimationFrame(scrollTimeoutRef.current);
+      }
+      
+      scrollTimeoutRef.current = requestAnimationFrame(() => {
+        try {
+          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+          const windowHeight = window.innerHeight;
+          const documentHeight = document.documentElement.scrollHeight;
+          
+          // Verificar se os valores são válidos
+          if (documentHeight <= windowHeight) {
+            setIsVisible(true);
+            return;
+          }
+          
+          // Calcular porcentagem de scroll
+          const scrollPercentage = (scrollTop + windowHeight) / documentHeight;
+          
+          // Esconder índice quando próximo ao final (90% da página foi rolada)
+          const shouldHide = scrollPercentage >= 0.9;
+          
+          setIsVisible(!shouldHide);
+        } catch (error) {
+          console.warn('Erro no handleScroll:', error);
+          setIsVisible(true); // Fallback seguro
+        }
+      });
+    };
 
-    window.addEventListener('scroll', handleScroll);
+    // Adicionar listener com passive para melhor performance
+    window.addEventListener('scroll', handleScroll, { passive: true });
     
     // Verificar posição inicial
     handleScroll();
     
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) {
+        cancelAnimationFrame(scrollTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -85,43 +100,69 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
     };
   }, [isModalOpen, isDesktop]);
 
-  // Early return se não há itens - COM VERIFICAÇÃO DE SEGURANÇA
+  // Handler otimizado para cliques
+  const handleScrollToHeading = useCallback((headingId: string, closeModal: boolean = false) => {
+    try {
+      // Prevenir múltiplos cliques
+      if (isScrollingRef.current) {
+        return;
+      }
+      
+      isScrollingRef.current = true;
+      
+      // Fechar modal primeiro se necessário
+      if (closeModal) {
+        setIsModalOpen(false);
+      }
+      
+      // Aguardar um frame antes de fazer scroll
+      requestAnimationFrame(() => {
+        scrollToHeading(headingId);
+        
+        // Reset flag após scroll
+        setTimeout(() => {
+          isScrollingRef.current = false;
+        }, 500);
+      });
+    } catch (error) {
+      console.warn('Erro ao navegar para heading:', error);
+      isScrollingRef.current = false;
+    }
+  }, [scrollToHeading]);
+
+  // Early return se não há itens
   if (!toc || !Array.isArray(toc) || toc.length === 0) {
     return null;
   }
 
   return (
     <>
-      {/* Botão flutuante para mobile/tablet - POSIÇÃO FIXA ABSOLUTA */}
+      {/* Botão flutuante para mobile/tablet */}
       {!isDesktop && (
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsModalOpen(true);
+          }}
           className={`fixed bottom-6 right-6 z-[9999] bg-neon-purple hover:bg-neon-purple/80 text-white p-3 rounded-full shadow-lg transition-all duration-500 hover:scale-110 backdrop-blur-sm ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
           }`}
           title="Índice do artigo"
-          style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            zIndex: 9999
-          }}
+          type="button"
         >
           <List className="h-5 w-5" />
         </button>
       )}
 
-      {/* Modal para mobile/tablet - POSIÇÃO FIXA ABSOLUTA */}
+      {/* Modal para mobile/tablet */}
       {!isDesktop && isModalOpen && (
         <div 
           className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 10000
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsModalOpen(false);
+            }
           }}
         >
           {/* Backdrop */}
@@ -136,8 +177,13 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
             <div className="flex items-center justify-between p-4 border-b border-futuristic-gray/20 bg-darker-surface/80 backdrop-blur-sm">
               <h3 className="font-orbitron font-semibold text-white">Índice</h3>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsModalOpen(false);
+                }}
                 className="text-futuristic-gray hover:text-white transition-colors p-1 rounded-md hover:bg-futuristic-gray/10"
+                type="button"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -151,9 +197,10 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
                     {toc.map((item) => (
                       <li key={item.id}>
                         <button
-                          onClick={() => {
-                            scrollToHeading(item.id);
-                            setIsModalOpen(false);
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleScrollToHeading(item.id, true);
                           }}
                           className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-300 ${
                             activeId === item.id
@@ -161,6 +208,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
                               : 'text-futuristic-gray hover:text-white hover:bg-futuristic-gray/10'
                           }`}
                           style={{ paddingLeft: `${(item.level - 1) * 12 + 12}px` }}
+                          type="button"
                         >
                           {item.text}
                         </button>
@@ -178,20 +226,12 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
         </div>
       )}
 
-      {/* Sidebar FIXA para desktop - EFEITO PARALLAX REAL */}
+      {/* Sidebar para desktop */}
       {isDesktop && (
         <div 
           className={`fixed top-20 left-6 w-80 max-h-[calc(100vh-120px)] z-[9998] bg-darker-surface/90 backdrop-blur-md border border-futuristic-gray/20 rounded-lg shadow-2xl transition-all duration-500 ${
             isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8 pointer-events-none'
           }`}
-          style={{
-            position: 'fixed',
-            top: '80px',
-            left: '24px',
-            width: '320px',
-            maxHeight: 'calc(100vh - 120px)',
-            zIndex: 9998
-          }}
         >
           <div className="p-6">
             <h3 className="font-orbitron font-semibold text-white mb-4 flex items-center sticky top-0 bg-darker-surface/90 backdrop-blur-sm -mx-6 -mt-6 px-6 pt-6 pb-4 border-b border-futuristic-gray/10">
@@ -206,13 +246,18 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
                     {toc.map((item) => (
                       <li key={item.id}>
                         <button
-                          onClick={() => scrollToHeading(item.id)}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleScrollToHeading(item.id);
+                          }}
                           className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-300 text-sm ${
                             activeId === item.id
                               ? 'bg-neon-purple/20 text-neon-purple border-l-2 border-neon-purple shadow-sm'
                               : 'text-futuristic-gray hover:text-white hover:bg-futuristic-gray/10'
                           }`}
                           style={{ paddingLeft: `${(item.level - 1) * 12 + 12}px` }}
+                          type="button"
                         >
                           {item.text}
                         </button>
