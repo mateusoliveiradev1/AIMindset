@@ -31,7 +31,7 @@ export const useStats = () => {
           .select('*', { count: 'exact', head: true })
           .eq('published', true),
         supabase
-          .from('newsletter_subscriptions')
+          .from('newsletter_subscribers')
           .select('*', { count: 'exact', head: true })
       ]);
 
