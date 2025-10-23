@@ -1,20 +1,32 @@
-// Service Worker para cache avançado e performance
-const CACHE_NAME = 'aimindset-v1.0.0';
-const STATIC_CACHE = 'aimindset-static-v1.0.0';
-const DYNAMIC_CACHE = 'aimindset-dynamic-v1.0.0';
+// Service Worker otimizado para performance Lighthouse
+const CACHE_VERSION = '1.1.0';
+const CACHE_NAME = `aimindset-v${CACHE_VERSION}`;
+const STATIC_CACHE = `aimindset-static-v${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `aimindset-dynamic-v${CACHE_VERSION}`;
+const IMAGE_CACHE = `aimindset-images-v${CACHE_VERSION}`;
 
-// Recursos críticos para cache
+// Recursos críticos para cache imediato
 const CRITICAL_RESOURCES = [
   '/',
   '/manifest.json',
   '/offline.html'
 ];
 
-// Recursos estáticos para cache
+// Recursos estáticos para cache agressivo
 const STATIC_RESOURCES = [
   '/assets/index.css',
-  '/assets/index.js'
+  '/assets/index.js',
+  '/favicon.ico',
+  '/favicon.svg'
 ];
+
+// Configurações de cache otimizadas
+const CACHE_CONFIG = {
+  maxEntries: 100,
+  maxAgeSeconds: 30 * 24 * 60 * 60, // 30 dias
+  imageMaxEntries: 50,
+  imageMaxAgeSeconds: 7 * 24 * 60 * 60 // 7 dias para imagens
+};
 
 // Estratégias de cache
 const CACHE_STRATEGIES = {
@@ -68,13 +80,12 @@ self.addEventListener('activate', (event) => {
   console.log('🚀 Service Worker: Ativando...');
   
   event.waitUntil(
-    // Limpar caches antigos
+    // Limpar caches antigos de forma otimizada
     caches.keys().then((cacheNames) => {
+      const currentCaches = [CACHE_NAME, STATIC_CACHE, DYNAMIC_CACHE, IMAGE_CACHE];
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME && 
-              cacheName !== STATIC_CACHE && 
-              cacheName !== DYNAMIC_CACHE) {
+          if (!currentCaches.includes(cacheName)) {
             console.log('🗑️ Service Worker: Removendo cache antigo:', cacheName);
             return caches.delete(cacheName);
           }
@@ -82,7 +93,7 @@ self.addEventListener('activate', (event) => {
       );
     }).then(() => {
       console.log('✅ Service Worker: Ativação concluída');
-      // Toma controle de todas as abas
+      // Toma controle de todas as abas imediatamente
       return self.clients.claim();
     })
   );
@@ -177,9 +188,10 @@ function getCacheStrategy(request) {
   return 'networkFirst';
 }
 
-// Estratégia Cache First
+// Estratégia Cache First - otimizada para performance
 async function cacheFirst(request) {
-  const cache = await caches.open(STATIC_CACHE);
+  const isImage = request.destination === 'image' || /\.(png|jpg|jpeg|svg|gif|webp|avif)$/i.test(request.url);
+  const cache = await caches.open(isImage ? IMAGE_CACHE : STATIC_CACHE);
   const cachedResponse = await cache.match(request);
   
   if (cachedResponse) {
@@ -190,6 +202,10 @@ async function cacheFirst(request) {
     const networkResponse = await fetch(request);
     
     if (networkResponse.ok) {
+      // Implementar limpeza de cache para imagens
+      if (isImage) {
+        await cleanImageCache();
+      }
       cache.put(request, networkResponse.clone());
     }
     
@@ -247,7 +263,7 @@ async function staleWhileRevalidate(request) {
   return await fetchPromise;
 }
 
-// Limpeza periódica de cache
+// Limpeza otimizada de cache
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'CLEAN_CACHE') {
     cleanOldCache();
@@ -258,9 +274,22 @@ async function cleanOldCache() {
   const cache = await caches.open(DYNAMIC_CACHE);
   const requests = await cache.keys();
   
-  // Manter apenas os 100 itens mais recentes
-  if (requests.length > 100) {
-    const oldRequests = requests.slice(0, requests.length - 100);
+  // Manter apenas os itens configurados
+  if (requests.length > CACHE_CONFIG.maxEntries) {
+    const oldRequests = requests.slice(0, requests.length - CACHE_CONFIG.maxEntries);
+    await Promise.all(
+      oldRequests.map(request => cache.delete(request))
+    );
+  }
+}
+
+// Limpeza específica para cache de imagens
+async function cleanImageCache() {
+  const cache = await caches.open(IMAGE_CACHE);
+  const requests = await cache.keys();
+  
+  if (requests.length > CACHE_CONFIG.imageMaxEntries) {
+    const oldRequests = requests.slice(0, requests.length - CACHE_CONFIG.imageMaxEntries);
     await Promise.all(
       oldRequests.map(request => cache.delete(request))
     );

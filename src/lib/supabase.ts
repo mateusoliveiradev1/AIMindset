@@ -7,52 +7,27 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Global singleton instance para evitar múltiplas instâncias GoTrueClient
-declare global {
-  var __supabase_singleton__: any;
-}
-
-// Singleton instance - uma única instância para toda a aplicação
-export const supabase = (() => {
-  // Verificar se já existe uma instância global
-  if (typeof window !== 'undefined') {
-    if (window.__supabase_singleton__) {
-      return window.__supabase_singleton__;
+// Criar cliente Supabase simples
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    storageKey: 'supabase.auth.token',
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
+  },
+  global: {
+    headers: {
+      'x-client-info': 'aimindset-app'
     }
-  } else if (global.__supabase_singleton__) {
-    return global.__supabase_singleton__;
-  }
-
-  // Criar nova instância apenas se não existir
-  const instance = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-      storageKey: 'supabase.auth.token',
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true
-    },
-    global: {
-      headers: {
-        'x-client-info': 'aimindset-app'
-      }
-    },
-    realtime: {
-      params: {
-        eventsPerSecond: 10
-      }
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10
     }
-  });
-
-  // Armazenar a instância globalmente
-  if (typeof window !== 'undefined') {
-    window.__supabase_singleton__ = instance;
-  } else {
-    global.__supabase_singleton__ = instance;
   }
-  
-  return instance;
-})();
+});
+
 
 // Função para verificar conectividade
 export async function checkSupabaseConnection() {

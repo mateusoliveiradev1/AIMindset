@@ -7,6 +7,7 @@ import { useSEO } from '../hooks/useSEO';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import SEOManager from '../components/SEO/SEOManager';
+// import LazyImage from '../components/Performance/LazyImage';
 
 const Category: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -116,6 +117,9 @@ const Category: React.FC = () => {
                       src={article.image_url || article.featured_image}
                       alt={article.title}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      width={400}
+                      height={225}
+                      loading="lazy"
                     />
                   ) : (
                     <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-neon-purple/20 to-lime-green/20 flex items-center justify-center">

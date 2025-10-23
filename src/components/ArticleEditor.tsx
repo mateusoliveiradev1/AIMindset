@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+// import LazyImage from './Performance/LazyImage';
 import { 
   Save, 
   Eye, 
@@ -472,8 +473,10 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
                   <img
                     src={featuredImage}
                     alt={imageSettings.caption || title}
-                    style={getImageSizeStyle()}
                     className="rounded-lg shadow-lg object-cover"
+                    width={800}
+                    height={400}
+                    loading="eager"
                   />
                   {imageSettings.caption && (
                     <p className="text-sm text-gray-400 mt-2 italic text-center">
@@ -814,8 +817,10 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
                          <img
                            src={featuredImage}
                            alt="Preview"
-                           style={getImageSizeStyle()}
                            className="rounded-lg shadow-lg object-cover"
+                           width={400}
+                           height={200}
+                           loading="eager"
                          />
                        </div>
                      </div>

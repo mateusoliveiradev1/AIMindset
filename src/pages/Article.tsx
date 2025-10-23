@@ -12,7 +12,7 @@ import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import SEOManager from '../components/SEO/SEOManager';
 import PreloadManager from '../components/Performance/PreloadManager';
-import LazyImage from '../components/Performance/LazyImage';
+// import LazyImage from '../components/Performance/LazyImage';
 import { 
   ReadingProgressBarLazy,
   TableOfContentsLazy,
@@ -248,7 +248,7 @@ const Article: React.FC = () => {
                 </div>
     
                 <div className="relative w-full max-h-[400px] sm:max-h-[500px] lg:max-h-[600px] bg-darker-surface rounded-lg overflow-hidden flex items-center justify-center">
-                  <LazyImage
+                  <img
                     src={article.image_url || '/placeholder-image.jpg'}
                     alt={article.title}
                     className="w-full h-auto max-h-full object-contain transition-transform duration-300 hover:scale-105"
@@ -346,10 +346,9 @@ const Article: React.FC = () => {
                             src={relatedArticle.image_url || '/placeholder-image.svg'}
                             alt={relatedArticle.title}
                             className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src = '/placeholder-image.svg';
-                            }}
+                            width={300}
+                            height={200}
+                            loading="lazy"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-primary-dark/80 to-transparent"></div>
                         </Link>

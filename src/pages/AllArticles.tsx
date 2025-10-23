@@ -4,6 +4,7 @@ import { Search, Filter, Calendar, Clock, Tag, ChevronLeft, ChevronRight } from 
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import { useArticles } from '../hooks/useArticles';
+// import LazyImage from '../components/Performance/LazyImage';
 
 const AllArticles: React.FC = () => {
   const { articles, categories, loading, refreshArticles } = useArticles();
@@ -186,10 +187,9 @@ const AllArticles: React.FC = () => {
                         src={article.image_url}
                         alt={article.title}
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = '/placeholder-image.svg';
-                        }}
+                        width={400}
+                        height={225}
+                        loading="lazy"
                       />
                     </Link>
                   )}

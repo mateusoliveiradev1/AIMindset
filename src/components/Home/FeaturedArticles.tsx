@@ -4,6 +4,7 @@ import { Calendar, Clock, ArrowRight, Tag } from 'lucide-react';
 import { useArticles } from '../../hooks/useArticles';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
+// import LazyImage from '../Performance/LazyImage';
 
 const FeaturedArticles: React.FC = () => {
   const { articles, loading, refreshArticles } = useArticles();
@@ -55,10 +56,9 @@ const FeaturedArticles: React.FC = () => {
                       src={article.image_url}
                       alt={article.title}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/placeholder-image.svg';
-                      }}
+                      width={400}
+                      height={225}
+                      loading="lazy"
                     />
                   ) : (
                     <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-neon-purple/20 to-lime-green/20 flex items-center justify-center">

@@ -26,16 +26,23 @@ export default defineConfig({
       compress: {
         drop_console: true,
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn']
+        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn'],
+        passes: 2
+      },
+      mangle: {
+        safari10: true
       }
     },
     rollupOptions: {
       output: {
         manualChunks: (id) => {
-          // Vendor chunks
+          // Vendor chunks - mais granular para melhor cache
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'react-vendor';
+            if (id.includes('react') && !id.includes('react-dom') && !id.includes('react-router')) {
+              return 'react-core';
+            }
+            if (id.includes('react-dom')) {
+              return 'react-dom';
             }
             if (id.includes('@supabase')) {
               return 'supabase';
@@ -43,7 +50,7 @@ export default defineConfig({
             if (id.includes('lucide-react')) {
               return 'icons';
             }
-            if (id.includes('react-markdown') || id.includes('remark')) {
+            if (id.includes('react-markdown') || id.includes('remark') || id.includes('rehype')) {
               return 'markdown';
             }
             if (id.includes('react-router')) {
@@ -52,15 +59,31 @@ export default defineConfig({
             if (id.includes('react-helmet')) {
               return 'helmet';
             }
+            if (id.includes('framer-motion')) {
+              return 'animations';
+            }
+            // Separar bibliotecas grandes
+            if (id.includes('lodash') || id.includes('date-fns') || id.includes('moment')) {
+              return 'utils';
+            }
             return 'vendor';
           }
           
-          // App chunks by feature
+          // App chunks por funcionalidade - mais específico
+          if (id.includes('/pages/Admin') || id.includes('/components/Admin/')) {
+            return 'admin';
+          }
           if (id.includes('/pages/')) {
+            if (id.includes('Article')) {
+              return 'article-pages';
+            }
             return 'pages';
           }
-          if (id.includes('/components/Admin/')) {
-            return 'admin';
+          if (id.includes('/components/Performance/')) {
+            return 'performance';
+          }
+          if (id.includes('/components/UI/')) {
+            return 'ui-components';
           }
           if (id.includes('/hooks/')) {
             return 'hooks';
@@ -68,10 +91,21 @@ export default defineConfig({
           if (id.includes('/components/')) {
             return 'components';
           }
-        }
+        },
+        // Otimizar nomes de chunks para produção
+        chunkFileNames: (chunkInfo) => {
+          const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop() : 'chunk';
+          return `assets/[name]-[hash].js`;
+        },
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
       }
     },
-    chunkSizeWarningLimit: 1000
+    chunkSizeWarningLimit: 800,
+    // Otimizações adicionais
+    target: 'es2020',
+    cssCodeSplit: true,
+    assetsInlineLimit: 4096
   },
   plugins: [
     react({
