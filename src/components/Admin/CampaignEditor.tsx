@@ -270,7 +270,7 @@ export const CampaignEditor: React.FC<CampaignEditorProps> = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Você pode usar HTML e variáveis como {{name}}, {{email}}, etc.
+                    Você pode usar HTML e variáveis como {'{'}name{'}'}, {'{'}email{'}'}, etc.
                   </p>
                 </div>
 

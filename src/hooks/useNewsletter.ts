@@ -58,6 +58,7 @@ export interface NewsletterStats {
   clickRate: string;
   weeklyGrowth: number;
   totalNewslettersSent: number;
+  averageOpenRate: number;
 }
 
 export interface PaginationInfo {
@@ -127,6 +128,7 @@ export const useNewsletter = () => {
     campaignsThisMonth: 0,
     openRate: '0.0',
     clickRate: '0.0',
+    averageOpenRate: 0,
     weeklyGrowth: 0,
     totalNewslettersSent: 0
   });
@@ -319,6 +321,7 @@ export const useNewsletter = () => {
         campaignsThisMonth: 0,
         openRate: '0.0',
         clickRate: '0.0',
+        averageOpenRate: 0,
         weeklyGrowth: 0,
         totalNewslettersSent: 0
       };
@@ -373,6 +376,12 @@ export const useNewsletter = () => {
         
         stats.openRate = totalSent > 0 ? ((totalOpened / totalSent) * 100).toFixed(1) : '0.0';
         stats.clickRate = totalSent > 0 ? ((totalClicked / totalSent) * 100).toFixed(1) : '0.0';
+        
+        // Calcular averageOpenRate baseado nas taxas individuais das campanhas
+        const campaignsWithOpenRate = sentCampaigns.filter(c => c.open_rate !== null && c.open_rate !== undefined);
+        stats.averageOpenRate = campaignsWithOpenRate.length > 0 
+          ? campaignsWithOpenRate.reduce((sum, campaign) => sum + (campaign.open_rate || 0), 0) / campaignsWithOpenRate.length
+          : parseFloat(stats.openRate);
       }
 
       // Calcular crescimento mensal
@@ -489,7 +498,7 @@ export const useNewsletter = () => {
       }
 
       toast.success(`Status atualizado para ${status === 'active' ? 'ativo' : 'inativo'}`);
-      await fetchSubscribers(pagination.currentPage, pagination.itemsPerPage);
+      await fetchSubscribers(pagination.currentPage);
       await calculateStats();
       return true;
 
@@ -514,7 +523,7 @@ export const useNewsletter = () => {
       }
 
       toast.success('Inscrito removido com sucesso');
-      await fetchSubscribers(pagination.currentPage, pagination.itemsPerPage);
+      await fetchSubscribers(pagination.currentPage);
       await calculateStats();
       return true;
 

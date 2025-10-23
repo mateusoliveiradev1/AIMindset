@@ -36,7 +36,7 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
     if (metrics && metrics.length > 0) {
       const articleIds = metrics.map(m => m.article_id);
       console.log('🔄 [METRICS-TABLE] Atualizando indicadores para artigos:', articleIds);
-      setUpdatingArticles(new Set(articleIds));
+      setUpdatingArticles(new Set(articleIds.map(id => typeof id === 'string' ? parseInt(id) : id)));
       
       // Remover indicador após 2 segundos
       const timer = setTimeout(() => {

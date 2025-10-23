@@ -268,7 +268,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
         {/* Filters */}
         <div className="flex space-x-2 mb-4">
           <Button
-            variant={filter === 'all' ? 'default' : 'outline'}
+            variant={filter === 'all' ? 'primary' : 'outline'}
             size="sm"
             onClick={() => setFilter('all')}
             className="text-xs"
@@ -276,7 +276,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
             Todas
           </Button>
           <Button
-            variant={filter === 'unread' ? 'default' : 'outline'}
+            variant={filter === 'unread' ? 'primary' : 'outline'}
             size="sm"
             onClick={() => setFilter('unread')}
             className="text-xs"
@@ -284,7 +284,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
             Não Lidas
           </Button>
           <Button
-            variant={filter === 'high' ? 'default' : 'outline'}
+            variant={filter === 'high' ? 'primary' : 'outline'}
             size="sm"
             onClick={() => setFilter('high')}
             className="text-xs"

@@ -52,10 +52,18 @@ export const EmailAutomations: React.FC<EmailAutomationsProps> = ({ onRefresh })
   const [editingAutomation, setEditingAutomation] = useState<EmailAutomation | null>(null);
 
   // Estados para criação/edição
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    description: string;
+    trigger_type: 'welcome' | 'onboarding' | 'article_published' | 'inactive_user' | 'birthday';
+    delay_hours: number;
+    email_subject: string;
+    email_content: string;
+    is_active: boolean;
+  }>({
     name: '',
     description: '',
-    trigger_type: 'welcome' as const,
+    trigger_type: 'welcome',
     delay_hours: 0,
     email_subject: '',
     email_content: '',
@@ -280,7 +288,7 @@ export const EmailAutomations: React.FC<EmailAutomationsProps> = ({ onRefresh })
     setFormData({
       name: '',
       description: '',
-      trigger_type: 'welcome',
+      trigger_type: 'welcome' as const,
       delay_hours: 0,
       email_subject: '',
       email_content: '',

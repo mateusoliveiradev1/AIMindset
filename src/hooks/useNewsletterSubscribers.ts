@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabaseServiceClient } from '../lib/supabase';
+import { supabaseServiceClient, supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 
 export interface NewsletterSubscriber {
@@ -149,7 +149,7 @@ export const useNewsletterSubscribers = () => {
   // Obter estatísticas dos inscritos
   const getSubscriberStats = useCallback(async (): Promise<SubscriberStats> => {
     try {
-      const { data: allSubscribers, error } = await supabase
+      const { data: allSubscribers, error } = await supabaseServiceClient
         .from('newsletter_subscribers')
         .select('status, subscribed_at, total_emails_opened, total_emails_clicked');
 
@@ -242,7 +242,7 @@ export const useNewsletterSubscribers = () => {
   ) => {
     try {
       // Verificar se já existe
-      const { data: existing } = await supabase
+      const { data: existing } = await supabaseServiceClient
         .from('newsletter_subscribers')
         .select('id, status')
         .eq('email', email)
@@ -251,7 +251,7 @@ export const useNewsletterSubscribers = () => {
       if (existing) {
         if (existing.status === 'unsubscribed') {
           // Reativar inscrito
-          const { error } = await supabase
+          const { error } = await supabaseServiceClient
             .from('newsletter_subscribers')
             .update({
               status: 'active',
@@ -275,7 +275,7 @@ export const useNewsletterSubscribers = () => {
       }
 
       // Criar novo inscrito
-      const { error } = await supabase
+      const { error } = await supabaseServiceClient
         .from('newsletter_subscribers')
         .insert([{
           email,
@@ -319,7 +319,7 @@ export const useNewsletterSubscribers = () => {
         updates.unsubscribed_at = null;
       }
 
-      const { error } = await supabase
+      const { error } = await supabaseServiceClient
         .from('newsletter_subscribers')
         .update(updates)
         .eq('id', id);
@@ -478,7 +478,7 @@ export const useNewsletterSubscribers = () => {
       for (let i = 0; i < subscribersToImport.length; i += batchSize) {
         const batch = subscribersToImport.slice(i, i + batchSize);
         
-        const { error } = await supabase
+        const { error } = await supabaseServiceClient
           .from('newsletter_subscribers')
           .upsert(batch, { 
             onConflict: 'email',

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabaseServiceClient } from '../lib/supabase';
+import { supabaseServiceClient, supabase } from '../lib/supabase';
 import { toast } from 'sonner';
 
 export interface NewsletterCampaign {

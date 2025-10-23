@@ -6,6 +6,7 @@ interface CardProps {
   className?: string;
   variant?: 'default' | 'glass' | 'neon';
   hover?: boolean;
+  onClick?: () => void;
 }
 
 const Card: React.FC<CardProps> = ({
@@ -13,6 +14,7 @@ const Card: React.FC<CardProps> = ({
   className,
   variant = 'default',
   hover = true,
+  onClick,
 }) => {
   const baseClasses = 'rounded-lg transition-all duration-300';
   
@@ -30,8 +32,10 @@ const Card: React.FC<CardProps> = ({
         baseClasses,
         variants[variant],
         hoverClasses,
-        className
+        className,
+        onClick && 'cursor-pointer'
       )}
+      onClick={onClick}
     >
       {children}
     </div>

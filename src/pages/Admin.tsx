@@ -80,9 +80,8 @@ export const Admin: React.FC = () => {
     stats: dashboardStats, 
     weeklyData, 
     recentActivities, 
-    loading: loadingDashboard, 
-    error: dashboardError,
-    refreshStats 
+    refresh: refreshStats,
+    isLoading: loadingDashboard
   } = useDashboardStats();
   
   // Estados para edição de artigos
@@ -100,8 +99,8 @@ export const Admin: React.FC = () => {
   
   // Estados para filtros da newsletter
   const [subscriberSearchTerm, setSubscriberSearchTerm] = useState('');
-  const [subscriberStatusFilter, setSubscriberStatusFilter] = useState('all');
-  const [subscriberDateFilter, setSubscriberDateFilter] = useState('all');
+  const [subscriberStatusFilter, setSubscriberStatusFilter] = useState<'all' | 'active' | 'inactive' | 'unsubscribed'>('all');
+  const [subscriberDateFilter, setSubscriberDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'custom'>('all');
   
   // Aplicar filtros automaticamente quando mudarem
   useEffect(() => {
@@ -134,7 +133,7 @@ export const Admin: React.FC = () => {
     setActiveTab('editor');
   };
 
-  const handleDeleteArticle = async (articleId: number) => {
+  const handleDeleteArticle = async (articleId: string) => {
     if (window.confirm('Tem certeza que deseja excluir este artigo? Esta ação não pode ser desfeita.')) {
       try {
         const success = await deleteArticle(articleId);
@@ -337,29 +336,20 @@ export const Admin: React.FC = () => {
   // Função para exportar CSV (removida - agora usa o hook)
   const exportCSV = () => {
     // Esta função foi movida para o hook useNewsletter
-    newsletterHook.exportCSV();
+    newsletterHook.exportSubscribers();
   };
 
-  // Funções para gerenciar usuários
-  const handleActivateUser = (userId: number) => {
-    setUsers(prev => prev.map(user => 
-      user.id === userId ? { ...user, status: 'active' } : user
-    ));
-    toast.success('Usuário ativado com sucesso!');
+  // Funções para gerenciar usuários (agora usando o hook useUsers)
+  const handleActivateUser = (userId: string) => {
+    updateUserStatus(userId, 'active');
   };
 
-  const handleDeactivateUser = (userId: number) => {
-    setUsers(prev => prev.map(user => 
-      user.id === userId ? { ...user, status: 'inactive' } : user
-    ));
-    toast.warning('Usuário desativado!');
+  const handleDeactivateUser = (userId: string) => {
+    updateUserStatus(userId, 'inactive');
   };
 
-  const handleBanUser = (userId: number) => {
-    setUsers(prev => prev.map(user => 
-      user.id === userId ? { ...user, status: 'banned' } : user
-    ));
-    toast.error('Usuário banido!');
+  const handleBanUser = (userId: string) => {
+    updateUserStatus(userId, 'banned');
   };
 
   // Funções para gerenciar categorias
@@ -529,7 +519,7 @@ export const Admin: React.FC = () => {
                 <div>
                   <h2 className="text-2xl sm:text-3xl font-orbitron font-bold text-white">Dashboard</h2>
                   <p className="text-futuristic-gray text-sm">
-                    Última atualização: {dashboardStats?.lastUpdated ? new Date(dashboardStats.lastUpdated).toLocaleString('pt-BR') : 'Carregando...'}
+                    Última atualização: {dashboardStats?.lastUpdate ? new Date(dashboardStats.lastUpdate).toLocaleString('pt-BR') : 'Carregando...'}
                   </p>
                 </div>
                 <Button
@@ -554,19 +544,7 @@ export const Admin: React.FC = () => {
                 </div>
               )}
 
-              {/* Error State */}
-              {dashboardError && (
-                <Card className="glass-effect border-red-500/20">
-                  <div className="p-6 text-center">
-                    <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-                    <p className="text-red-400 mb-2">Erro ao carregar dados do dashboard</p>
-                    <p className="text-futuristic-gray text-sm">{dashboardError}</p>
-                    <Button onClick={refreshStats} className="mt-4 bg-red-500 hover:bg-red-600">
-                      Tentar Novamente
-                    </Button>
-                  </div>
-                </Card>
-              )}
+
 
               {/* Stats Cards - Principais Métricas */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6">
@@ -630,7 +608,7 @@ export const Admin: React.FC = () => {
                           {loadingDashboard ? '...' : dashboardStats?.totalComments?.toLocaleString() || '0'}
                         </p>
                         <p className="text-xs text-blue-400">
-                          {dashboardStats?.avgCommentsPerArticle?.toFixed(1) || '0'} por artigo
+                          {dashboardStats?.averageCommentsPerArticle?.toFixed(1) || '0'} por artigo
                         </p>
                       </div>
                       <MessageSquare className="w-6 h-6 sm:w-8 sm:h-8 text-blue-400" />
@@ -664,7 +642,7 @@ export const Admin: React.FC = () => {
                           {loadingDashboard ? '...' : dashboardStats?.totalCampaigns?.toLocaleString() || '0'}
                         </p>
                         <p className="text-xs text-purple-400">
-                          {dashboardStats?.engagementRate?.toFixed(1) || '0'}% engajamento
+                          Ativas
                         </p>
                       </div>
                       <Send className="w-6 h-6 sm:w-8 sm:h-8 text-purple-400" />
@@ -883,21 +861,22 @@ export const Admin: React.FC = () => {
                           {recentActivities.slice(0, 8).map((activity, index) => (
                             <div key={index} className="group flex items-center space-x-3 p-3 bg-gradient-to-r from-darker-surface/20 to-darker-surface/40 rounded-xl hover:from-darker-surface/40 hover:to-darker-surface/60 transition-all duration-300 border border-transparent hover:border-neon-purple/20">
                               <div className={`p-2.5 rounded-full transition-all duration-300 group-hover:scale-110 ${
-                                activity.type === 'new_subscriber' ? 'bg-gradient-to-br from-lime-green/30 to-lime-green/10 shadow-lg shadow-lime-green/20' :
+                
                                 activity.type === 'article_published' ? 'bg-gradient-to-br from-neon-purple/30 to-neon-purple/10 shadow-lg shadow-neon-purple/20' :
-                                activity.type === 'new_user' ? 'bg-gradient-to-br from-blue-500/30 to-blue-500/10 shadow-lg shadow-blue-500/20' :
-                                activity.type === 'newsletter_sent' ? 'bg-gradient-to-br from-yellow-500/30 to-yellow-500/10 shadow-lg shadow-yellow-500/20' :
-                                activity.type === 'comment_added' ? 'bg-gradient-to-br from-blue-400/30 to-blue-400/10 shadow-lg shadow-blue-400/20' :
-                                activity.type === 'feedback_received' ? 'bg-gradient-to-br from-orange-500/30 to-orange-500/10 shadow-lg shadow-orange-500/20' :
+                                activity.type === 'campaign_sent' ? 'bg-gradient-to-br from-yellow-500/30 to-yellow-500/10 shadow-lg shadow-yellow-500/20' :
+                                activity.type === 'new_comment' ? 'bg-gradient-to-br from-blue-400/30 to-blue-400/10 shadow-lg shadow-blue-400/20' :
+                                activity.type === 'new_feedback' ? 'bg-gradient-to-br from-orange-500/30 to-orange-500/10 shadow-lg shadow-orange-500/20' :
+                                activity.type === 'new_contact' ? 'bg-gradient-to-br from-green-500/30 to-green-500/10 shadow-lg shadow-green-500/20' :
                                 'bg-gradient-to-br from-gray-500/30 to-gray-500/10 shadow-lg shadow-gray-500/20'
                               }`}>
-                                {activity.type === 'new_subscriber' && <Mail className="w-4 h-4 text-lime-green" />}
+
                                 {activity.type === 'article_published' && <FileText className="w-4 h-4 text-neon-purple" />}
-                                {activity.type === 'new_user' && <Users className="w-4 h-4 text-blue-400" />}
-                                {activity.type === 'newsletter_sent' && <Send className="w-4 h-4 text-yellow-400" />}
-                                {activity.type === 'comment_added' && <MessageSquare className="w-4 h-4 text-blue-400" />}
-                                {activity.type === 'feedback_received' && <Zap className="w-4 h-4 text-orange-400" />}
-                                {activity.type === 'article_edited' && <Edit3 className="w-4 h-4 text-gray-400" />}
+
+                                {activity.type === 'campaign_sent' && <Send className="w-4 h-4 text-yellow-400" />}
+                                {activity.type === 'new_comment' && <MessageSquare className="w-4 h-4 text-blue-400" />}
+                                {activity.type === 'new_feedback' && <Zap className="w-4 h-4 text-orange-400" />}
+                                {activity.type === 'new_contact' && <Mail className="w-4 h-4 text-green-400" />}
+
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-white text-sm font-medium leading-tight group-hover:text-gray-100 transition-colors">
@@ -908,20 +887,21 @@ export const Admin: React.FC = () => {
                                     {activity.time}
                                   </p>
                                   <div className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                    activity.type === 'new_subscriber' ? 'bg-lime-green/10 text-lime-green border border-lime-green/20' :
+                    
                                     activity.type === 'article_published' ? 'bg-neon-purple/10 text-neon-purple border border-neon-purple/20' :
-                                    activity.type === 'new_user' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                                    activity.type === 'newsletter_sent' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
-                                    activity.type === 'comment_added' ? 'bg-blue-400/10 text-blue-400 border border-blue-400/20' :
-                                    activity.type === 'feedback_received' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' :
+
+                                    activity.type === 'campaign_sent' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
+                                    activity.type === 'new_comment' ? 'bg-blue-400/10 text-blue-400 border border-blue-400/20' :
+                                    activity.type === 'new_feedback' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' :
+                                    activity.type === 'new_contact' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
                                     'bg-gray-500/10 text-gray-400 border border-gray-500/20'
                                   }`}>
-                                    {activity.type === 'new_subscriber' ? 'Newsletter' :
-                                     activity.type === 'article_published' ? 'Artigo' :
-                                     activity.type === 'new_user' ? 'Usuário' :
-                                     activity.type === 'newsletter_sent' ? 'Campanha' :
-                                     activity.type === 'comment_added' ? 'Comentário' :
-                                     activity.type === 'feedback_received' ? 'Feedback' :
+                                    {activity.type === 'article_published' ? 'Artigo' :
+
+                                     activity.type === 'campaign_sent' ? 'Campanha' :
+                                     activity.type === 'new_comment' ? 'Comentário' :
+                                     activity.type === 'new_feedback' ? 'Feedback' :
+                                     activity.type === 'new_contact' ? 'Contato' :
                                      'Geral'}
                                   </div>
                                 </div>
@@ -1197,7 +1177,7 @@ export const Admin: React.FC = () => {
                             size="sm" 
                             variant="ghost" 
                             className="text-red-400 hover:text-red-300 p-1 sm:p-2"
-                            onClick={() => handleDeleteArticle(article.id)}
+                            onClick={() => handleDeleteArticle(article.id.toString())}
                             title="Excluir artigo"
                           >
                             <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -1301,7 +1281,7 @@ export const Admin: React.FC = () => {
               <div></div>
               <div className="flex space-x-3">
                 <Button
-                  onClick={newsletterHook.exportCSV}
+                  onClick={newsletterHook.exportSubscribers}
                   disabled={newsletterHook.loading}
                   variant="outline"
                   className="flex items-center space-x-2"
@@ -1730,10 +1710,10 @@ export const Admin: React.FC = () => {
                           </div>
                           <div className="flex items-center space-x-4 text-sm">
                             <span className="text-futuristic-gray">
-                              {campaign.sent_count || 0} enviados
+                              {campaign.recipient_count || 0} enviados
                             </span>
                             <span className="text-lime-green">
-                              {campaign.open_count || 0} abertos
+                              {campaign.opened_count || 0} abertos
                             </span>
                           </div>
                         </div>
@@ -1764,7 +1744,7 @@ export const Admin: React.FC = () => {
                       </div>
                       <select
                         value={subscriberStatusFilter}
-                        onChange={(e) => setSubscriberStatusFilter(e.target.value)}
+                        onChange={(e) => setSubscriberStatusFilter(e.target.value as 'all' | 'active' | 'inactive' | 'unsubscribed')}
                         className="px-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple"
                       >
                         <option value="all">Todos os Status</option>
@@ -1774,7 +1754,7 @@ export const Admin: React.FC = () => {
                       </select>
                       <select
                         value={subscriberDateFilter}
-                        onChange={(e) => setSubscriberDateFilter(e.target.value)}
+                        onChange={(e) => setSubscriberDateFilter(e.target.value as 'all' | 'today' | 'week' | 'month' | 'custom')}
                         className="px-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple"
                       >
                         <option value="all">Todas as Datas</option>
@@ -1872,9 +1852,9 @@ export const Admin: React.FC = () => {
                               </span>
                               <div className="flex space-x-2">
                                 <Button
-                                  onClick={() => subscribersHook.updateSubscriber(subscriber.id, { 
-                                    status: subscriber.status === 'active' ? 'unsubscribed' : 'active' 
-                                  })}
+                                  onClick={() => subscribersHook.updateSubscriberStatus(subscriber.id, 
+                                    subscriber.status === 'active' ? 'unsubscribed' : 'active' 
+                                  )}
                                   disabled={subscribersHook.loading}
                                   size="sm"
                                   variant="outline"
@@ -1883,7 +1863,7 @@ export const Admin: React.FC = () => {
                                   {subscriber.status === 'active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                                 </Button>
                                 <Button
-                                  onClick={() => subscribersHook.deleteSubscriber(subscriber.id)}
+                                  onClick={() => subscribersHook.removeSubscriber(subscriber.id)}
                                   disabled={subscribersHook.loading}
                                   size="sm"
                                   variant="outline"

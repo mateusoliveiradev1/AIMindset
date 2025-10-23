@@ -5,12 +5,12 @@ import { useFeedback } from '../../hooks/useFeedback';
 import { useArticleFeedbackStats } from '../../hooks/useArticleFeedbackStats';
 
 interface FeedbackSectionProps {
-  articleId: string;
+  articleId: string | number;
 }
 
 export const FeedbackSection: React.FC<FeedbackSectionProps> = ({ articleId }) => {
-  const { submitting, hasSubmitted, submitFeedback } = useFeedback(articleId);
-  const { stats, loading: statsLoading } = useArticleFeedbackStats(articleId);
+  const { submitting, hasSubmitted, submitFeedback } = useFeedback(String(articleId));
+  const { stats, loading: statsLoading } = useArticleFeedbackStats(String(articleId));
 
   const handleFeedback = async (useful: boolean) => {
     await submitFeedback(useful);

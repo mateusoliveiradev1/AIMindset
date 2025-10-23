@@ -16,7 +16,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
   const [screenSize, setScreenSize] = useState<'large' | 'medium' | 'small'>('large');
   
   // Refs para controle de performance
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollTimeoutRef = useRef<number | null>(null);
   const lastScrollTimeRef = useRef<number>(0);
   const isScrollingRef = useRef<boolean>(false);
 

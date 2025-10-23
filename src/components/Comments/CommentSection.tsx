@@ -4,7 +4,7 @@ import { CommentForm } from './CommentForm';
 import { useComments } from '../../hooks/useComments';
 
 interface CommentSectionProps {
-  articleId: string;
+  articleId: string | number;
 }
 
 export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => {
@@ -19,7 +19,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
     submitComment,
     loadMoreComments,
     refreshComments
-  } = useComments(articleId);
+  } = useComments(String(articleId));
 
   console.log('📊 [DEBUG] CommentSection - Estado atual:', {
     commentsCount: comments.length,

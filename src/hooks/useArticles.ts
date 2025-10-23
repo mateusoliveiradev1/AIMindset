@@ -67,7 +67,7 @@ export interface UseArticlesReturn {
   error: string | null;
   createArticle: (article: Omit<Article, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
   updateArticle: (id: string, article: Partial<Article>) => Promise<boolean>;
-  deleteArticle: (id: number) => Promise<boolean>;
+  deleteArticle: (id: string) => Promise<boolean>;
   createCategory: (category: Omit<Category, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
   updateCategory: (id: string, category: Partial<Category>) => Promise<boolean>;
   deleteCategory: (id: string) => Promise<boolean>;
@@ -411,7 +411,7 @@ export const useArticles = (): UseArticlesReturn => {
     }
   };
 
-  const deleteArticle = async (id: number): Promise<boolean> => {
+  const deleteArticle = async (id: string): Promise<boolean> => {
     try {
       setError(null);
       
