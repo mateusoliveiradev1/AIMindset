@@ -48,33 +48,38 @@ graph TD
 
 ## 2. Descrição das Tecnologias
 
-- **Frontend**: React@18 + TypeScript + Vite + TailwindCSS
-- **Backend**: Supabase (PostgreSQL + Auth + Storage)
-- **SEO**: React Helmet Async + Schema.org JSON-LD
-- **Performance**: Vite Bundle Analyzer + React.lazy + Intersection Observer API
-- **Build**: Vite com otimizações de produção + Rollup plugins
+* **Frontend**: React\@18 + TypeScript + Vite + TailwindCSS
+
+* **Backend**: Supabase (PostgreSQL + Auth + Storage)
+
+* **SEO**: React Helmet Async + Schema.org JSON-LD
+
+* **Performance**: Vite Bundle Analyzer + React.lazy + Intersection Observer API
+
+* **Build**: Vite com otimizações de produção + Rollup plugins
 
 ## 3. Definições de Rotas
 
-| Rota | Propósito | Otimizações SEO |
-|------|-----------|-----------------|
-| / | Página inicial com hero e artigos em destaque | Schema Organization, metadados dinâmicos |
-| /artigos | Lista completa de artigos | Schema CollectionPage, paginação SEO |
-| /artigos/:slug | Página individual do artigo | Schema BlogPosting, metadados dinâmicos |
-| /categorias | Lista de categorias | Schema CollectionPage, navegação estruturada |
-| /categorias/:slug | Artigos por categoria | Schema CollectionPage, filtros SEO |
-| /sobre | Página institucional | Schema AboutPage, metadados estáticos |
-| /contato | Página de contato | Schema ContactPage, formulário otimizado |
-| /newsletter | Página de newsletter | Schema WebPage, formulário otimizado |
-| /admin/* | Painel administrativo | Metadados básicos, noindex |
-| /sitemap.xml | Sitemap dinâmico | XML estruturado com todos os artigos |
-| /robots.txt | Arquivo robots | Configuração de indexação |
+| Rota              | Propósito                                     | Otimizações SEO                              |
+| ----------------- | --------------------------------------------- | -------------------------------------------- |
+| /                 | Página inicial com hero e artigos em destaque | Schema Organization, metadados dinâmicos     |
+| /artigos          | Lista completa de artigos                     | Schema CollectionPage, paginação SEO         |
+| /artigos/:slug    | Página individual do artigo                   | Schema BlogPosting, metadados dinâmicos      |
+| /categorias       | Lista de categorias                           | Schema CollectionPage, navegação estruturada |
+| /categorias/:slug | Artigos por categoria                         | Schema CollectionPage, filtros SEO           |
+| /sobre            | Página institucional                          | Schema AboutPage, metadados estáticos        |
+| /contato          | Página de contato                             | Schema ContactPage, formulário otimizado     |
+| /newsletter       | Página de newsletter                          | Schema WebPage, formulário otimizado         |
+| /admin/\*         | Painel administrativo                         | Metadados básicos, noindex                   |
+| /sitemap.xml      | Sitemap dinâmico                              | XML estruturado com todos os artigos         |
+| /robots.txt       | Arquivo robots                                | Configuração de indexação                    |
 
 ## 4. Definições de API
 
 ### 4.1 APIs Core do SEO
 
 **Busca de Metadados de Artigo**
+
 ```typescript
 // Hook personalizado para metadados
 const useArticleSEO = (slug: string) => {
@@ -85,12 +90,14 @@ const useArticleSEO = (slug: string) => {
 ```
 
 **Geração de Sitemap**
+
 ```typescript
 // Endpoint virtual para sitemap.xml
 GET /sitemap.xml
 ```
 
 Resposta:
+
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -106,6 +113,7 @@ Resposta:
 ### 4.2 APIs de Performance
 
 **Otimização de Imagens**
+
 ```typescript
 // Componente de imagem otimizada
 interface OptimizedImageProps {
@@ -117,6 +125,7 @@ interface OptimizedImageProps {
 ```
 
 **Cache de Metadados**
+
 ```typescript
 // Sistema de cache para metadados
 interface MetadataCache {
@@ -204,6 +213,7 @@ erDiagram
 ### 6.2 Linguagem de Definição de Dados
 
 **Tabela de Metadados SEO (Extensão)**
+
 ```sql
 -- Criar tabela para cache de metadados SEO
 CREATE TABLE IF NOT EXISTS seo_metadata (
@@ -302,6 +312,7 @@ INSERT INTO seo_metadata (
 ## 7. Estrutura de Componentes SEO
 
 ### 7.1 Componente SEO Manager
+
 ```typescript
 // src/components/SEO/SEOManager.tsx
 interface SEOManagerProps {
@@ -317,6 +328,7 @@ interface SEOManagerProps {
 ```
 
 ### 7.2 Hooks Personalizados
+
 ```typescript
 // src/hooks/useSEO.ts - Hook principal para SEO
 // src/hooks/useSchema.ts - Hook para Schema.org
@@ -325,9 +337,11 @@ interface SEOManagerProps {
 ```
 
 ### 7.3 Utilitários SEO
+
 ```typescript
 // src/utils/seo.ts - Funções utilitárias para SEO
 // src/utils/schema.ts - Geradores de Schema.org
 // src/utils/performance.ts - Otimizações de performance
 // src/utils/metadata.ts - Processamento de metadados
 ```
+

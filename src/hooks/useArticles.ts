@@ -5,6 +5,13 @@ import type { Article, Category } from '../lib/supabase';
 
 export type { Article, Category };
 
+// Debug logs para verificar conexão
+console.log('🔍 useArticles: Verificando clientes Supabase...', {
+  supabase: !!supabase,
+  supabaseServiceClient: !!supabaseServiceClient,
+  supabaseAdmin: !!supabaseAdmin
+});
+
 // Função para gerar slug a partir do título
 const generateSlug = (title: string): string => {
   return title
@@ -88,7 +95,7 @@ export const useArticles = (): UseArticlesReturn => {
   const fetchArticles = useCallback(async () => {
     try {
       setError(null);
-      // console.log('🔄 Tentando buscar artigos do Supabase...');
+      console.log('🔄 Tentando buscar artigos do Supabase...');
 
       // Verificar se o Supabase está configurado
       if (!supabase) {
@@ -98,6 +105,29 @@ export const useArticles = (): UseArticlesReturn => {
       // Tentar primeiro com cliente normal, depois com admin se necessário
       let data, fetchError;
       
+      try {
+        console.log('📡 Fazendo query para artigos...');
+        const result = await supabase
+          .from('articles')
+          .select(`
+            *,
+            category:categories (
+              id,
+              name,
+              slug,
+              description
+            )
+          `)
+          .order('created_at', { ascending: false });
+
+        console.log('📊 Resultado da query:', result);
+        data = result.data;
+        fetchError = result.error;
+      } catch (queryError) {
+        console.error('❌ Erro na query:', queryError);
+        fetchError = queryError;
+      }
+
       try {
         const result = await supabase
           .from('articles')
@@ -140,13 +170,13 @@ export const useArticles = (): UseArticlesReturn => {
         setError('Failed to fetch articles from database');
         
         // Fallback para dados mock
-        // console.log('🔄 Usando dados mock como fallback...');
+        console.log('🔄 Usando dados mock como fallback...');
         const { mockArticles } = await import('../data/mockData');
         setArticles(mockArticles || []);
         return;
       }
 
-      // console.log('✅ Artigos carregados com sucesso:', data?.length || 0);
+      console.log('✅ Artigos carregados com sucesso:', data?.length || 0);
       setArticles(data || []);
     } catch (err) {
       console.error('❌ Error fetching articles:', err);

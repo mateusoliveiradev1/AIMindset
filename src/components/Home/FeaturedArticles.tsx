@@ -10,8 +10,17 @@ const FeaturedArticles: React.FC = () => {
   const { articles, loading, refreshArticles } = useArticles();
   const featuredArticles = articles.filter(article => article.published).slice(0, 3);
 
+  // Debug logs
+  console.log('🔍 FeaturedArticles Debug:', {
+    articles: articles.length,
+    loading,
+    featuredArticles: featuredArticles.length,
+    allArticles: articles
+  });
+
   // Carregar artigos quando o componente montar
   React.useEffect(() => {
+    console.log('🚀 FeaturedArticles: Chamando refreshArticles...');
     refreshArticles();
   }, [refreshArticles]);
 

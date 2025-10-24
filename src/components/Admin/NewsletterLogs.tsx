@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from '../ui/button';
+import Button from '../UI/Button';
 import { useNewsletterLogs, LogFilters } from '../../hooks/useNewsletterLogs';
 import { 
   Activity, 

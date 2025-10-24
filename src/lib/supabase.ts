@@ -3,12 +3,29 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+// Debug das variáveis de ambiente
+console.log('🔍 Supabase Environment Variables:', {
+  url: supabaseUrl ? 'SET' : 'NOT SET',
+  key: supabaseAnonKey ? 'SET' : 'NOT SET',
+  fullUrl: supabaseUrl,
+  keyPrefix: supabaseAnonKey?.substring(0, 20) + '...'
+});
+
+// Fallback para valores hardcoded em caso de emergência
+const EMERGENCY_SUPABASE_URL = 'https://jywjqzhqynhnhetidzsa.supabase.co';
+const EMERGENCY_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5d2pxemhxeW5obmhldGlkenNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5MjkxMzQsImV4cCI6MjA3NjUwNTEzNH0.oTZ6B-77NGBSqa_lN2YWCtnKwKc0glWnwfuN9xQjDl0';
+
+const finalUrl = supabaseUrl || EMERGENCY_SUPABASE_URL;
+const finalKey = supabaseAnonKey || EMERGENCY_SUPABASE_ANON_KEY;
+
+console.log('🚨 EMERGENCY MODE: Using', supabaseUrl ? 'ENV vars' : 'hardcoded values');
+
+if (!finalUrl || !finalKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
 // Criar cliente Supabase simples
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(finalUrl, finalKey, {
   auth: {
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     storageKey: 'supabase.auth.token',

@@ -5,6 +5,9 @@ import { traeBadgePlugin } from 'vite-plugin-trae-solo-badge';
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Configuração para carregar variáveis de ambiente
+  envPrefix: 'VITE_',
+  
   server: {
     // Configurações para suportar payloads grandes
     timeout: 300000, // 5 minutos de timeout

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚨 TESTE EMERGENCIAL - BANCO DE DADOS</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background: #0a0a0a; 
+            color: #00ff00; 
+            font-size: 16px;
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .test-result { 
+            margin: 15px 0; 
+            padding: 15px; 
+            border-radius: 8px; 
+            border: 2px solid;
+        }
+        .success { 
+            background: #001a00; 
+            border-color: #00ff00; 
+            color: #00ff00;
+        }
+        .error { 
+            background: #1a0000; 
+            border-color: #ff0000; 
+            color: #ff0000;
+        }
+        .info { 
+            background: #001a1a; 
+            border-color: #00ffff; 
+            color: #00ffff;
+        }
+        .warning {
+            background: #1a1a00;
+            border-color: #ffff00;
+            color: #ffff00;
+        }
+        pre { 
+            background: #111; 
+            padding: 15px; 
+            border-radius: 5px; 
+            overflow-x: auto; 
+            font-size: 14px;
+            border: 1px solid #333;
+        }
+        button { 
+            background: #00ff00; 
+            color: #000; 
+            border: none; 
+            padding: 12px 24px; 
+            margin: 8px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-weight: bold;
+            font-size: 14px;
+        }
+        button:hover { background: #00cc00; }
+        h1 { color: #ff0000; text-align: center; font-size: 24px; }
+        h2 { color: #00ffff; }
+        .status { font-size: 18px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚨 DIAGNÓSTICO EMERGENCIAL - BANCO DE DADOS</h1>
+        <h2>Status do Sistema:</h2>
+        <div id="status" class="status">🔄 Iniciando diagnóstico...</div>
+        
+        <div id="results"></div>
+        
+        <h2>Testes Manuais:</h2>
+        <button onclick="testarConexao()">🔍 TESTAR CONEXÃO</button>
+        <button onclick="testarArtigos()">📄 TESTAR ARTIGOS</button>
+        <button onclick="testarCategorias()">📂 TESTAR CATEGORIAS</button>
+        <button onclick="testarVariaveis()">⚙️ TESTAR VARIÁVEIS</button>
+        <button onclick="limparResultados()">🧹 LIMPAR</button>
+    </div>
+
+    <script>
+        // Configurações do Supabase
+        const supabaseUrl = 'https://jywjqzhqynhnhetidzsa.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5d2pxemhxeW5obmhldGlkenNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5MjkxMzQsImV4cCI6MjA3NjUwNTEzNH0.oTZ6B-77NGBSqa_lN2YWCtnKwKc0glWnwfuN9xQjDl0';
+        
+        let supabase;
+        
+        function atualizarStatus(texto, tipo = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = texto;
+            statusEl.className = `status ${tipo}`;
+        }
+        
+        function adicionarResultado(tipo, titulo, conteudo) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${tipo}`;
+            div.innerHTML = `
+                <h3>${titulo}</h3>
+                <pre>${conteudo}</pre>
+            `;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        function limparResultados() {
+            document.getElementById('results').innerHTML = '';
+            atualizarStatus('🧹 Resultados limpos');
+        }
+        
+        async function inicializarSupabase() {
+            try {
+                atualizarStatus('🔄 Inicializando cliente Supabase...');
+                supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+                adicionarResultado('success', '✅ Cliente Supabase Inicializado', 
+                    `URL: ${supabaseUrl}\nChave: ${supabaseAnonKey.substring(0, 20)}...`);
+                atualizarStatus('✅ Cliente Supabase inicializado com sucesso', 'success');
+                return true;
+            } catch (err) {
+                adicionarResultado('error', '❌ Erro ao Inicializar Supabase', err.message);
+                atualizarStatus('❌ Falha ao inicializar Supabase', 'error');
+                return false;
+            }
+        }
+        
+        async function testarConexao() {
+            if (!supabase) {
+                const inicializado = await inicializarSupabase();
+                if (!inicializado) return;
+            }
+            
+            adicionarResultado('info', '🔍 Testando Conexão Básica', 'Iniciando teste de conectividade...');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('articles')
+                    .select('count')
+                    .limit(1);
+                
+                if (error) {
+                    adicionarResultado('error', '❌ ERRO NA CONEXÃO', 
+                        `Código: ${error.code}\nMensagem: ${error.message}\nDetalhes: ${error.details || 'N/A'}`);
+                    atualizarStatus('❌ CONEXÃO FALHANDO!', 'error');
+                } else {
+                    adicionarResultado('success', '✅ CONEXÃO OK!', 
+                        `Resposta do banco: ${JSON.stringify(data, null, 2)}\nTempo: ${new Date().toLocaleTimeString()}`);
+                    atualizarStatus('✅ BANCO CONECTADO E FUNCIONANDO!', 'success');
+                }
+            } catch (err) {
+                adicionarResultado('error', '💥 ERRO CRÍTICO DE REDE', 
+                    `Erro: ${err.message}\nStack: ${err.stack}`);
+                atualizarStatus('💥 ERRO CRÍTICO!', 'error');
+            }
+        }
+        
+        async function testarArtigos() {
+            if (!supabase) {
+                const inicializado = await inicializarSupabase();
+                if (!inicializado) return;
+            }
+            
+            adicionarResultado('info', '📄 Testando Busca de Artigos', 'Buscando artigos na base...');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('articles')
+                    .select('id, title, slug, published, created_at')
+                    .limit(10);
+                
+                if (error) {
+                    adicionarResultado('error', '❌ ERRO AO BUSCAR ARTIGOS', 
+                        `Código: ${error.code}\nMensagem: ${error.message}\nDetalhes: ${JSON.stringify(error, null, 2)}`);
+                } else {
+                    adicionarResultado('success', '✅ ARTIGOS CARREGADOS!', 
+                        `Total encontrado: ${data.length}\nArtigos:\n${JSON.stringify(data, null, 2)}`);
+                    atualizarStatus(`✅ ${data.length} artigos encontrados!`, 'success');
+                }
+            } catch (err) {
+                adicionarResultado('error', '💥 ERRO AO BUSCAR ARTIGOS', err.message);
+            }
+        }
+        
+        async function testarCategorias() {
+            if (!supabase) {
+                const inicializado = await inicializarSupabase();
+                if (!inicializado) return;
+            }
+            
+            adicionarResultado('info', '📂 Testando Busca de Categorias', 'Buscando categorias...');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('categories')
+                    .select('id, name, slug, description')
+                    .limit(10);
+                
+                if (error) {
+                    adicionarResultado('error', '❌ ERRO AO BUSCAR CATEGORIAS', 
+                        `Código: ${error.code}\nMensagem: ${error.message}`);
+                } else {
+                    adicionarResultado('success', '✅ CATEGORIAS CARREGADAS!', 
+                        `Total: ${data.length}\nCategorias:\n${JSON.stringify(data, null, 2)}`);
+                    atualizarStatus(`✅ ${data.length} categorias encontradas!`, 'success');
+                }
+            } catch (err) {
+                adicionarResultado('error', '💥 ERRO AO BUSCAR CATEGORIAS', err.message);
+            }
+        }
+        
+        function testarVariaveis() {
+            adicionarResultado('info', '⚙️ Testando Variáveis de Ambiente', 'Verificando configurações...');
+            
+            const variaveis = {
+                'URL do Supabase': supabaseUrl,
+                'Chave Anon (primeiros 30 chars)': supabaseAnonKey.substring(0, 30) + '...',
+                'Chave Anon (últimos 10 chars)': '...' + supabaseAnonKey.slice(-10),
+                'Tamanho da chave': supabaseAnonKey.length,
+                'Navegador': navigator.userAgent,
+                'Timestamp': new Date().toISOString(),
+                'URL atual': window.location.href
+            };
+            
+            adicionarResultado('success', '✅ VARIÁVEIS VERIFICADAS', 
+                Object.entries(variaveis).map(([k, v]) => `${k}: ${v}`).join('\n'));
+        }
+        
+        // Executar diagnóstico automático ao carregar
+        window.onload = async function() {
+            atualizarStatus('🚀 Página carregada - iniciando diagnóstico automático...');
+            
+            // Aguardar um pouco para garantir que tudo carregou
+            setTimeout(async () => {
+                await inicializarSupabase();
+                setTimeout(() => testarConexao(), 1000);
+                setTimeout(() => testarArtigos(), 2000);
+                setTimeout(() => testarCategorias(), 3000);
+            }, 500);
+        };
+        
+        // Log de erros globais
+        window.onerror = function(msg, url, line, col, error) {
+            adicionarResultado('error', '💥 ERRO JAVASCRIPT GLOBAL', 
+                `Mensagem: ${msg}\nArquivo: ${url}\nLinha: ${line}\nColuna: ${col}\nErro: ${error}`);
+        };
+    </script>
+</body>
+</html>
