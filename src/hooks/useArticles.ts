@@ -67,6 +67,7 @@ export interface UseArticlesReturn {
   error: string | null;
   createArticle: (article: Omit<Article, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
   updateArticle: (id: string, article: Partial<Article>) => Promise<boolean>;
+  updateArticlePublished: (id: string, published: boolean) => Promise<boolean>; // 🚨 FUNÇÃO DE EMERGÊNCIA
   deleteArticle: (id: string) => Promise<boolean>;
   createCategory: (category: Omit<Category, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
   updateCategory: (id: string, category: Partial<Category>) => Promise<boolean>;
@@ -272,12 +273,37 @@ export const useArticles = (): UseArticlesReturn => {
       const startTime = Date.now();
       // console.log('⏱️ Timestamp de início:', new Date(startTime).toISOString());
       
-      // Usar service role client singleton para evitar múltiplas instâncias
+      // SOLUÇÃO DEFINITIVA: Separar published da inserção principal
+      const { published, ...articleDataWithoutPublished } = articleWithSlug;
+      
+      // PRIMEIRA INSERÇÃO - Todos os campos EXCETO published
       const { data, error: insertError } = await supabaseServiceClient
         .from('articles')
-        .insert([articleWithSlug])
+        .insert([articleDataWithoutPublished])
         .select()
         .single();
+
+      if (insertError) {
+        console.error('❌ ERRO na inserção principal:', insertError);
+        throw insertError;
+      }
+
+      // SEGUNDA QUERY - Atualizar APENAS o campo published se necessário
+      if (published !== undefined && data?.id) {
+        console.log('🔧 Atualizando campo published no artigo criado:', published);
+        
+        const { error: publishedError } = await supabaseServiceClient
+          .from('articles')
+          .update({ published: Boolean(published) })
+          .eq('id', data.id);
+
+        if (publishedError) {
+          console.error('❌ ERRO na atualização do published:', publishedError);
+          throw publishedError;
+        }
+        
+        console.log('✅ Campo published atualizado com sucesso no artigo criado');
+      }
 
       const endTime = Date.now();
       const duration = endTime - startTime;
@@ -339,74 +365,143 @@ export const useArticles = (): UseArticlesReturn => {
     try {
       setError(null);
       
-      // console.log('🔄 INÍCIO - Tentando atualizar artigo ID:', id);
-      // console.log('📝 DADOS RECEBIDOS para atualização:', JSON.stringify(articleData, null, 2));
+      console.log('🚀 SOLUÇÃO ULTRA SIMPLES - ID recebido:', id);
+      console.log('🚀 Tipo do ID:', typeof id);
+      console.log('🚀 ID válido?', !!id && id.trim() !== '');
+      console.log('🚀 DADOS RECEBIDOS:', JSON.stringify(articleData, null, 2));
       
-      // Validar se o ID existe
+      // Validação básica
       if (!id || id.trim() === '') {
-        console.error('❌ ID do artigo é inválido:', id);
+        console.error('❌ ID inválido:', id);
         throw new Error('ID do artigo é obrigatório');
       }
+
+      // Preparar dados ULTRA SIMPLES - INCLUINDO PUBLISHED
+      const updateData: any = {};
       
-      const updateData = { ...articleData };
+      // Copiar TODOS os campos de forma simples
+      if (articleData.title !== undefined) updateData.title = articleData.title;
+      if (articleData.excerpt !== undefined) updateData.excerpt = articleData.excerpt;
+      if (articleData.content !== undefined) updateData.content = articleData.content;
+      if (articleData.image_url !== undefined) updateData.image_url = articleData.image_url;
+      if (articleData.category_id !== undefined) updateData.category_id = articleData.category_id;
+      if (articleData.author_id !== undefined) updateData.author_id = articleData.author_id;
+      if (articleData.slug !== undefined) updateData.slug = articleData.slug;
+      if (articleData.tags !== undefined) updateData.tags = articleData.tags;
       
-      // Se o título foi alterado, gerar novo slug único
+      // 🚨 EMERGÊNCIA: REMOVER PUBLISHED COMPLETAMENTE DA FUNÇÃO PRINCIPAL
+      // O campo published será tratado em função separada para evitar erro 42883
+      console.log('🚨 PUBLISHED REMOVIDO DA FUNÇÃO PRINCIPAL - será tratado separadamente');
+      
+      // Gerar slug se título foi alterado
       if (updateData.title) {
         const baseSlug = generateSlug(updateData.title);
-        const uniqueSlug = await ensureUniqueSlug(baseSlug, id);
-        updateData.slug = uniqueSlug;
-        // console.log('🔗 Slug gerado:', uniqueSlug);
+        updateData.slug = await ensureUniqueSlug(baseSlug, id);
+        console.log('🔗 Slug gerado:', updateData.slug);
       }
       
-      // Remover campos que não devem ser atualizados ou que não existem na tabela
-      delete updateData.id;
-      delete updateData.created_at;
-      delete updateData.updated_at;
-      delete updateData.category; // ❌ CAMPO INEXISTENTE - causa erro PGRST204
+      console.log('🔧 DADOS FINAIS PARA UPDATE:', JSON.stringify(updateData, null, 2));
+      console.log('🔧 Quantidade de campos a atualizar:', Object.keys(updateData).length);
       
-      // Filtrar apenas campos válidos da tabela articles
-      const validFields = ['title', 'excerpt', 'content', 'image_url', 'category_id', 'author_id', 'published', 'slug', 'tags'];
-      const cleanedData: any = {};
-      
-      for (const [key, value] of Object.entries(updateData)) {
-        if (validFields.includes(key)) {
-          cleanedData[key] = value;
-        } else {
-          console.warn('⚠️ Campo inválido removido:', key);
-        }
-      }
-      
-      // console.log('📝 DADOS FINAIS para atualização (limpos):', JSON.stringify(cleanedData, null, 2));
-      
-      // console.log('🔧 Executando query UPDATE no Supabase...');
-      
-      // Usar service role client singleton para evitar múltiplas instâncias
-      const { data, error: updateError } = await supabaseServiceClient
+      // UMA QUERY SIMPLES - SEM COMPLICAÇÕES
+      console.log('🚀 Executando query de atualização...');
+      const { data, error: updateError } = await supabase
         .from('articles')
-        .update(cleanedData)
+        .update(updateData)
         .eq('id', id)
-        .select()
-        .single();
+        .select();
+
+      console.log('🔍 Resultado da query:', { data, error: updateError });
 
       if (updateError) {
-        console.error('❌ ERRO SUPABASE ao atualizar:', updateError);
-        console.error('❌ Código do erro:', updateError.code);
-        console.error('❌ Mensagem do erro:', updateError.message);
-        console.error('❌ Detalhes do erro:', updateError.details);
+        console.error('❌ ERRO na query:', updateError);
         throw updateError;
       }
 
-      // console.log('✅ SUCESSO - Artigo atualizado:', JSON.stringify(data, null, 2));
-      // console.log('🔄 Atualizando lista de artigos...');
-      
+      if (!data || data.length === 0) {
+        console.error('❌ NENHUM ARTIGO ATUALIZADO - Verificando se ID existe...');
+        
+        // Verificar se o artigo existe
+        const { data: checkData, error: checkError } = await supabase
+          .from('articles')
+          .select('id, title')
+          .eq('id', id);
+          
+        console.log('🔍 Verificação de existência:', { checkData, checkError });
+        
+        if (checkError) {
+          console.error('❌ Erro ao verificar existência:', checkError);
+          throw new Error(`Erro ao verificar artigo: ${checkError.message}`);
+        }
+        
+        if (!checkData || checkData.length === 0) {
+          console.error('❌ Artigo não existe com ID:', id);
+          throw new Error(`Artigo não encontrado com ID: ${id}`);
+        }
+        
+        console.error('❌ Artigo existe mas não foi atualizado - dados:', checkData);
+        throw new Error('Falha na atualização - artigo existe mas não foi modificado');
+      }
+
+      console.log('✅ SUCESSO! Artigos atualizados:', data.length);
+      console.log('✅ Dados atualizados:', data[0]);
+
+      console.log('🔄 Atualizando lista de artigos...');
       await fetchArticles();
-      
-      // console.log('✅ CONCLUÍDO - Lista de artigos atualizada');
+      console.log('✅ PROCESSO COMPLETO - Artigo atualizado com sucesso!');
       return true;
+      
     } catch (err) {
-      console.error('❌ ERRO GERAL ao atualizar artigo:', err);
-      console.error('❌ Stack trace:', err instanceof Error ? err.stack : 'N/A');
+      console.error('❌ ERRO ao atualizar artigo:', err);
       setError(err instanceof Error ? err.message : 'Failed to update article');
+      return false;
+    }
+  };
+
+  // 🚨 FUNÇÃO DE EMERGÊNCIA PARA ATUALIZAR PUBLISHED SEM ERRO 42883
+  const updateArticlePublished = async (id: string, published: boolean): Promise<boolean> => {
+    console.log('🚨 EMERGÊNCIA - updateArticlePublished iniciado');
+    console.log('📋 Parâmetros recebidos:', { id, published, type_id: typeof id, type_published: typeof published });
+    
+    // Validar ID
+    if (!id || typeof id !== 'string') {
+      console.error('❌ ID inválido:', id);
+      return false;
+    }
+    
+    try {
+      // Log detalhado antes da chamada RPC
+      console.log('🔧 Chamando RPC emergency_update_published com BOOLEAN direto:', {
+        article_id: id,
+        published_value: published  // BOOLEAN direto agora
+      });
+      
+      // Usar RPC que aceita BOOLEAN direto
+      const { data, error } = await supabaseServiceClient
+        .rpc('emergency_update_published', {
+          article_id: id,
+          published_value: published  // BOOLEAN direto
+        });
+
+      console.log('📊 Resposta da RPC:', { data, error });
+
+      if (error) {
+        console.error('❌ Erro na RPC emergency_update_published:', error);
+        console.error('❌ Detalhes do erro:', JSON.stringify(error, null, 2));
+        throw error;
+      }
+
+      if (data === false || data === null) {
+        console.error('❌ RPC retornou false/null - artigo não encontrado ou não atualizado');
+        console.error('❌ Verificar se o artigo com ID existe:', id);
+        return false;
+      }
+
+      console.log('✅ Published atualizado com sucesso via RPC:', data);
+      return true;
+    } catch (error) {
+      console.error('❌ Erro geral em updateArticlePublished:', error);
+      console.error('❌ Stack trace:', error instanceof Error ? error.stack : 'N/A');
       return false;
     }
   };
@@ -588,6 +683,7 @@ export const useArticles = (): UseArticlesReturn => {
     error,
     createArticle,
     updateArticle,
+    updateArticlePublished, // 🚨 FUNÇÃO DE EMERGÊNCIA PARA PUBLISHED
     deleteArticle,
     createCategory,
     updateCategory,

@@ -102,8 +102,7 @@ export function useRealTimeMetrics(articleIds: string[]) {
     try {
       // PRIMEIRO: Tentar usar a função get_article_metrics do Supabase
       console.log(`🎯 [REALTIME-METRICS] Tentando função get_article_metrics para ${articleId}`);
-      console.log(`🔧 [REALTIME-METRICS] Supabase URL:`, supabase.supabaseUrl);
-      console.log(`🔧 [REALTIME-METRICS] Supabase Key (primeiros 20 chars):`, supabase.supabaseKey?.substring(0, 20));
+      console.log(`🔧 [REALTIME-METRICS] Supabase configurado`);
       
       const { data: rpcData, error: rpcError } = await supabase
         .rpc('get_article_metrics', { target_article_id: articleId });
@@ -328,7 +327,7 @@ export function useRealTimeMetrics(articleIds: string[]) {
         },
         (payload) => {
           console.log('🔄 [REALTIME] Feedback atualizado:', payload);
-          const articleId = payload.new?.article_id || payload.old?.article_id;
+          const articleId = (payload.new as any)?.article_id || (payload.old as any)?.article_id;
           if (articleId && ids.includes(articleId)) {
             updateMetricsForArticle(articleId);
           }
@@ -351,7 +350,7 @@ export function useRealTimeMetrics(articleIds: string[]) {
         },
         (payload) => {
           console.log('🔄 [REALTIME] Comentários atualizados:', payload);
-          const articleId = payload.new?.article_id || payload.old?.article_id;
+          const articleId = (payload.new as any)?.article_id || (payload.old as any)?.article_id;
           if (articleId && ids.includes(articleId)) {
             updateMetricsForArticle(articleId);
           }

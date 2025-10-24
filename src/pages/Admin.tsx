@@ -55,7 +55,7 @@ import NewsletterLogs from '../components/Admin/NewsletterLogs';
 export const Admin: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'articles' | 'categories' | 'editor' | 'newsletter' | 'users' | 'feedback'>('dashboard');
   const { logout, user } = useAuth();
-  const { articles, categories, loading: loadingArticles, refreshArticles, createArticle, createCategory, updateCategory, deleteCategory, updateArticle, deleteArticle } = useArticles();
+  const { articles, categories, loading: loadingArticles, refreshArticles, createArticle, createCategory, updateCategory, deleteCategory, updateArticle, deleteArticle, updateArticlePublished } = useArticles();
   const { refreshData: refreshNewsletter, ...newsletterHook } = useNewsletter();
   const { contacts, loading: loadingContacts, refreshContacts } = useContacts();
   
@@ -151,23 +151,23 @@ export const Admin: React.FC = () => {
   };
 
   const handleTogglePublish = async (article: any) => {
-    console.log('🔄 Iniciando toggle publish para artigo:', article.id, 'Status atual:', article.published);
+    console.log('🚨 EMERGÊNCIA - Usando nova função updateArticlePublished para artigo:', article.id, 'Status atual:', article.published);
     
     try {
-      // Enviar apenas o campo 'published' para evitar erro PGRST204
-      const updatedData = { published: !article.published };
-      console.log('📝 Dados para atualização (apenas published):', updatedData);
+      const newPublishedStatus = !article.published;
+      console.log('📝 Novo status published:', newPublishedStatus);
       
-      const success = await updateArticle(article.id, updatedData);
-      console.log('✅ Resultado do updateArticle:', success);
+      // USAR A NOVA FUNÇÃO DE EMERGÊNCIA PARA EVITAR ERRO 42883
+      const success = await updateArticlePublished(article.id, newPublishedStatus);
+      console.log('✅ Resultado do updateArticlePublished:', success);
       
       if (success) {
-        toast.success(`Artigo ${updatedData.published ? 'publicado' : 'despublicado'} com sucesso!`);
+        toast.success(`Artigo ${newPublishedStatus ? 'publicado' : 'despublicado'} com sucesso!`);
         console.log('🔄 Chamando refreshArticles...');
         await refreshArticles();
         console.log('✅ refreshArticles concluído');
       } else {
-        console.error('❌ updateArticle retornou false');
+        console.error('❌ updateArticlePublished retornou false');
         toast.error('Erro ao atualizar status do artigo');
       }
     } catch (error) {
@@ -2386,15 +2386,16 @@ export const Admin: React.FC = () => {
                       .trim(),
                     excerpt: articleData.excerpt,
                     content: articleData.content,
-                    featured_image: articleData.featuredImage || '',
+                    image_url: articleData.featuredImage || '',
+                    featured_image: articleData.featuredImage || '', // Adicionar featured_image
                     category_id: selectedCategory?.id || categories[0]?.id || '',
                     author_id: user?.id || '',
-                    published: articleData.published,
+                    published: Boolean(articleData.published), // Garantir que seja boolean
                     tags: typeof articleData.tags === 'string' ? articleData.tags.split(',').map(t => t.trim()) : articleData.tags || [],
-                    meta_description: articleData.excerpt || '',
-                    meta_title: articleData.title || null,
-                    reading_time: Math.ceil(articleData.content.split(' ').length / 200),
-                    views: 0
+                    views: 0, // Adicionar views
+                    reading_time: Math.ceil(articleData.content.length / 1000), // Adicionar reading_time estimado
+                    meta_title: articleData.title, // Adicionar meta_title
+                    meta_description: articleData.excerpt || articleData.title, // Adicionar meta_description
                   };
 
                   console.log('📝 Dados do artigo para salvar:', supabaseArticle);

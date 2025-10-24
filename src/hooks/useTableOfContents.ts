@@ -83,8 +83,34 @@ export const useTableOfContents = (contentSelector: string = '[data-article-cont
       setToc(tocItems);
     };
 
-    // Generate TOC after content is loaded
-    const timer = setTimeout(generateTOC, 500);
+    // Generate TOC after content is loaded with retry mechanism
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    const generateTOCWithRetry = () => {
+      console.log(`🔄 Tentativa ${retryCount + 1} de geração do TOC`);
+      const content = document.querySelector(contentSelector);
+      
+      if (!content) {
+        console.warn('❌ Elemento não encontrado:', contentSelector);
+        return;
+      }
+
+      const headings = content.querySelectorAll('h1, h2, h3, h4, h5, h6');
+      
+      // If no headings found and we haven't reached max retries, try again
+      if (headings.length === 0 && retryCount < maxRetries) {
+        retryCount++;
+        console.log(`⏳ Nenhum heading encontrado, tentando novamente em 1s (tentativa ${retryCount}/${maxRetries})`);
+        setTimeout(generateTOCWithRetry, 1000);
+        return;
+      }
+      
+      // Generate TOC with found headings
+      generateTOC();
+    };
+    
+    const timer = setTimeout(generateTOCWithRetry, 1500);
     
     return () => clearTimeout(timer);
   }, [contentSelector]);
