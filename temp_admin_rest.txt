@@ -1,4 +1,4 @@
-﻿  };
+  };
 
   // Mock data para grÃ¡ficos
   const weeklyData = [

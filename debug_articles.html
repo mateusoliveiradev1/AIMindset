@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Artigos - AIMindset</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .article { border: 1px solid #ccc; margin: 10px 0; padding: 15px; }
+        .error { color: red; font-weight: bold; }
+        .success { color: green; font-weight: bold; }
+        .warning { color: orange; font-weight: bold; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Artigos - AIMindset</h1>
+    
+    <div>
+        <button onclick="testarConexao()">1. Testar Conexão Supabase</button>
+        <button onclick="listarTodosArtigos()">2. Listar Todos os Artigos</button>
+        <button onclick="verificarSEO()">3. Verificar SEO</button>
+        <button onclick="testarCarregamento()">4. Testar Carregamento Individual</button>
+        <button onclick="corrigirProblemas()" style="background: #ff6b35; color: white;">🔧 Corrigir Problemas</button>
+        <button onclick="limparResultados()">Limpar</button>
+    </div>
+    
+    <div id="resultados"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Configuração do Supabase
+        const supabaseUrl = 'https://jywjqzhqynhnhetidzsa.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5d2pxemhxeW5obmhldGlkenNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5MjkxMzQsImV4cCI6MjA3NjUwNTEzNH0.oTZ6B-77NGBSqa_lN2YWCtnKwKc0glWnwfuN9xQjDl0';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        function adicionarResultado(tipo, titulo, conteudo) {
+            const div = document.createElement('div');
+            div.className = tipo;
+            div.innerHTML = `<h3>${titulo}</h3><pre>${conteudo}</pre>`;
+            document.getElementById('resultados').appendChild(div);
+        }
+        
+        function limparResultados() {
+            document.getElementById('resultados').innerHTML = '';
+        }
+        
+        async function testarConexao() {
+            adicionarResultado('info', '🔗 Testando Conexão', 'Verificando conexão com Supabase...');
+            
+            try {
+                const { data, error } = await supabase.from('articles').select('count').limit(1);
+                
+                if (error) {
+                    adicionarResultado('error', '❌ ERRO DE CONEXÃO', 
+                        `Código: ${error.code}\nMensagem: ${error.message}`);
+                } else {
+                    adicionarResultado('success', '✅ CONEXÃO OK!', 
+                        'Supabase conectado com sucesso!');
+                }
+            } catch (err) {
+                adicionarResultado('error', '💥 ERRO CRÍTICO', err.message);
+            }
+        }
+        
+        async function listarTodosArtigos() {
+            adicionarResultado('info', '📄 Listando Artigos', 'Buscando todos os artigos...');
+            
+            try {
+                const { data: articles, error } = await supabase
+                    .from('articles')
+                    .select('id, title, slug, published, excerpt, content, tags, image_url, created_at')
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    adicionarResultado('error', '❌ ERRO AO BUSCAR ARTIGOS', 
+                        `Código: ${error.code}\nMensagem: ${error.message}`);
+                    return;
+                }
+                
+                if (!articles || articles.length === 0) {
+                    adicionarResultado('warning', '⚠️ NENHUM ARTIGO ENCONTRADO', 
+                        'Não há artigos na base de dados.');
+                    return;
+                }
+                
+                let resultado = `Total de artigos: ${articles.length}\n\n`;
+                
+                articles.forEach((article, index) => {
+                    const problemas = [];
+                    
+                    // Verificar problemas
+                    if (!article.title || article.title.trim() === '') {
+                        problemas.push('❌ TÍTULO VAZIO');
+                    }
+                    if (!article.slug || article.slug.trim() === '') {
+                        problemas.push('❌ SLUG VAZIO');
+                    }
+                    if (!article.content || article.content.trim() === '') {
+                        problemas.push('❌ CONTEÚDO VAZIO');
+                    }
+                    if (!article.published) {
+                        problemas.push('⚠️ NÃO PUBLICADO');
+                    }
+                    
+                    resultado += `${index + 1}. ${article.title || 'SEM TÍTULO'}\n`;
+                    resultado += `   Slug: ${article.slug || 'SEM SLUG'}\n`;
+                    resultado += `   Publicado: ${article.published ? 'Sim' : 'Não'}\n`;
+                    resultado += `   Excerpt: ${article.excerpt ? 'Sim' : 'Não'}\n`;
+                    resultado += `   Conteúdo: ${article.content ? 'Sim' : 'Não'}\n`;
+                    resultado += `   Tags: ${article.tags || 'Nenhuma'}\n`;
+                    resultado += `   Imagem: ${article.image_url ? 'Sim' : 'Não'}\n`;
+                    
+                    if (problemas.length > 0) {
+                        resultado += `   PROBLEMAS: ${problemas.join(', ')}\n`;
+                    } else {
+                        resultado += `   ✅ OK\n`;
+                    }
+                    resultado += `\n`;
+                });
+                
+                adicionarResultado('success', '✅ ARTIGOS LISTADOS', resultado);
+                
+            } catch (err) {
+                adicionarResultado('error', '💥 ERRO AO LISTAR', err.message);
+            }
+        }
+        
+        async function verificarSEO() {
+            adicionarResultado('info', '🔍 Verificando SEO', 'Analisando metadados SEO...');
+            
+            try {
+                const { data: seoData, error } = await supabase
+                    .from('seo_metadata')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    adicionarResultado('error', '❌ ERRO AO BUSCAR SEO', 
+                        `Código: ${error.code}\nMensagem: ${error.message}`);
+                    return;
+                }
+                
+                if (!seoData || seoData.length === 0) {
+                    adicionarResultado('warning', '⚠️ NENHUM SEO ENCONTRADO', 
+                        'Não há metadados SEO na base.');
+                    return;
+                }
+                
+                let resultado = `Total de registros SEO: ${seoData.length}\n\n`;
+                
+                seoData.forEach((seo, index) => {
+                    const problemas = [];
+                    
+                    if (!seo.title || seo.title.includes('Artigo sobre IA')) {
+                        problemas.push('❌ TÍTULO GENÉRICO');
+                    }
+                    if (!seo.description || seo.description.length < 50) {
+                        problemas.push('❌ DESCRIÇÃO RUIM');
+                    }
+                    if (!seo.keywords || seo.keywords.length < 3) {
+                        problemas.push('❌ POUCAS KEYWORDS');
+                    }
+                    
+                    resultado += `${index + 1}. ${seo.page_type}/${seo.page_slug || 'home'}\n`;
+                    resultado += `   Título: ${seo.title}\n`;
+                    resultado += `   Descrição: ${seo.description}\n`;
+                    resultado += `   Keywords: ${Array.isArray(seo.keywords) ? seo.keywords.join(', ') : seo.keywords}\n`;
+                    
+                    if (problemas.length > 0) {
+                        resultado += `   PROBLEMAS: ${problemas.join(', ')}\n`;
+                    } else {
+                        resultado += `   ✅ SEO OK\n`;
+                    }
+                    resultado += `\n`;
+                });
+                
+                adicionarResultado('success', '✅ SEO ANALISADO', resultado);
+                
+            } catch (err) {
+                adicionarResultado('error', '💥 ERRO AO VERIFICAR SEO', err.message);
+            }
+        }
+        
+        async function testarCarregamento() {
+            adicionarResultado('info', '🧪 Testando Carregamento', 'Testando carregamento individual...');
+            
+            try {
+                // Buscar artigos publicados
+                const { data: articles, error } = await supabase
+                    .from('articles')
+                    .select('slug, title')
+                    .eq('published', true);
+                
+                if (error) {
+                    adicionarResultado('error', '❌ ERRO AO BUSCAR ARTIGOS', error.message);
+                    return;
+                }
+                
+                if (!articles || articles.length === 0) {
+                    adicionarResultado('warning', '⚠️ NENHUM ARTIGO PUBLICADO', 
+                        'Não há artigos publicados para testar.');
+                    return;
+                }
+                
+                let resultado = `Testando ${articles.length} artigos:\n\n`;
+                
+                for (const article of articles) {
+                    try {
+                        // Testar carregamento individual
+                        const { data: fullArticle, error: loadError } = await supabase
+                            .from('articles')
+                            .select('*')
+                            .eq('slug', article.slug)
+                            .eq('published', true)
+                            .single();
+                        
+                        if (loadError) {
+                            resultado += `❌ ${article.title}: ERRO - ${loadError.message}\n`;
+                        } else if (!fullArticle) {
+                            resultado += `❌ ${article.title}: NÃO ENCONTRADO\n`;
+                        } else {
+                            resultado += `✅ ${article.title}: OK\n`;
+                            
+                            // Testar URL do artigo
+                            const articleUrl = `http://localhost:5174/artigo/${article.slug}`;
+                            resultado += `   URL: ${articleUrl}\n`;
+                        }
+                    } catch (err) {
+                        resultado += `💥 ${article.title}: ERRO CRÍTICO - ${err.message}\n`;
+                    }
+                }
+                
+                adicionarResultado('success', '✅ TESTE CONCLUÍDO', resultado);
+                
+            } catch (err) {
+                adicionarResultado('error', '💥 ERRO NO TESTE', err.message);
+            }
+        }
+        
+        async function corrigirProblemas() {
+            adicionarResultado('info', '🔧 Corrigindo Problemas', 'Iniciando correções automáticas...');
+            
+            try {
+                // 1. Buscar artigos com problemas
+                const { data: articles, error } = await supabase
+                    .from('articles')
+                    .select('*');
+                
+                if (error) {
+                    adicionarResultado('error', '❌ ERRO AO BUSCAR ARTIGOS', error.message);
+                    return;
+                }
+                
+                let resultado = 'Correções realizadas:\n\n';
+                let correcoes = 0;
+                
+                for (const article of articles) {
+                    const updates = {};
+                    let needsUpdate = false;
+                    
+                    // Corrigir título vazio ou genérico
+                    if (!article.title || article.title.trim() === '' || article.title === 'artigo') {
+                        updates.title = `Artigo ${article.id.substring(0, 8)} - Conteúdo sobre IA`;
+                        needsUpdate = true;
+                        resultado += `✅ Título corrigido: ${updates.title}\n`;
+                    }
+                    
+                    // Corrigir slug vazio
+                    if (!article.slug || article.slug.trim() === '') {
+                        updates.slug = `artigo-${article.id.substring(0, 8)}`;
+                        needsUpdate = true;
+                        resultado += `✅ Slug corrigido: ${updates.slug}\n`;
+                    }
+                    
+                    // Corrigir excerpt vazio
+                    if (!article.excerpt || article.excerpt.trim() === '') {
+                        updates.excerpt = 'Descubra insights valiosos sobre inteligência artificial e como ela pode transformar sua produtividade.';
+                        needsUpdate = true;
+                        resultado += `✅ Excerpt corrigido\n`;
+                    }
+                    
+                    // Corrigir conteúdo vazio
+                    if (!article.content || article.content.trim() === '') {
+                        updates.content = '<h2>Conteúdo em Desenvolvimento</h2><p>Este artigo está sendo desenvolvido com conteúdo sobre inteligência artificial e produtividade.</p>';
+                        needsUpdate = true;
+                        resultado += `✅ Conteúdo básico adicionado\n`;
+                    }
+                    
+                    // Aplicar correções
+                    if (needsUpdate) {
+                        const { error: updateError } = await supabase
+                            .from('articles')
+                            .update(updates)
+                            .eq('id', article.id);
+                        
+                        if (updateError) {
+                            resultado += `❌ Erro ao atualizar ${article.id}: ${updateError.message}\n`;
+                        } else {
+                            correcoes++;
+                            resultado += `✅ Artigo ${article.id.substring(0, 8)} atualizado\n`;
+                        }
+                    }
+                }
+                
+                resultado += `\nTotal de correções: ${correcoes}`;
+                adicionarResultado('success', '✅ CORREÇÕES CONCLUÍDAS', resultado);
+                
+            } catch (err) {
+                adicionarResultado('error', '💥 ERRO NAS CORREÇÕES', err.message);
+            }
+        }
+        
+        // Executar teste inicial
+        window.onload = function() {
+            adicionarResultado('info', '🚀 Debug Iniciado', 'Sistema de debug carregado. Clique nos botões para executar os testes.');
+        };
+    </script>
+</body>
+</html>
