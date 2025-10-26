@@ -393,7 +393,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
 
                         <div className="flex items-center">
                           <Clock className="w-3 h-3 mr-1" />
-                          {article.reading_time || '5'} min
+                          {article.reading_time || 5} min
                         </div>
                       </div>
 

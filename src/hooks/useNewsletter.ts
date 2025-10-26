@@ -271,11 +271,14 @@ export const useNewsletter = () => {
       const to = from + ITEMS_PER_PAGE - 1;
 
       const result = await supabaseWithRetry(
-        () => client
-          .from('newsletter_campaigns')
-          .select('*', { count: 'exact' })
-          .range(from, to)
-          .order('created_at', { ascending: false }),
+        async () => {
+          const response = await client
+            .from('newsletter_campaigns')
+            .select('*', { count: 'exact' })
+            .range(from, to)
+            .order('created_at', { ascending: false });
+          return response;
+        },
         `Fetch Campaigns (${requestId})`
       );
 
@@ -284,7 +287,7 @@ export const useNewsletter = () => {
       }
 
       if (result.data) {
-        setCampaigns(result.data);
+        setCampaigns(result.data as NewsletterCampaign[]);
         setCampaignPagination({
           currentPage: page,
           totalItems: result.count || 0,

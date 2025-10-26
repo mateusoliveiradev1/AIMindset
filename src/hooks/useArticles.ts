@@ -105,30 +105,33 @@ export const useArticles = (): UseArticlesReturn => {
       }
 
       // Função para buscar artigos com retry
-      const fetchWithRetry = async () => {
+      const fetchWithRetry = async (): Promise<{ data: Article[] | null; error: any }> => {
         // Tentar primeiro com cliente normal
         const normalResult = await supabaseWithRetry(
-          () => supabase
-            .from('articles')
-            .select(`
-              *,
-              category:categories (
-                id,
-                name,
-                slug,
-                description
-              )
-            `)
-            .order('created_at', { ascending: false }),
+          async () => {
+            const response = await supabase
+              .from('articles')
+              .select(`
+                *,
+                category:categories (
+                  id,
+                  name,
+                  slug,
+                  description
+                )
+              `)
+              .order('created_at', { ascending: false });
+            return response;
+          },
           'Fetch Articles (Normal Client)'
         );
 
         if (normalResult.success && normalResult.data) {
-          return { data: normalResult.data, error: null };
+          return { data: normalResult.data as Article[], error: null };
         }
 
         // Se falhou com cliente normal, tentar com admin
-        console.warn('⚠️ [useArticles] Tentando com supabaseAdmin...');
+        console.warn('⚠️ [useArticles] Cliente normal falhou, tentando com admin...');
         const adminResult = await supabaseWithRetry(
           () => supabaseAdmin
             .from('articles')
@@ -145,8 +148,8 @@ export const useArticles = (): UseArticlesReturn => {
           'Fetch Articles (Admin Client)'
         );
 
-        return { 
-          data: adminResult.data, 
+        return {
+          data: adminResult.success ? adminResult.data as Article[] : null,
           error: adminResult.error || normalResult.error 
         };
       };
@@ -154,15 +157,15 @@ export const useArticles = (): UseArticlesReturn => {
       const { data, error: fetchError } = await fetchWithRetry();
 
       // Se ainda não há dados, usar dados mock como fallback
-      if (fetchError || !data || data.length === 0) {
+      if (fetchError || !data || (data as Article[]).length === 0) {
         console.warn('⚠️ [useArticles] Usando dados mock como fallback');
         const { mockArticles } = await import('../data/mockData');
         setArticles(mockArticles || []);
         return;
       }
 
-      console.log('✅ [useArticles] Artigos carregados com sucesso:', data.length);
-      setArticles(data || []);
+      console.log('✅ [useArticles] Artigos carregados com sucesso:', (data as Article[]).length);
+      setArticles(data as Article[] || []);
     } catch (err) {
       console.error('❌ Error fetching articles:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch articles');
@@ -189,10 +192,13 @@ export const useArticles = (): UseArticlesReturn => {
       const fetchWithRetry = async () => {
         // Tentar primeiro com cliente normal
         const normalResult = await supabaseWithRetry(
-          () => supabase
-            .from('categories')
-            .select('*')
-            .order('name', { ascending: true }),
+          async () => {
+            const response = await supabase
+              .from('categories')
+              .select('*')
+              .order('name', { ascending: true });
+            return response;
+          },
           'Fetch Categories (Normal Client)'
         );
 
@@ -227,9 +233,9 @@ export const useArticles = (): UseArticlesReturn => {
         return;
       }
 
-      console.log('✅ [useArticles] Categorias carregadas com sucesso:', data?.length || 0);
-      console.log('📋 [useArticles] Categorias:', data?.map(cat => ({ id: cat.id, name: cat.name, slug: cat.slug })));
-      setCategories(data || []);
+      console.log('✅ [useArticles] Categorias carregadas com sucesso:', (data as Category[])?.length || 0);
+      console.log('📋 [useArticles] Categorias:', (data as Category[])?.map(cat => ({ id: cat.id, name: cat.name, slug: cat.slug })));
+      setCategories((data as Category[]) || []);
     } catch (err) {
       console.error('❌ Error fetching categories:', err);
       // Fallback para dados mock em caso de erro

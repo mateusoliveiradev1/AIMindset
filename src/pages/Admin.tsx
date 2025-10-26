@@ -63,8 +63,8 @@ export const Admin: React.FC = () => {
   const { getMetadata } = useSEO({
     pageType: 'admin',
     breadcrumbs: [
-      { name: 'Home', url: '/' },
-      { name: 'Admin', url: '/admin' }
+      { name: 'Home', url: '/', position: 1 },
+      { name: 'Admin', url: '/admin', position: 2 }
     ]
   });
   const { articles, categories, loading: loadingArticles, refreshArticles, createArticle, createCategory, updateCategory, deleteCategory, updateArticle, deleteArticle, updateArticlePublished } = useArticles();

@@ -21,11 +21,11 @@ const Newsletter: React.FC = () => {
   const { stats, loading: statsLoading, error: statsError, subscribe } = useNewsletter();
 
   // Hook para SEO
-  const { getMetadata } = useSEO({
+  const { seoData, loading: seoLoading, getMetadata } = useSEO({
     pageType: 'newsletter',
     breadcrumbs: [
-      { name: 'Home', url: '/' },
-      { name: 'Newsletter', url: '/newsletter' }
+      { name: 'Home', url: '/', position: 1 },
+      { name: 'Newsletter', url: '/newsletter', position: 2 }
     ]
   });
 

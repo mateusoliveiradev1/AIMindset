@@ -12,6 +12,7 @@ export interface RetryResult<T> {
   error: any;
   attempts: number;
   success: boolean;
+  count?: number;
 }
 
 const DEFAULT_OPTIONS: Required<RetryOptions> = {
@@ -107,7 +108,8 @@ export async function withRetry<T>(
             data: null,
             error: result.error,
             attempts,
-            success: false
+            success: false,
+            count: (result as any).count
           };
         }
       }
@@ -117,7 +119,8 @@ export async function withRetry<T>(
         data: result.data,
         error: null,
         attempts,
-        success: true
+        success: true,
+        count: (result as any).count
       };
       
     } catch (error) {
@@ -140,7 +143,8 @@ export async function withRetry<T>(
           data: null,
           error,
           attempts,
-          success: false
+          success: false,
+          count: 0
         };
       }
     }
@@ -150,7 +154,8 @@ export async function withRetry<T>(
     data: null,
     error: lastError,
     attempts,
-    success: false
+    success: false,
+    count: 0
   };
 }
 

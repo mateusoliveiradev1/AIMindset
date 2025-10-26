@@ -18,8 +18,8 @@ const AllArticles: React.FC = () => {
   const { getMetadata } = useSEO({
     pageType: 'all_articles',
     breadcrumbs: [
-      { name: 'Home', url: '/' },
-      { name: 'Artigos', url: '/artigos' }
+      { name: 'Home', url: '/', position: 1 },
+      { name: 'Artigos', url: '/artigos', position: 2 }
     ]
   });
 

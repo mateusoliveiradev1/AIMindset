@@ -78,6 +78,7 @@ export async function getSupabaseStats() {
 export type Article = Database['public']['Tables']['articles']['Row'] & {
   category?: Category | { name: string } | string;
   tags?: string[] | string | null; // Permitir string ou array
+  reading_time?: number | string; // Propriedade para tempo de leitura
 };
 export type Category = Database['public']['Tables']['categories']['Row'];
 export type NewsletterSubscriber = Database['public']['Tables']['newsletter_subscribers']['Row'];

@@ -55,7 +55,10 @@ const Article: React.FC = () => {
     fallbackTitle: article ? `${article.title} | AIMindset` : 'Artigo - AIMindset',
     fallbackDescription: article?.excerpt || 'Descubra insights sobre IA e tecnologia no AIMindset.',
     fallbackKeywords: article?.tags ? 
-      [...article.tags.split(',').map(tag => tag.trim()), 'inteligência artificial', 'IA', 'produtividade'] :
+      (typeof article.tags === 'string' ? 
+        [...article.tags.split(',').map(tag => tag.trim()), 'inteligência artificial', 'IA', 'produtividade'] :
+        [...(article.tags as string[]), 'inteligência artificial', 'IA', 'produtividade']
+      ) :
       ['inteligência artificial', 'IA', 'produtividade', 'artigo', 'blog']
   });
 
@@ -176,7 +179,6 @@ const Article: React.FC = () => {
             {/* Sidebar - Table of Contents */}
             <aside className="lg:w-64 order-2 lg:order-1">
               <div className="lg:sticky lg:top-20 lg:h-screen lg:overflow-y-auto lg:pb-20">
-                {console.log('🔍 [ARTICLE DEBUG] Renderizando TableOfContents com slug:', slug)}
                 <TableOfContents articleSlug={slug} />
               </div>
             </aside>
@@ -282,10 +284,6 @@ const Article: React.FC = () => {
     
               {/* Article Content */}
               <article id="article-content" data-article-content className="prose prose-invert prose-lg max-w-none mb-12">
-                {/* DEBUG: Log do conteúdo do artigo */}
-                {console.log('🔍 [ARTICLE DEBUG] Conteúdo do artigo:', article.content.substring(0, 500))}
-                {console.log('🔍 [ARTICLE DEBUG] Artigo completo:', article)}
-
                 <ReactMarkdown 
                   remarkPlugins={[remarkGfm]}
                   className="font-roboto text-futuristic-gray leading-relaxed"

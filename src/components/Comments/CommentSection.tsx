@@ -8,15 +8,13 @@ interface CommentSectionProps {
 }
 
 export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => {
-  console.log('🎯 [DEBUG] CommentSection renderizado com articleId:', articleId);
-  
   const {
     comments,
     loading,
     submitting,
     hasMore,
     error,
-    submitComment,
+    addComment, // Corrigido: usar addComment em vez de submitComment
     loadMoreComments,
     refreshComments
   } = useComments(String(articleId));
@@ -63,11 +61,11 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
         onLoadMore={loadMoreComments}
       />
 
-      {/* Formulário para novo comentário */}
-      <CommentForm
-        onSubmit={submitComment}
-        submitting={submitting}
-      />
-    </div>
-  );
-};
+       {/* Formulário para novo comentário */}
+       <CommentForm
+         onSubmit={addComment}
+         submitting={submitting}
+       />
+     </div>
+   );
+ };

@@ -30,8 +30,8 @@ export interface Article {
   // meta_description removido - coluna não existe na tabela
   category?: Category;
   tags?: string[] | string | null;
-  // reading_time removido - coluna não existe na tabela
-  read_time?: number;
+  reading_time?: string | number; // Adicionado para compatibilidade com componentes
+  read_time?: number | string;
   // views removido - coluna não existe na tabela
 }
 

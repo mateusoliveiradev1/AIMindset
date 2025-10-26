@@ -21,8 +21,8 @@ const AdminLogin: React.FC = () => {
   const { getMetadata } = useSEO({
     pageType: 'admin',
     breadcrumbs: [
-      { name: 'Home', url: '/' },
-      { name: 'Admin Login', url: '/admin/login' }
+      { name: 'Home', url: '/', position: 1 },
+      { name: 'Admin Login', url: '/admin/login', position: 2 }
     ]
   });
 
