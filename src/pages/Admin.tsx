@@ -2387,15 +2387,14 @@ export const Admin: React.FC = () => {
                     excerpt: articleData.excerpt,
                     content: articleData.content,
                     image_url: articleData.featuredImage || '',
-                    featured_image: articleData.featuredImage || '', // Adicionar featured_image
                     category_id: selectedCategory?.id || categories[0]?.id || '',
                     author_id: user?.id || '',
                     published: Boolean(articleData.published), // Garantir que seja boolean
                     tags: typeof articleData.tags === 'string' ? articleData.tags.split(',').map(t => t.trim()) : articleData.tags || [],
-                    views: 0, // Adicionar views
-                    reading_time: Math.ceil(articleData.content.length / 1000), // Adicionar reading_time estimado
-                    meta_title: articleData.title, // Adicionar meta_title
-                    meta_description: articleData.excerpt || articleData.title, // Adicionar meta_description
+                    // views removido - coluna não existe na tabela
+                    // reading_time removido - coluna não existe na tabela
+                    // meta_title removido - coluna não existe na tabela
+                    // meta_description removido - coluna não existe na tabela
                   };
 
                   console.log('📝 Dados do artigo para salvar:', supabaseArticle);

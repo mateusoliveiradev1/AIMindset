@@ -19,21 +19,20 @@ export interface Article {
   title: string;
   content: string;
   excerpt: string;
-  featured_image: string;
+  image_url: string;
   slug: string;
   published: boolean;
   category_id: string;
   author_id: string;
   created_at: string;
   updated_at: string;
-  meta_title?: string;
-  meta_description: string;
-  image_url?: string; // Alias para featured_image
+  // meta_title removido - coluna não existe na tabela
+  // meta_description removido - coluna não existe na tabela
   category?: Category;
   tags?: string[] | string | null;
-  reading_time?: number;
+  // reading_time removido - coluna não existe na tabela
   read_time?: number;
-  views?: number;
+  // views removido - coluna não existe na tabela
 }
 
 export interface NewsletterSubscriber {

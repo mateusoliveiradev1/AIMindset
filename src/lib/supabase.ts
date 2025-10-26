@@ -24,7 +24,7 @@ if (!finalUrl || !finalKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Criar cliente Supabase simples
+// Criar cliente Supabase com configuração correta de headers
 export const supabase = createClient(finalUrl, finalKey, {
   auth: {
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
@@ -35,7 +35,9 @@ export const supabase = createClient(finalUrl, finalKey, {
   },
   global: {
     headers: {
-      'x-client-info': 'aimindset-app'
+      'x-client-info': 'aimindset-app',
+      'apikey': finalKey, // Garantir que a API key seja enviada nos headers
+      'Authorization': `Bearer ${finalKey}` // Header de autorização explícito
     }
   },
   realtime: {
@@ -49,7 +51,7 @@ export const supabase = createClient(finalUrl, finalKey, {
 // Função para verificar conectividade
 export async function checkSupabaseConnection() {
   try {
-    const { data, error } = await supabase.from('articles').select('count').limit(1);
+    const { data, error } = await supabaseServiceClient.from('articles').select('count').limit(1);
     return { connected: !error, error };
   } catch (error) {
     return { connected: false, error };
@@ -59,8 +61,8 @@ export async function checkSupabaseConnection() {
 // Função para obter estatísticas do Supabase
 export async function getSupabaseStats() {
   try {
-    const { data: articlesCount } = await supabase.from('articles').select('id', { count: 'exact' });
-    const { data: categoriesCount } = await supabase.from('categories').select('id', { count: 'exact' });
+    const { data: articlesCount } = await supabaseServiceClient.from('articles').select('id', { count: 'exact' });
+    const { data: categoriesCount } = await supabaseServiceClient.from('categories').select('id', { count: 'exact' });
     
     return {
       articles: articlesCount?.length || 0,
@@ -74,7 +76,6 @@ export async function getSupabaseStats() {
 
 // Exportar tipos para compatibilidade com propriedades adicionais
 export type Article = Database['public']['Tables']['articles']['Row'] & {
-  image_url?: string; // Alias para featured_image
   category?: Category | { name: string } | string;
   tags?: string[] | string | null; // Permitir string ou array
 };
@@ -105,54 +106,51 @@ export type Database = {
           title: string;
           content: string;
           excerpt: string;
-          featured_image: string | null;
+          image_url: string | null;
           slug: string;
           published: boolean;
           category_id: string;
           author_id: string;
           created_at: string;
           updated_at: string;
-          views: number | null;
-          reading_time: number | null;
+          // views removido - coluna não existe na tabela
+          // reading_time removido - coluna não existe na tabela
           tags: string[] | null;
-          meta_title: string | null;
-          meta_description: string | null;
+          // meta_title removido - coluna não existe na tabela
         };
         Insert: {
           id?: string;
           title: string;
           content: string;
           excerpt: string;
-          featured_image?: string | null;
+          image_url?: string | null;
           slug: string;
           published?: boolean;
           category_id: string;
           author_id: string;
           created_at?: string;
           updated_at?: string;
-          views?: number;
-          reading_time?: number;
+          // views removido - coluna não existe na tabela
+          // reading_time removido - coluna não existe na tabela
           tags?: string[] | null;
-          meta_title?: string | null;
-          meta_description?: string | null;
+          // meta_title removido - coluna não existe na tabela
         };
         Update: {
           id?: string;
           title?: string;
           content?: string;
           excerpt?: string;
-          featured_image?: string | null;
+          image_url?: string | null;
           slug?: string;
           published?: boolean;
           category_id?: string;
           author_id?: string;
           created_at?: string;
           updated_at?: string;
-          views?: number;
-          reading_time?: number;
+          // views removido - coluna não existe na tabela
+          // reading_time removido - coluna não existe na tabela
           tags?: string[] | null;
-          meta_title?: string | null;
-          meta_description?: string | null;
+          // meta_title removido - coluna não existe na tabela
         };
       };
       categories: {
