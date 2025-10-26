@@ -158,8 +158,25 @@ export const Admin: React.FC = () => {
 
   // Funções para gerenciar artigos
   const handleEditArticle = (article: any) => {
+    console.log('✏️ handleEditArticle chamada com:', article);
+    
+    // Verificar se o artigo é válido
+    if (!article || !article.id) {
+      console.error('❌ Artigo inválido:', article);
+      toast.error('Artigo inválido para edição');
+      return;
+    }
+    
+    // Definir o artigo para edição
     setEditingArticle(article);
+    console.log('📝 Artigo definido para edição:', article.id);
+    
+    // Mudar para a aba do editor
     setActiveTab('editor');
+    console.log('🔄 Mudando para aba editor');
+    
+    // Feedback visual para o usuário
+    toast.success(`Editando artigo: ${article.title || 'Sem título'}`);
   };
 
   const handleDeleteArticle = async (articleId: string) => {
@@ -206,8 +223,20 @@ export const Admin: React.FC = () => {
   };
 
   const handleViewArticle = (article: any) => {
-    // Abrir artigo em nova aba usando o slug do artigo
-    window.open(`/artigo/${article.slug}`, '_blank');
+    console.log('🔍 handleViewArticle chamada com:', article);
+    
+    // Verificar se o artigo tem slug válido
+    if (!article.slug) {
+      console.error('❌ Artigo sem slug:', article);
+      toast.error('Artigo não possui slug válido para visualização');
+      return;
+    }
+    
+    // Abrir artigo em nova aba usando URL completa
+    const url = `${window.location.origin}/artigo/${article.slug}`;
+    console.log('🌐 Abrindo URL:', url);
+    window.open(url, '_blank', 'noopener,noreferrer');
+    toast.success(`Abrindo artigo: ${article.title}`);
   };
 
   // Função memoizada para carregar dados
@@ -1110,6 +1139,19 @@ export const Admin: React.FC = () => {
                         </div>
                       ) : articles && articles.length > 0 ? (
                         <>
+                          {(() => {
+                            console.log('📊 Dados dos artigos na seção Conteúdo Recente:', {
+                              totalArticles: articles.length,
+                              articlesData: articles.map(a => ({
+                                id: a.id,
+                                title: a.title,
+                                slug: a.slug,
+                                published: a.published,
+                                created_at: a.created_at
+                              }))
+                            });
+                            return null;
+                          })()}
                           {articles
                             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                             .slice(0, 6)
@@ -1135,12 +1177,18 @@ export const Admin: React.FC = () => {
                                         {article.published ? 'Publicado' : 'Rascunho'}
                                       </span>
                                     </div>
-                                    <div className="flex items-center space-x-1">
+                                    <div className="flex items-center space-x-1" style={{ zIndex: 10, position: 'relative' }}>
                                       <Button 
                                         size="sm" 
                                         variant="ghost" 
                                         className="h-8 w-8 sm:h-7 sm:w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-neon-purple/20 min-h-[32px] min-w-[32px] sm:min-h-[28px] sm:min-w-[28px]"
-                                        onClick={() => setEditingArticle(article)}
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          console.log('🖱️ Botão Editar clicado para artigo:', article.id);
+                                          handleEditArticle(article);
+                                        }}
+                                        style={{ zIndex: 20, position: 'relative' }}
                                       >
                                         <Edit3 className="w-4 h-4 sm:w-3 sm:h-3" />
                                       </Button>
@@ -1148,6 +1196,13 @@ export const Admin: React.FC = () => {
                                         size="sm" 
                                         variant="ghost" 
                                         className="h-8 w-8 sm:h-7 sm:w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-blue-500/20 min-h-[32px] min-w-[32px] sm:min-h-[28px] sm:min-w-[28px]"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          console.log('🖱️ Botão Ver clicado para artigo:', article.id);
+                                          handleViewArticle(article);
+                                        }}
+                                        style={{ zIndex: 20, position: 'relative' }}
                                       >
                                         <Eye className="w-4 h-4 sm:w-3 sm:h-3" />
                                       </Button>
