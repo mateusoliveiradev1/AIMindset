@@ -27,9 +27,9 @@ const Footer: React.FC = () => {
   };
 
   const socialLinks = [
-    { name: 'Twitter', icon: Twitter, href: '#' },
-    { name: 'LinkedIn', icon: Linkedin, href: '#' },
-    { name: 'GitHub', icon: Github, href: '#' },
+    { name: 'Twitter', icon: Twitter, href: 'https://x.com/AIMindset_BR' },
+    { name: 'LinkedIn', icon: Linkedin, href: 'https://www.linkedin.com/in/mateus-oliveira-430659281/' },
+    { name: 'GitHub', icon: Github, href: 'https://github.com/mateusoliveiradev1' },
     { name: 'Email', icon: Mail, href: 'mailto:contato@aimindset.com' },
   ];
 
@@ -57,12 +57,14 @@ const Footer: React.FC = () => {
             <div className="flex space-x-4">
               {socialLinks.map((social) => {
                 const Icon = social.icon;
+                const isExternal = social.name !== 'Email';
                 return (
                   <a
                     key={social.name}
                     href={social.href}
                     className="p-2 text-futuristic-gray hover:text-lime-green transition-all duration-300 hover-lift neon-border rounded-lg"
                     aria-label={social.name}
+                    {...(isExternal && { target: "_blank", rel: "noopener noreferrer" })}
                   >
                     <Icon className="h-5 w-5" />
                   </a>

@@ -64,7 +64,7 @@ const Hero: React.FC = () => {
           <Link to="/categoria">
             <Button size="lg" className="w-full sm:w-auto">
               <Brain className="h-5 w-5 mr-2" />
-              Explorar Artigos
+              Explorar Categorias
               <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
           </Link>
