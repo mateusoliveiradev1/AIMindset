@@ -5,10 +5,10 @@
 ### *Plataforma de Artigos sobre Inteligência Artificial com Design Futurístico*
 
 [![React](https://img.shields.io/badge/React-18.3.1-61DAFB?style=for-the-badge&logo=react&logoColor=white)](https://reactjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.6.3-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Vite](https://img.shields.io/badge/Vite-6.0.5-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8.3-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-6.3.5-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4.17-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Supabase](https://img.shields.io/badge/Supabase-3EAF7C?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-2.39.0-3EAF7C?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](http://makeapullrequest.com)
@@ -16,27 +16,82 @@
 
 ---
 
-*Uma experiência de leitura revolucionária com design futurístico, índice inteligente e navegação fluida*
+*Uma experiência de leitura revolucionária com design futurístico, autenticação segura e painel administrativo completo*
 
 </div>
 
 ## 🚀 Sobre o Projeto
 
-**AIMindset** é uma plataforma moderna e inovadora dedicada a artigos sobre Inteligência Artificial, Machine Learning e tecnologias emergentes. Desenvolvida com foco na **experiência do usuário**, oferece uma interface futurística com funcionalidades avançadas de navegação e leitura.
+**AIMindset** é uma plataforma moderna e inovadora dedicada a artigos sobre Inteligência Artificial, Machine Learning e tecnologias emergentes. Desenvolvida com foco na **experiência do usuário** e **segurança**, oferece uma interface futurística com funcionalidades avançadas de navegação, autenticação robusta e painel administrativo completo.
 
 ### 🎯 **Missão**
-Democratizar o conhecimento sobre IA através de uma plataforma acessível, responsiva e visualmente atrativa que torna a leitura técnica uma experiência prazerosa.
+Democratizar o conhecimento sobre IA através de uma plataforma acessível, segura e visualmente atrativa que torna a leitura técnica uma experiência prazerosa e profissional.
 
 ### ✨ **Diferenciais**
 - 🎨 **Design Futurístico** com tema dark e elementos neon
+- 🔐 **Autenticação Segura** com Supabase e proteção de rotas
 - 📱 **100% Responsivo** - Otimizado para todos os dispositivos
 - 🧭 **Índice Inteligente** - Navegação automática por seções
-- ⚡ **Performance Otimizada** - Carregamento rápido e fluido
-- 🔄 **Sistema de Fallback** - Funciona mesmo offline
+- ⚡ **Performance Otimizada** - Carregamento rápido e cache inteligente
+- 📊 **Painel Admin Completo** - Gerenciamento avançado de conteúdo
 
 ---
 
 ## ✨ Funcionalidades Principais
+
+### 🎨 **Interface e Design**
+
+| Funcionalidade | Descrição | Status |
+|---|---|---|
+| 🌙 **Header Elegante** | Design com efeitos neon e backdrop blur | ✅ |
+| 📂 **3 Categorias Principais** | IA & Tecnologia, Produtividade, Futuro | ✅ |
+| 🔍 **Busca Avançada** | Sistema de busca com filtros inteligentes | ✅ |
+| 📱 **Menu Mobile** | Navegação responsiva otimizada | ✅ |
+| ✨ **Animações Fluidas** | Efeitos hover e transições suaves | ✅ |
+| 🎯 **Design Moderno** | Interface profissional e futurística | ✅ |
+
+### 🔐 **Sistema de Autenticação**
+
+| Funcionalidade | Descrição | Status |
+|---|---|---|
+| 🔑 **Login/Logout Seguro** | Autenticação robusta com Supabase | ✅ |
+| 👑 **Painel Admin Protegido** | Acesso restrito apenas para super admins | ✅ |
+| 🛡️ **Proteção de Rotas** | Verificação contínua de permissões | ✅ |
+| 🚪 **Logout Robusto** | Sistema com fallback e invalidação completa | ✅ |
+| 🔒 **Sessão Segura** | Gerenciamento seguro de tokens e sessões | ✅ |
+| 🔄 **Singleton Pattern** | Prevenção de múltiplas instâncias GoTrueClient | ✅ |
+
+### 📱 **Funcionalidades Mobile**
+
+| Funcionalidade | Descrição | Status |
+|---|---|---|
+| 📐 **Design Responsivo** | Layout adaptativo para todos os dispositivos | ✅ |
+| 📱 **Menu Mobile Otimizado** | Navegação touch-friendly | ✅ |
+| 👆 **Touch Feedback** | Resposta tátil para interações | ✅ |
+| ⚡ **Performance Mobile** | Otimizações específicas para dispositivos móveis | ✅ |
+| 🔄 **Pull to Refresh** | Atualização por gesto | ✅ |
+
+### ⚡ **Performance e Otimização**
+
+| Funcionalidade | Descrição | Status |
+|---|---|---|
+| ♾️ **Carregamento Infinito** | Paginação automática de artigos | ✅ |
+| 🧠 **Cache Inteligente** | Sistema de cache multi-camadas | ✅ |
+| 🖼️ **Lazy Loading** | Carregamento sob demanda de imagens | ✅ |
+| 📴 **Service Worker** | Funcionalidade offline | ✅ |
+| 📦 **Bundle Otimizado** | Código dividido e otimizado | ✅ |
+| 🔄 **Prefetch Inteligente** | Pré-carregamento de conteúdo | ✅ |
+
+### 📊 **Painel Administrativo**
+
+| Funcionalidade | Descrição | Status |
+|---|---|---|
+| 📈 **Dashboard Estatísticas** | Métricas e analytics em tempo real | ✅ |
+| 📝 **Gerenciamento Artigos** | CRUD completo de artigos | ✅ |
+| 💬 **Sistema Comentários** | Moderação e gerenciamento | ✅ |
+| 📊 **Analytics Métricas** | Relatórios detalhados de performance | ✅ |
+| 🏠 **Botão Voltar Home** | Navegação rápida para página inicial | ✅ |
+| 📧 **Automações Email** | Sistema de newsletter e notificações | ✅ |
 
 ### 📖 **Experiência de Leitura Avançada**
 
@@ -48,29 +103,42 @@ Democratizar o conhecimento sobre IA através de uma plataforma acessível, resp
 | 🔄 **Navegação Artigos** | Botões anterior/próximo entre artigos | ✅ |
 | 📱 **Botão Flutuante** | Acesso rápido ao índice em dispositivos móveis | ✅ |
 
-### 🎨 **Interface e Design**
+---
 
-- **🌙 Tema Dark Futurístico** - Interface moderna com elementos neon
-- **🎭 Animações Fluidas** - Transições suaves e micro-interações
-- **📐 Layout Responsivo** - Adaptação perfeita para qualquer tela
-- **🎯 UX Otimizada** - Navegação intuitiva e acessível
+## 🗂️ **Estrutura do Projeto**
 
-### 📱 **Responsividade Perfeita**
-
-#### 📱 **Mobile (< 768px)**
-- Botão flutuante para índice
-- Layout otimizado para touch
-- Navegação por gestos
-
-#### 📟 **Tablet (768px - 1024px)**
-- Botão flutuante universal
-- Modal centralizado
-- Fechamento automático
-
-#### 🖥️ **Desktop (≥ 1024px)**
-- Sidebar fixa com índice
-- Layout de duas colunas
-- Navegação por scroll
+```
+AIMindset/
+├── 📁 docs/                    # Documentação do projeto
+│   ├── DEPLOY.md              # Guia de deploy
+│   ├── INSTRUCOES_RLS_STORAGE.md
+│   └── header_original.txt
+├── 📁 scripts/                # Scripts de teste e utilitários
+│   ├── check_dom.js
+│   ├── check_rls.js
+│   ├── create-admin.js
+│   └── fix-rls-*.js
+├── 📁 debug/                  # Arquivos de debug
+│   ├── page_content.html
+│   └── page_debug.html
+├── 📁 database/               # Scripts de banco de dados
+│   ├── create_sql_function.sql
+│   └── test_queries.sql
+├── 📁 src/
+│   ├── 📁 components/         # Componentes React
+│   │   ├── 📁 Admin/         # Componentes administrativos
+│   │   ├── 📁 Layout/        # Layout e navegação
+│   │   ├── 📁 Articles/      # Componentes de artigos
+│   │   └── 📁 UI/           # Componentes de interface
+│   ├── 📁 hooks/             # Custom hooks
+│   ├── 📁 contexts/          # Contextos React
+│   ├── 📁 lib/              # Configurações e utilitários
+│   ├── 📁 pages/            # Páginas da aplicação
+│   ├── 📁 utils/            # Funções utilitárias
+│   └── 📁 types/            # Definições TypeScript
+├── 📁 public/               # Arquivos estáticos
+└── 📁 supabase/            # Configurações Supabase
+```
 
 ---
 
@@ -79,8 +147,8 @@ Democratizar o conhecimento sobre IA através de uma plataforma acessível, resp
 ### **Frontend Core**
 ```
 React 18.3.1          - Biblioteca principal
-TypeScript 5.6.3      - Tipagem estática
-Vite 6.0.5            - Build tool moderna
+TypeScript 5.8.3      - Tipagem estática
+Vite 6.3.5            - Build tool moderna
 ```
 
 ### **Styling & UI**
@@ -107,55 +175,16 @@ React Helmet Async 2.0.4  - Meta tags dinâmicas
 ```
 React Markdown 9.1.0  - Renderização de Markdown
 Remark GFM 4.0.1      - GitHub Flavored Markdown
+DOMPurify 3.3.0       - Sanitização de HTML
 ```
 
-### **Utilitários**
+### **State Management & Utils**
 ```
-Date-fns 4.1.0        - Manipulação de datas
 Zustand 5.0.3         - Gerenciamento de estado
+Date-fns 4.1.0        - Manipulação de datas
 Sonner 1.4.3          - Notificações toast
+Zod 4.1.12            - Validação de schemas
 ```
-
----
-
-## 🔄 Changelog
-
-### 🎉 **v1.1.0** - *Índice Responsivo e Melhorias UX* (2024-12-22)
-
-**✨ Novas Funcionalidades:**
-- 📋 **Índice Responsivo Universal** - Botão flutuante para todos os dispositivos
-- 🔄 **Fechamento Automático** - Modal fecha ao clicar em item do índice
-- 📱 **Otimização Tablet** - Suporte perfeito para iPad Mini, iPad Air 4, iPad Pro 11 e Galaxy Tab S7
-- 🎯 **Navegação Inteligente** - Sistema de navegação anterior/próximo entre artigos
-
-**🐛 Correções:**
-- ✅ **Bug React Hooks** - Corrigida violação das Rules of Hooks no TableOfContents
-- 🔧 **Estado do Modal** - Resolvido problema de reabertura do índice (especialmente em 838x830)
-- 📐 **Responsividade** - Ajustes finos para diferentes resoluções de tablet
-
-**🚀 Melhorias:**
-- ⚡ **Sistema de Fallback** - Dados mock quando Supabase não está disponível
-- 🎨 **UX Consistente** - Design unificado entre mobile, tablet e desktop
-- 📊 **Logs de Debug** - Sistema completo de monitoramento e debugging
-- 🔄 **Reset Automático** - Estado limpo ao mudar tamanho de tela
-
-**📈 Estatísticas do Commit:**
-```
-15 arquivos alterados
-1013 inserções (+)
-236 deleções (-)
-7 novos componentes criados
-```
-
-### 🎯 **v1.0.0** - *Lançamento Inicial* (2024-12-21)
-
-**🚀 Funcionalidades Base:**
-- 📖 Plataforma de artigos sobre IA
-- 🎨 Design futurístico com tema dark
-- 📱 Layout responsivo básico
-- 🔐 Sistema de autenticação
-- 📊 Dashboard administrativo
-- 🗃️ Integração com Supabase
 
 ---
 
@@ -167,6 +196,7 @@ Sonner 1.4.3          - Notificações toast
 Node.js >= 18.0.0
 npm >= 9.0.0
 Git
+Conta Supabase (para backend)
 ```
 
 ### **⚡ Instalação Rápida**
@@ -190,71 +220,121 @@ cp .env.example .env
 Edite o arquivo `.env` com suas credenciais:
 
 ```env
+# Supabase Configuration
 VITE_SUPABASE_URL=sua_url_do_supabase
 VITE_SUPABASE_ANON_KEY=sua_chave_anonima
+VITE_SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key
+
+# Application Settings
+VITE_APP_URL=http://localhost:5173
 ```
 
-### **🚀 Executar o Projeto**
+### **🚀 Scripts Disponíveis**
 
 ```bash
 # Desenvolvimento
-npm run dev
+npm run dev              # Inicia servidor de desenvolvimento
 
-# Build para produção
-npm run build
+# Build
+npm run build           # Build para produção
+npm run preview         # Preview da build
 
-# Preview da build
-npm run preview
+# Qualidade de Código
+npm run lint            # Executa ESLint
+npm run check           # Verificação TypeScript
+
+# Utilitários
+npm run create-admin    # Cria usuário administrador
 ```
 
 ### **📱 Acessar a Aplicação**
 
 ```
-🌐 Local:    http://localhost:5174
-🔗 Network:  http://192.168.1.x:5174
+🌐 Local:    http://localhost:5173
+🔗 Network:  http://192.168.1.x:5173
 ```
 
 ---
 
-## 📸 Screenshots
+## 🔄 Changelog
 
-### 🖥️ **Desktop Experience**
+### 🎉 **v2.0.0** - *Autenticação Segura e Organização* (2024-12-26)
+
+**🔐 Sistema de Autenticação Robusto:**
+- ✅ **Correção Rota Login** - Rota `/admin-login` corrigida para `/admin/login`
+- 🔄 **Padrão Singleton** - Implementado para clientes Supabase (admin e regular)
+- 🚀 **AuthContext Otimizado** - Prevenção de múltiplas inicializações
+- 🛡️ **Logout Robusto** - Sistema com fallback e invalidação completa
+- 🔒 **Proteções Segurança** - Verificações contínuas no painel admin
+- ⚠️ **Eliminação Warnings** - Correção de múltiplas instâncias GoTrueClient
+
+**🗂️ Organização do Projeto:**
+- 📁 **Pasta `docs/`** - Documentação organizada (`DEPLOY.md`, `INSTRUCOES_RLS_STORAGE.md`)
+- 🔧 **Pasta `scripts/`** - Scripts de teste e utilitários organizados
+- 🐛 **Pasta `debug/`** - Arquivos de debug separados
+- 🗄️ **Pasta `database/`** - Scripts SQL organizados
+- 🧹 **Raiz Limpa** - Apenas arquivos essenciais na raiz
+
+**📈 Estatísticas do Commit:**
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  🧠 AIMindset                                    📋 Índice  │
-│  ═══════════════════════════════════════════════════════════ │
-│                                                             │
-│  📖 Artigo Principal              │  📋 Sumário             │
-│  ─────────────────────────────────  │  ─────────────────────  │
-│  # Introdução à IA                │  • Introdução          │
-│  Lorem ipsum dolor sit amet...    │  • Conceitos Básicos   │
-│                                   │  • Aplicações          │
-│  ## Conceitos Básicos             │  • Conclusão           │
-│  Consectetur adipiscing elit...   │                        │
-│                                   │  ⏱️ 8 min de leitura   │
-│  ▓▓▓▓▓▓░░░░ 60%                   │                        │
-└─────────────────────────────────────────────────────────────┘
+11 arquivos alterados
+543 inserções (+)
+125 deleções (-)
+Múltiplas correções de segurança
 ```
 
-### 📱 **Mobile Experience**
+### 🎉 **v1.1.0** - *Índice Responsivo e Melhorias UX* (2024-12-22)
+
+**✨ Novas Funcionalidades:**
+- 📋 **Índice Responsivo Universal** - Botão flutuante para todos os dispositivos
+- 🔄 **Fechamento Automático** - Modal fecha ao clicar em item do índice
+- 📱 **Otimização Tablet** - Suporte perfeito para iPad Mini, iPad Air 4, iPad Pro 11 e Galaxy Tab S7
+- 🎯 **Navegação Inteligente** - Sistema de navegação anterior/próximo entre artigos
+
+**🐛 Correções:**
+- ✅ **Bug React Hooks** - Corrigida violação das Rules of Hooks no TableOfContents
+- 🔧 **Estado do Modal** - Resolvido problema de reabertura do índice
+- 📐 **Responsividade** - Ajustes finos para diferentes resoluções
+
+### 🎯 **v1.0.0** - *Lançamento Inicial* (2024-12-21)
+
+**🚀 Funcionalidades Base:**
+- 📖 Plataforma de artigos sobre IA
+- 🎨 Design futurístico com tema dark
+- 📱 Layout responsivo básico
+- 🔐 Sistema de autenticação
+- 📊 Dashboard administrativo
+- 🗃️ Integração com Supabase
+
+---
+
+## 🚀 Deploy
+
+### **Vercel (Recomendado)**
+
+```bash
+# 1. Instale a CLI da Vercel
+npm i -g vercel
+
+# 2. Faça login
+vercel login
+
+# 3. Deploy
+vercel --prod
 ```
-┌─────────────────────────┐
-│  🧠 AIMindset          │
-│  ═══════════════════════ │
-│                         │
-│  📖 Artigo Principal    │
-│  ─────────────────────── │
-│  # Introdução à IA      │
-│  Lorem ipsum dolor...   │
-│                         │
-│  ## Conceitos Básicos   │
-│  Consectetur elit...    │
-│                         │
-│  ▓▓▓▓▓▓░░░░ 60%         │
-│                         │
-│                    📋   │ ← Botão Flutuante
-└─────────────────────────┘
-```
+
+### **Configuração de Variáveis**
+
+No painel da Vercel, configure:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_SUPABASE_SERVICE_ROLE_KEY`
+
+### **Outras Plataformas**
+
+- **Netlify**: Suporte completo para SPAs
+- **GitHub Pages**: Configuração adicional necessária
+- **Railway**: Deploy automático via Git
 
 ---
 
@@ -288,6 +368,21 @@ style:    Formatação
 refactor: Refatoração
 test:     Testes
 chore:    Manutenção
+perf:     Performance
+security: Segurança
+```
+
+### **🧪 Testes**
+
+```bash
+# Executar testes
+npm run test
+
+# Verificar tipos
+npm run check
+
+# Lint
+npm run lint
 ```
 
 ---
