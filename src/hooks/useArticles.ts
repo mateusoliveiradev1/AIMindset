@@ -116,7 +116,9 @@ export const useArticles = (): UseArticlesReturn => {
         const normalResult = await supabaseWithRetry(
           async () => {
             console.log('🔍 [DEBUG] Executando query com cliente normal...');
-            const result = await supabase
+            
+            // Primeiro buscar os artigos
+            const articlesResult = await supabase
               .from('articles')
               .select(`
                 *,
@@ -128,8 +130,112 @@ export const useArticles = (): UseArticlesReturn => {
                 )
               `)
               .order('created_at', { ascending: false });
-            console.log('🔍 [DEBUG] Resultado cliente normal:', result);
-            return result;
+            
+            if (articlesResult.error || !articlesResult.data) {
+              return articlesResult;
+            }
+
+            // Buscar métricas para cada artigo usando a função get_article_metrics
+            const articlesWithMetrics = await Promise.all(
+              articlesResult.data.map(async (article) => {
+                try {
+                  console.log(`🎯 [DEBUG CRÍTICO] Chamando get_article_metrics para "${article.title}" (ID: ${article.id})`);
+                  
+                  const { data: metrics, error: metricsError } = await supabase
+                    .rpc('get_article_metrics', { target_article_id: article.id });
+                  
+                  console.log(`🔍 [DEBUG CRÍTICO] Resultado RPC para "${article.title}":`, {
+                    id: article.id,
+                    metrics_raw: metrics,
+                    metrics_length: metrics?.length || 0,
+                    error: metricsError,
+                    error_message: metricsError?.message,
+                    error_details: metricsError?.details
+                  });
+                  
+                  if (metricsError) {
+                    console.error(`❌ [DEBUG CRÍTICO] ERRO na RPC para "${article.title}":`, metricsError);
+                    throw metricsError;
+                  }
+                  
+                  if (metrics && metrics.length > 0) {
+                    const metric = metrics[0];
+                    const processedArticle = {
+                      ...article,
+                      positive_feedback: Number(metric.positive_feedback) || 0,
+                      negative_feedback: Number(metric.negative_feedback) || 0,
+                      total_comments: Number(metric.total_comments) || 0,
+                      approval_rate: Number(metric.approval_rate) || 0
+                    };
+                    
+                    console.log(`✅ [DEBUG CRÍTICO] Artigo COM métricas "${article.title}":`, {
+                      positive_feedback: processedArticle.positive_feedback,
+                      negative_feedback: processedArticle.negative_feedback,
+                      total_comments: processedArticle.total_comments,
+                      approval_rate: processedArticle.approval_rate,
+                      calculated_rate: processedArticle.positive_feedback + processedArticle.negative_feedback > 0 ? 
+                        (processedArticle.positive_feedback / (processedArticle.positive_feedback + processedArticle.negative_feedback)) * 100 : 0,
+                      raw_metric: metric
+                    });
+                    
+                    return processedArticle;
+                  }
+                  
+                  // Se não há métricas, usar valores padrão
+                  const defaultArticle = {
+                    ...article,
+                    positive_feedback: 0,
+                    negative_feedback: 0,
+                    total_comments: 0,
+                    approval_rate: 0
+                  };
+                  
+                  console.log(`⚠️ [DEBUG CRÍTICO] Artigo SEM métricas "${article.title}":`, {
+                    positive_feedback: 0,
+                    negative_feedback: 0,
+                    total_comments: 0,
+                    approval_rate: 0,
+                    reason: 'metrics array empty or null'
+                  });
+                  
+                  return defaultArticle;
+                } catch (error) {
+                  console.error(`❌ [DEBUG CRÍTICO] ERRO ao buscar métricas para "${article.title}":`, error);
+                  // Em caso de erro, usar valores padrão
+                  const errorArticle = {
+                    ...article,
+                    positive_feedback: 0,
+                    negative_feedback: 0,
+                    total_comments: 0,
+                    approval_rate: 0
+                  };
+                  
+                  console.log(`❌ [DEBUG CRÍTICO] Artigo com ERRO "${article.title}":`, {
+                    error: error.message,
+                    fallback_values: { positive_feedback: 0, negative_feedback: 0, approval_rate: 0 }
+                  });
+                  
+                  return errorArticle;
+                }
+              })
+            );
+
+            console.log('🔍 [DEBUG CRÍTICO] RESUMO FINAL - Todos os artigos processados:', 
+              articlesWithMetrics.map(a => ({
+                title: a.title,
+                id: a.id,
+                approval_rate: a.approval_rate,
+                positive_feedback: a.positive_feedback,
+                negative_feedback: a.negative_feedback,
+                total_comments: a.total_comments,
+                created_at: a.created_at
+              }))
+            );
+
+            return {
+              ...articlesResult,
+              data: articlesWithMetrics
+            };
           },
           'Fetch Articles (Normal Client)'
         );
@@ -150,18 +256,69 @@ export const useArticles = (): UseArticlesReturn => {
         }
 
         const adminResult = await supabaseWithRetry(
-          () => supabaseAdmin
-            .from('articles')
-            .select(`
-              *,
-              category:categories (
-                id,
-                name,
-                slug,
-                description
-              )
-            `)
-            .order('created_at', { ascending: false }),
+          async () => {
+            // Primeiro buscar os artigos com admin client
+            const articlesResult = await supabaseAdmin
+              .from('articles')
+              .select(`
+                *,
+                category:categories (
+                  id,
+                  name,
+                  slug,
+                  description
+                )
+              `)
+              .order('created_at', { ascending: false });
+            
+            if (articlesResult.error || !articlesResult.data) {
+              return articlesResult;
+            }
+
+            // Buscar métricas para cada artigo usando a função get_article_metrics
+            const articlesWithMetrics = await Promise.all(
+              articlesResult.data.map(async (article) => {
+                try {
+                  const { data: metrics } = await supabaseAdmin
+                    .rpc('get_article_metrics', { article_id_param: article.id });
+                  
+                  if (metrics && metrics.length > 0) {
+                    const metric = metrics[0];
+                    return {
+                      ...article,
+                      positive_feedback: metric.positive_feedback || 0,
+                      negative_feedback: metric.negative_feedback || 0,
+                      total_comments: metric.total_comments || 0,
+                      approval_rate: metric.approval_rate || 0
+                    };
+                  }
+                  
+                  // Se não há métricas, usar valores padrão
+                  return {
+                    ...article,
+                    positive_feedback: 0,
+                    negative_feedback: 0,
+                    total_comments: 0,
+                    approval_rate: 0
+                  };
+                } catch (error) {
+                  console.warn('⚠️ Erro ao buscar métricas para artigo (admin):', article.id, error);
+                  return {
+                    ...article,
+                    positive_feedback: 0,
+                    negative_feedback: 0,
+                    total_comments: 0,
+                    approval_rate: 0
+                  };
+                }
+              })
+            );
+
+            return {
+              ...articlesResult,
+              data: articlesWithMetrics
+            };
+          },
           'Fetch Articles (Admin Client)'
         );
 

@@ -1,5 +1,5 @@
 // Web Worker para processamento pesado de artigos
-import type { Article, Category } from '../types/index';
+import type { Article, Category, SortBy } from '../types/index';
 
 export interface ProcessingTask {
   id: string;
@@ -215,8 +215,9 @@ class TaskQueue {
 
   private async performSort(data: { articles: Article[]; sortBy: string; order: 'asc' | 'desc' }): Promise<any> {
     const { articles, sortBy, order } = data;
+    
     const sorted = [...articles];
-
+    
     sorted.sort((a, b) => {
       let comparison = 0;
 
@@ -227,10 +228,11 @@ class TaskQueue {
         case 'title':
           comparison = a.title.localeCompare(b.title);
           break;
-        case 'category':
-          const aCat = typeof a.category === 'string' ? a.category : a.category?.name || '';
-          const bCat = typeof b.category === 'string' ? b.category : b.category?.name || '';
-          comparison = aCat.localeCompare(bCat);
+        case 'rating':
+          // Ordenação por rating usando approval_rate
+          const aRating = a.approval_rate || 0;
+          const bRating = b.approval_rate || 0;
+          comparison = aRating - bRating;
           break;
         case 'relevance':
           comparison = (a as any).relevanceScore - (b as any).relevanceScore;

@@ -13,7 +13,7 @@ import {
   performanceMonitor,
   PERFORMANCE_CONFIG 
 } from '../utils/performanceOptimizer';
-import { Article } from '../types';
+import { Article, SortBy } from '../types';
 
 interface UsePerformanceOptimizationOptions {
   enableCache?: boolean;
@@ -213,82 +213,147 @@ export function usePerformanceOptimization(options: UsePerformanceOptimizationOp
 
   // Optimized article filtering with cache
   const filterArticles = useCallback(
-    (articles: Article[], query: string): Article[] => {
-      if (!query.trim()) return articles;
+    (articles: Article[], query: string, selectedCategory?: string): Article[] => {
+      let filtered = articles;
 
-      const cacheKey = `filter_${query}_${articles.length}`;
-      const cached = getCachedArticle(cacheKey);
-      
-      if (cached) {
-        return [cached]; // Retorna array com resultado cached
+      // Filtrar por categoria primeiro se especificada
+      if (selectedCategory && selectedCategory !== 'all' && selectedCategory !== '') {
+        filtered = filtered.filter(article => {
+          if (typeof article.category === 'string') {
+            return article.category === selectedCategory;
+          }
+          return article.category?.id === selectedCategory;
+        });
       }
+
+      // Se não há query de busca, retornar apenas o filtro de categoria
+      if (!query.trim()) return filtered;
 
       startSearchMeasurement();
       
-      const filtered = articles.filter(article => {
-        const titleMatch = article.title.toLowerCase().includes(query.toLowerCase());
-        const contentMatch = article.content.toLowerCase().includes(query.toLowerCase());
+      const queryLower = query.toLowerCase().trim();
+      const queryWords = queryLower.split(/\s+/).filter(word => word.length > 0);
+      
+      const searchFiltered = filtered.filter(article => {
+        // Função auxiliar para verificar se alguma palavra da query está presente no texto
+        const matchesQuery = (text: string) => {
+          const textLower = text.toLowerCase();
+          return queryWords.some(word => textLower.includes(word));
+        };
         
+        // Busca no título (peso maior)
+        const titleMatch = matchesQuery(article.title);
+        
+        // Busca no conteúdo
+        const contentMatch = matchesQuery(article.content);
+        
+        // Busca no excerpt se existir
+        const excerptMatch = article.excerpt ? matchesQuery(article.excerpt) : false;
+        
+        // Busca na categoria
         let categoryMatch = false;
         if (article.category) {
           if (typeof article.category === 'string') {
-            categoryMatch = (article.category as string).toLowerCase().includes(query.toLowerCase());
+            categoryMatch = matchesQuery(article.category);
           } else if (typeof article.category === 'object' && article.category.name) {
-            categoryMatch = article.category.name.toLowerCase().includes(query.toLowerCase());
+            categoryMatch = matchesQuery(article.category.name);
           }
         }
         
-        return titleMatch || contentMatch || categoryMatch;
+        // Busca nas tags (melhorada)
+        let tagsMatch = false;
+        if (article.tags) {
+          if (Array.isArray(article.tags)) {
+            tagsMatch = article.tags.some(tag => {
+              const tagStr = typeof tag === 'string' ? tag : String(tag);
+              return matchesQuery(tagStr);
+            });
+          } else if (typeof article.tags === 'string') {
+            // Se tags é uma string separada por vírgulas ou espaços
+            const tagsArray = article.tags.split(/[,\s]+/).map(tag => tag.trim()).filter(tag => tag.length > 0);
+            tagsMatch = tagsArray.some(tag => matchesQuery(tag));
+          }
+        }
+        
+        // Busca no slug se existir
+        const slugMatch = article.slug ? matchesQuery(article.slug.replace(/-/g, ' ')) : false;
+        
+        return titleMatch || contentMatch || excerptMatch || categoryMatch || tagsMatch || slugMatch;
       });
 
       endSearchMeasurement();
-
-      // Cache apenas se o resultado for significativo
-      if (filtered.length > 0 && filtered.length < articles.length) {
-        // Para cache de filtros, armazenamos um artigo especial com os IDs
-        const filterResult: Article = {
-          id: cacheKey,
-          title: `Filter: ${query}`,
-          content: JSON.stringify(filtered.map(a => a.id)),
-          slug: cacheKey,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          published: true,
-          category_id: 'filter-result',
-          author_id: 'system',
-          category: { 
-            id: 'filter-result', 
-            name: 'Filter Result', 
-            slug: 'filter-result', 
-            description: 'Cached filter result',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          image_url: '',
-          excerpt: '',
-          tags: []
-        };
-        cacheArticle(cacheKey, filterResult);
-      }
-
-      return filtered;
+      return searchFiltered;
     },
-    [getCachedArticle, cacheArticle, startSearchMeasurement, endSearchMeasurement]
+    [startSearchMeasurement, endSearchMeasurement]
   );
 
   // Optimized article sorting with memoization
   const sortArticles = useMemo(() => {
-    return (articles: Article[], sortBy: 'date' | 'title' | 'category' = 'date') => {
+    return (articles: Article[], sortBy: SortBy = 'date') => {
       return [...articles].sort((a, b) => {
         switch (sortBy) {
           case 'date':
             return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
           case 'title':
             return a.title.localeCompare(b.title);
-          case 'category':
-            const catA = typeof a.category === 'string' ? a.category : a.category?.name || '';
-            const catB = typeof b.category === 'string' ? b.category : b.category?.name || '';
-            return catA.localeCompare(catB);
+          case 'rating':
+            // Ordenar por avaliação usando dados reais de feedback do banco de dados
+            const getRating = (article: Article): number => {
+              console.log(`🔍 [DEBUG CRÍTICO ORDENAÇÃO] Calculando rating para "${article.title}":`, {
+                 approval_rate: article.approval_rate,
+                 positive_feedback: article.positive_feedback,
+                 negative_feedback: article.negative_feedback,
+                 total_feedback: (article.positive_feedback || 0) + (article.negative_feedback || 0)
+               });
+               
+               // Usar approval_rate se disponível
+               if (typeof article.approval_rate === 'number') {
+                 console.log(`✅ [DEBUG CRÍTICO ORDENAÇÃO] Usando approval_rate para "${article.title}": ${article.approval_rate}`);
+                 return article.approval_rate;
+               }
+               
+               // Fallback para campos antigos se approval_rate não estiver disponível
+               const positive = article.positive_feedback || 0;
+               const negative = article.negative_feedback || 0;
+               const total = positive + negative;
+               
+               if (total === 0) {
+                 console.log(`⚠️ [DEBUG CRÍTICO ORDENAÇÃO] Sem feedback para "${article.title}", retornando 0`);
+                 return 0;
+               }
+               
+               const calculatedRate = (positive / total) * 100;
+               console.log(`📊 [DEBUG CRÍTICO ORDENAÇÃO] Calculando rate para "${article.title}": ${calculatedRate}% (${positive}/${total})`);
+               return calculatedRate;
+             };
+
+             const ratingA = getRating(a);
+             const ratingB = getRating(b);
+             
+             console.log(`🔍 [DEBUG CRÍTICO ORDENAÇÃO] Comparando ratings: "${a.title}" (${ratingA}) vs "${b.title}" (${ratingB})`);
+             
+             // Se os ratings são iguais, usar quantidade total de feedback como critério secundário
+             if (ratingA === ratingB) {
+               const totalFeedbackA = (a.positive_feedback || 0) + (a.negative_feedback || 0);
+               const totalFeedbackB = (b.positive_feedback || 0) + (b.negative_feedback || 0);
+               
+               console.log(`📊 [DEBUG CRÍTICO ORDENAÇÃO] Ratings iguais, comparando total de feedback: "${a.title}" (${totalFeedbackA}) vs "${b.title}" (${totalFeedbackB})`);
+               
+               // Se o total de feedback também for igual, usar data como critério terciário
+               if (totalFeedbackA === totalFeedbackB) {
+                 const dateComparison = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                 console.log(`📅 [DEBUG CRÍTICO ORDENAÇÃO] Total de feedback igual, ordenando por data: "${a.title}" vs "${b.title}" = ${dateComparison}`);
+                 return dateComparison;
+               }
+               
+               const feedbackComparison = totalFeedbackB - totalFeedbackA; // Mais feedback primeiro
+               console.log(`📊 [DEBUG CRÍTICO ORDENAÇÃO] Resultado da comparação por feedback: ${feedbackComparison} (${totalFeedbackB} - ${totalFeedbackA})`);
+               return feedbackComparison;
+             }
+             
+             const ratingComparison = ratingB - ratingA; // Maior rating primeiro
+             console.log(`📊 [DEBUG CRÍTICO ORDENAÇÃO] Resultado da comparação: ${ratingComparison} (${ratingB} - ${ratingA})`);
+             return ratingComparison;
           default:
             return 0;
         }

@@ -43,6 +43,12 @@ export interface Article {
   likes?: number; // Para componentes que usam likes
   featured?: boolean; // Para componentes que usam featured
   author?: string; // Para componentes que usam author como string
+  
+  // Campos de métricas de feedback do banco de dados
+  positive_feedback?: number;
+  negative_feedback?: number;
+  total_comments?: number;
+  approval_rate?: number;
 }
 
 export interface NewsletterSubscriber {
@@ -63,3 +69,5 @@ export interface User {
   created_at: string;
   updated_at: string;
 }
+
+export type SortBy = 'date' | 'title' | 'rating';

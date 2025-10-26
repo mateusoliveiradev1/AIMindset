@@ -10,12 +10,13 @@ import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { InfiniteScrollLoader } from '../components/UI/InfiniteScrollLoader';
 import { usePerformanceOptimization } from '../hooks/usePerformanceOptimization';
 import { VirtualizedArticleList } from '../components/Performance/VirtualizedArticleList';
+import { SortBy } from '../types';
 
 const Articles: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
-  const [sortBy, setSortBy] = useState<'date' | 'title' | 'category'>('date');
+  const [sortBy, setSortBy] = useState<SortBy>('date');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [enableVirtualization, setEnableVirtualization] = useState(true);
 
@@ -85,34 +86,16 @@ const Articles: React.FC = () => {
 
   // Filtered and sorted articles with performance optimization
   const processedArticles = useMemo(() => {
-    startRenderMeasurement();
-    
     let filtered = articles;
     
-    // Filter by search query
-    if (searchQuery.trim()) {
-      filtered = filterArticles(filtered as any, searchQuery) as any;
-    }
+    // Filtrar por busca e categoria
+    filtered = filterArticles(filtered, searchQuery, selectedCategory);
     
-    // Filter by category
-    if (selectedCategory) {
-      filtered = filtered.filter(article => {
-        if (typeof article.category === 'string') {
-          return article.category === selectedCategory;
-        }
-        if (article.category && typeof article.category === 'object' && 'id' in article.category) {
-          return article.category.id === selectedCategory;
-        }
-        return false;
-      });
-    }
+    // Ordenar
+    const sorted = sortArticles(filtered, sortBy);
     
-    // Sort articles (cast to compatible type)
-    const sorted = sortArticles(filtered as any, sortBy);
-    
-    endRenderMeasurement();
     return sorted;
-  }, [articles, searchQuery, selectedCategory, sortBy, filterArticles, sortArticles, startRenderMeasurement, endRenderMeasurement]);
+  }, [articles, searchQuery, selectedCategory, sortBy, filterArticles, sortArticles]);
 
   // Handle search input
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -231,12 +214,12 @@ const Articles: React.FC = () => {
                   <label className="text-xs text-futuristic-gray mb-1">Ordenar por</label>
                   <select
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as 'date' | 'title' | 'category')}
+                    onChange={(e) => setSortBy(e.target.value as SortBy)}
                     className="bg-dark-surface/50 border border-neon-purple/30 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-lime-green focus:ring-2 focus:ring-lime-green/20 transition-all duration-300 hover:border-neon-purple/50 min-w-[120px]"
                   >
                     <option value="date">Data</option>
                     <option value="title">Título</option>
-                    <option value="category">Categoria</option>
+                    <option value="rating">Melhor Avaliados</option>
                   </select>
                 </div>
 

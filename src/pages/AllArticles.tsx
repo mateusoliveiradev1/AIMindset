@@ -1,15 +1,20 @@
 import React, { useState, useMemo, useCallback, memo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Search, Filter, Calendar, Clock, Tag, Grid, List, TrendingUp } from 'lucide-react';
+import { Search, Filter, Calendar, Clock, Tag, Grid, List, TrendingUp, SortAsc, SortDesc } from 'lucide-react';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
-import { useArticlesSimple } from '../hooks/useArticlesSimple';
+import SearchBar from '../components/UI/SearchBar';
+import FilterDropdown from '../components/UI/FilterDropdown';
+import ViewToggle from '../components/UI/ViewToggle';
+import VirtualizationToggle from '../components/UI/VirtualizationToggle';
+import { useArticles } from '../hooks/useArticles';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '../components/UI/PullToRefreshIndicator';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { InfiniteScrollLoader } from '../components/UI/InfiniteScrollLoader';
 import { VirtualizedArticleList } from '../components/Performance/VirtualizedArticleList';
 import { usePerformanceOptimization } from '../hooks/usePerformanceOptimization';
+import { SortBy } from '../types';
 
 const AllArticles: React.FC = () => {
   // DEBUG: Log para verificar se o componente está sendo renderizado
@@ -18,7 +23,7 @@ const AllArticles: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
-  const [sortBy, setSortBy] = useState<'date' | 'title' | 'category'>('date');
+  const [sortBy, setSortBy] = useState<SortBy>('rating');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [enableVirtualization, setEnableVirtualization] = useState(true);
 
@@ -38,14 +43,14 @@ const AllArticles: React.FC = () => {
     enablePerformanceMonitoring: true
   });
 
-  // Usar hook simples para debug
+  // Usar hook completo com métricas em vez do simples
   const { 
     articles, 
     categories, 
     loading, 
-    error, 
+    error,
     refresh 
-  } = useArticlesSimple();
+  } = useArticles();
   
   // Valores padrão para compatibilidade
   const hasMore = false;
@@ -90,39 +95,59 @@ const AllArticles: React.FC = () => {
 
   // Filtered and sorted articles with performance optimization
   const processedArticles = useMemo(() => {
-    startRenderMeasurement();
+    console.log('🔍 [DEBUG CRÍTICO ALLARTICLES] Iniciando processamento dos artigos');
+    console.log('🔍 [DEBUG CRÍTICO ALLARTICLES] Artigos recebidos:', articles?.map(a => ({
+      title: a.title,
+      approval_rate: a.approval_rate,
+      positive_feedback: a.positive_feedback,
+      negative_feedback: a.negative_feedback
+    })));
     
-    let filtered = articles;
-    
-    // Filter by search query
-    if (searchQuery.trim()) {
-      filtered = filterArticles(filtered as any, searchQuery) as any;
+    if (!articles || articles.length === 0) {
+      console.log('⚠️ [DEBUG CRÍTICO ALLARTICLES] Nenhum artigo disponível');
+      return [];
     }
+
+    startRenderMeasurement('processArticles');
     
-    // Filter by category
-    if (selectedCategory) {
-      filtered = filtered.filter(article => {
-        if (typeof article.category === 'string') {
-          return article.category === selectedCategory;
-        }
-        if (article.category && typeof article.category === 'object' && 'id' in article.category) {
-          return article.category.id === selectedCategory;
-        }
-        return false;
-      });
-    }
+    // Filtrar artigos
+    const filtered = filterArticles(articles, searchQuery, selectedCategory);
+    console.log('🔍 [DEBUG CRÍTICO ALLARTICLES] Artigos após filtro:', filtered?.map(a => ({
+      title: a.title,
+      approval_rate: a.approval_rate
+    })));
     
-    // Sort articles (cast to compatible type)
-    const sorted = sortArticles(filtered as any, sortBy);
+    // Ordenar artigos
+    const sorted = sortArticles(filtered, sortBy);
+    console.log('🔍 [DEBUG CRÍTICO ALLARTICLES] Artigos após ordenação por', sortBy, ':', sorted?.map(a => ({
+      title: a.title,
+      approval_rate: a.approval_rate,
+      positive_feedback: a.positive_feedback,
+      negative_feedback: a.negative_feedback,
+      created_at: a.created_at
+    })));
     
-    endRenderMeasurement();
+    console.log('🔍 [DEBUG CRÍTICO ALLARTICLES] ORDEM FINAL DOS ARTIGOS:');
+    sorted?.forEach((article, index) => {
+      console.log(`${index + 1}. "${article.title}" - Rating: ${article.approval_rate}% (${article.positive_feedback}+/${article.negative_feedback}-)`);
+    });
+    endRenderMeasurement('processArticles');
+    
     return sorted;
   }, [articles, searchQuery, selectedCategory, sortBy, filterArticles, sortArticles, startRenderMeasurement, endRenderMeasurement]);
 
   // Handle search input
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    debouncedSearch(e.target.value);
-  }, [debouncedSearch]);
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    setSearchParams(prev => {
+      if (value) {
+        prev.set('search', value);
+      } else {
+        prev.delete('search');
+      }
+      return prev;
+    });
+  }, [setSearchParams]);
 
   // Handle category filter
   const handleCategoryChange = useCallback((categoryId: string) => {
@@ -182,87 +207,73 @@ const AllArticles: React.FC = () => {
           </p>
         </div>
 
-        {/* Advanced Search and Filter Controls */}
+        {/* Modern Search and Filter Controls */}
         <div className="glass-effect p-6 rounded-xl mb-8">
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-futuristic-gray w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Buscar artigos..."
-                defaultValue={searchQuery}
+          <div className="flex flex-col gap-6">
+            {/* Top Row - Search */}
+            <div className="flex flex-col lg:flex-row gap-4 items-center">
+              <SearchBar
+                value={searchQuery}
                 onChange={handleSearchChange}
-                className="w-full pl-10 pr-4 py-3 bg-dark-surface/50 border border-neon-purple/30 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green focus:ring-1 focus:ring-lime-green transition-colors"
+                placeholder="Buscar artigos por título, conteúdo ou tags..."
+                className="flex-1 max-w-2xl"
               />
             </div>
 
-            {/* Category Filter */}
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => handleCategoryChange('')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  !selectedCategory
-                    ? 'bg-lime-green text-dark-bg'
-                    : 'bg-dark-surface/50 text-futuristic-gray hover:text-white border border-neon-purple/30'
-                }`}
-              >
-                Todas
-              </button>
-              {categories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => handleCategoryChange(category.id)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    selectedCategory === category.id
-                      ? 'bg-neon-purple text-white'
-                      : 'bg-dark-surface/50 text-futuristic-gray hover:text-white border border-neon-purple/30'
-                  }`}
-                >
-                  {category.name}
-                </button>
-              ))}
-            </div>
+            {/* Bottom Row - Filters and Controls */}
+            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+              {/* Left Side - Filters */}
+              <div className="flex flex-wrap gap-3">
+                {/* Category Filter */}
+                <FilterDropdown
+                  title="Filtrar por Categoria"
+                  options={[
+                    { id: 'all', label: 'Todas as Categorias', value: '' },
+                    ...categories.map(cat => ({
+                      id: cat.id,
+                      label: cat.name,
+                      value: cat.id,
+                      icon: <Tag className="w-4 h-4" />
+                    }))
+                  ]}
+                  selectedValue={selectedCategory}
+                  onSelect={handleCategoryChange}
+                  placeholder="Categoria"
+                  icon={<Tag className="w-4 h-4" />}
+                  className="min-w-[160px]"
+                />
 
-            {/* Controls */}
-            <div className="flex items-center gap-4">
-              {/* Sort Options */}
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'date' | 'title' | 'category')}
-                className="bg-dark-surface/50 border border-neon-purple/30 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-lime-green"
-              >
-                <option value="date">Data</option>
-                <option value="title">Título</option>
-                <option value="category">Categoria</option>
-              </select>
-
-              {/* View Mode Toggle */}
-              <div className="flex items-center bg-dark-surface/50 rounded-lg p-1">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded ${viewMode === 'grid' ? 'bg-lime-green text-dark-bg' : 'text-futuristic-gray hover:text-white'}`}
-                >
-                  <Grid className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded ${viewMode === 'list' ? 'bg-lime-green text-dark-bg' : 'text-futuristic-gray hover:text-white'}`}
-                >
-                  <List className="w-4 h-4" />
-                </button>
+                {/* Sort Filter */}
+                <FilterDropdown
+                  title="Ordenar Artigos"
+                  options={[
+                    { id: 'date', label: 'Mais Recentes', value: 'date', icon: <Calendar className="w-4 h-4" /> },
+                    { id: 'title', label: 'Título A-Z', value: 'title', icon: <SortAsc className="w-4 h-4" /> },
+                    { id: 'rating', label: 'Melhor Avaliados', value: 'rating', icon: <TrendingUp className="w-4 h-4" /> }
+                  ]}
+                  selectedValue={sortBy}
+                  onSelect={(value) => setSortBy(value as SortBy)}
+                  placeholder="Ordenar"
+                  icon={<SortAsc className="w-4 h-4" />}
+                  className="min-w-[140px]"
+                  allowClear={false}
+                />
               </div>
 
-              {/* Virtualization Toggle */}
-              <label className="flex items-center gap-2 text-sm text-futuristic-gray">
-                <input
-                  type="checkbox"
-                  checked={enableVirtualization}
-                  onChange={(e) => setEnableVirtualization(e.target.checked)}
-                  className="rounded"
+              {/* Right Side - View Controls */}
+              <div className="flex items-center gap-4">
+                {/* View Toggle */}
+                <ViewToggle
+                  viewMode={viewMode}
+                  onViewModeChange={setViewMode}
                 />
-                Virtualização
-              </label>
+
+                {/* Virtualization Toggle */}
+                <VirtualizationToggle
+                  enabled={enableVirtualization}
+                  onChange={setEnableVirtualization}
+                />
+              </div>
             </div>
           </div>
 
