@@ -100,14 +100,15 @@ A IA continuará a transformar:
 ## Conclusão
 
 O futuro da IA é promissor, mas requer planejamento cuidadoso e consideração ética.`,
+    image_url: '/placeholder-image.svg',
     category_id: '1',
     category: mockCategories[0],
     author_id: '1',
     published: true,
-    featured: true,
+    // featured: true, // Removido temporariamente para corrigir erro de build
     tags: ['IA', 'Futuro', 'Tecnologia', 'Inovação'],
-    meta_title: 'O Futuro da Inteligência Artificial - AIMindset',
-    meta_description: 'Explore as tendências e inovações que estão moldando o futuro da IA e como elas impactarão nossa sociedade.',
+    // meta_title: 'O Futuro da Inteligência Artificial - AIMindset', // Removido - não existe na interface
+    // meta_description: 'Explore as tendências e inovações que estão moldando o futuro da IA e como elas impactarão nossa sociedade.', // Removido - não existe na interface
     created_at: '2024-01-15T10:00:00Z',
     updated_at: '2024-01-15T10:00:00Z'
   },
@@ -164,16 +165,17 @@ model.fit(X, y)
 ## Conclusão
 
 Machine Learning é uma ferramenta poderosa quando aplicada corretamente.`,
+    image_url: '/placeholder-image.svg',
     category_id: '4',
     category: mockCategories[3],
     author_id: '1',
     published: true,
-    featured: true,
+    // featured: true, // Removido temporariamente para corrigir erro de build
     tags: ['Machine Learning', 'Python', 'Prática', 'Tutorial'],
-    meta_title: 'Machine Learning na Prática - Guia Completo',
-    meta_description: 'Aprenda como aplicar machine learning em projetos reais com exemplos práticos e ferramentas essenciais.',
-    created_at: '2024-01-10T14:30:00Z',
-    updated_at: '2024-01-10T14:30:00Z'
+    // meta_title: 'Machine Learning na Prática - Guia Completo', // Removido - não existe na interface
+    // meta_description: 'Aprenda como aplicar machine learning em projetos reais com exemplos práticos e ferramentas essenciais.', // Removido - não existe na interface
+    created_at: '2024-01-14T14:30:00Z',
+    updated_at: '2024-01-14T14:30:00Z'
   },
   {
     id: '3',
@@ -227,16 +229,17 @@ Redes neurais são modelos computacionais inspirados no funcionamento do cérebr
 ## Conclusão
 
 Deep Learning está transformando a IA e abrindo novas possibilidades.`,
+    image_url: '/placeholder-image.svg',
     category_id: '5',
     category: mockCategories[4],
     author_id: '1',
     published: true,
-    featured: false,
+    // featured: false, // Removido temporariamente para corrigir erro de build
     tags: ['Deep Learning', 'Redes Neurais', 'IA', 'Tecnologia'],
-    meta_title: 'Deep Learning: Redes Neurais Explicadas',
-    meta_description: 'Entenda como funcionam as redes neurais e como elas estão revolucionando a inteligência artificial.',
-    created_at: '2024-01-05T09:15:00Z',
-    updated_at: '2024-01-05T09:15:00Z'
+    // meta_title: 'Deep Learning: Redes Neurais Explicadas', // Removido - não existe na interface
+    // meta_description: 'Entenda como funcionam as redes neurais e como elas estão revolucionando a inteligência artificial.', // Removido - não existe na interface
+    created_at: '2024-01-13T09:15:00Z',
+    updated_at: '2024-01-13T09:15:00Z'
   },
   {
     id: '4',
@@ -324,14 +327,15 @@ Automação inteligente combina:
 ## Conclusão
 
 A automação com IA não é apenas uma tendência, é uma necessidade para empresas que querem se manter competitivas.`,
+    image_url: '/placeholder-image.svg',
     category_id: '6',
     category: mockCategories[5],
     author_id: '1',
     published: true,
-    featured: true,
+    // featured: true, // Removido temporariamente para corrigir erro de build
     tags: ['Automação', 'IA', 'Processos', 'Eficiência', 'RPA'],
-    meta_title: 'Automação com IA: Transformando Processos Empresariais',
-    meta_description: 'Descubra como a inteligência artificial está automatizando processos e aumentando a eficiência empresarial.',
+    // meta_title: 'Automação com IA: Transformando Processos Empresariais', // Removido - não existe na interface
+    // meta_description: 'Descubra como a inteligência artificial está automatizando processos e aumentando a eficiência empresarial.', // Removido - não existe na interface
     created_at: '2024-01-12T16:45:00Z',
     updated_at: '2024-01-12T16:45:00Z'
   },
@@ -493,16 +497,17 @@ A implementação de IA nos negócios requer planejamento estratégico e execuç
 ## Conclusão
 
 A implementação bem-sucedida de IA nos negócios requer uma abordagem holística que combine estratégia, tecnologia, pessoas e processos. O sucesso não vem apenas da tecnologia, mas de como ela é integrada à cultura e operações da empresa.`,
+    image_url: '/placeholder-image.svg',
     category_id: '8',
     category: mockCategories[7],
     author_id: '1',
     published: true,
-    featured: false,
+    // featured: false, // Removido temporariamente para corrigir erro de build
     tags: ['IA', 'Negócios', 'Estratégia', 'Implementação', 'ROI'],
-    meta_title: 'IA nos Negócios: Estratégias de Implementação - Guia Completo',
-    meta_description: 'Aprenda como implementar inteligência artificial em sua empresa com estratégias práticas e casos de sucesso.',
-    created_at: '2024-01-08T11:20:00Z',
-    updated_at: '2024-01-08T11:20:00Z'
+    // meta_title: 'IA nos Negócios: Estratégias de Implementação - Guia Completo', // Removido - não existe na interface
+    // meta_description: 'Aprenda como implementar inteligência artificial em sua empresa com estratégias práticas e casos de sucesso.', // Removido - não existe na interface
+    created_at: '2024-01-11T11:20:00Z',
+    updated_at: '2024-01-11T11:20:00Z'
   }
 ];
 

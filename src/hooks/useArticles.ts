@@ -93,19 +93,10 @@ export interface UseArticlesReturn {
 export const useArticles = (): UseArticlesReturn => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
-
-  // Inicializar carregamento de dados do Supabase
-  useEffect(() => {
-    console.log('🔄 [useArticles] Inicializando carregamento do Supabase...');
-    console.log('🌍 [useArticles] Current URL:', window.location.href);
-    console.log('🔍 [useArticles] Is Preview?', window.location.href.includes('trae') || window.location.href.includes('preview'));
-    fetchArticles();
-    fetchCategories();
-  }, []);
 
   const fetchArticles = useCallback(async () => {
     try {
@@ -202,6 +193,8 @@ export const useArticles = (): UseArticlesReturn => {
   const fetchCategories = useCallback(async () => {
     try {
       console.log('🔄 [useArticles] Buscando categorias do Supabase...');
+      console.log('🔍 [DEBUG] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
+      console.log('🔍 [DEBUG] Supabase Key exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
       
       // Função para buscar categorias com retry
       const fetchWithRetry = async () => {
@@ -212,6 +205,7 @@ export const useArticles = (): UseArticlesReturn => {
               .from('categories')
               .select('*')
               .order('name', { ascending: true });
+            console.log('🔍 [DEBUG] Categories response (normal):', response);
             return response;
           },
           'Fetch Categories (Normal Client)'
@@ -231,6 +225,8 @@ export const useArticles = (): UseArticlesReturn => {
           'Fetch Categories (Admin Client)'
         );
 
+        console.log('🔍 [DEBUG] Categories response (admin):', adminResult);
+
         return { 
           data: adminResult.data, 
           error: adminResult.error || normalResult.error 
@@ -247,6 +243,7 @@ export const useArticles = (): UseArticlesReturn => {
 
       if (!data || (data as Category[]).length === 0) {
         console.warn('⚠️ [useArticles] Nenhuma categoria encontrada no banco');
+        console.log('🔍 [DEBUG] Data received:', data);
         setCategories([]);
         return;
       }
@@ -268,6 +265,26 @@ export const useArticles = (): UseArticlesReturn => {
     } finally {
       setLoading(false);
     }
+  }, [fetchArticles, fetchCategories]);
+
+  // Inicializar dados do Supabase
+  useEffect(() => {
+    console.log('🚀 [useArticles] useEffect executado - iniciando carregamento de dados');
+    console.log('🔍 [useArticles] Estado inicial:', { loading, articles: articles.length, categories: categories.length });
+    
+    // Chamar as funções diretamente para garantir que executem
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        await Promise.all([fetchArticles(), fetchCategories()]);
+      } catch (error) {
+        console.error('❌ Erro ao carregar dados:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
   }, [fetchArticles, fetchCategories]);
 
   const createArticle = async (articleData: Omit<Article, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {

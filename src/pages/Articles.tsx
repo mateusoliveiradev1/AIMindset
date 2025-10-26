@@ -45,6 +45,14 @@ const Articles: React.FC = () => {
     refresh 
   } = useArticles();
 
+  // Debug logs
+  console.log('🔍 [Articles] Component rendered with:', {
+    articles: articles?.length || 0,
+    categories: categories?.length || 0,
+    loading,
+    error
+  });
+
   // Pull to refresh
   const pullToRefreshProps = usePullToRefresh({
     onRefresh: refresh,
@@ -170,90 +178,86 @@ const Articles: React.FC = () => {
         </div>
 
         {/* Search and Filter Controls */}
-        <div className="glass-effect p-6 rounded-xl mb-8">
-          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+        <div className="glass-effect p-8 rounded-xl mb-8 shadow-xl">
+          <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
             {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-futuristic-gray w-5 h-5" />
+            <div className="relative flex-1 max-w-2xl">
+              <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 text-futuristic-gray w-6 h-6 transition-all duration-300 group-focus-within:text-lime-green" />
               <input
                 type="text"
                 placeholder="Buscar artigos..."
                 defaultValue={searchQuery}
                 onChange={handleSearchChange}
-                className="w-full pl-10 pr-4 py-3 bg-dark-surface/50 border border-neon-purple/30 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green focus:ring-1 focus:ring-lime-green transition-colors"
+                className="w-full pl-14 pr-6 py-6 bg-gradient-to-r from-dark-surface/60 to-dark-surface/40 border-2 border-neon-purple/40 rounded-xl text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green focus:ring-4 focus:ring-lime-green/30 focus:bg-dark-surface/80 focus:shadow-2xl focus:shadow-lime-green/20 hover:border-neon-purple/60 hover:shadow-lg hover:shadow-neon-purple/10 transition-all duration-300 text-lg font-medium backdrop-blur-sm"
               />
-            </div>
-
-            {/* Category Filter */}
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => handleCategoryChange('')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  !selectedCategory
-                    ? 'bg-lime-green text-dark-bg'
-                    : 'bg-dark-surface/50 text-futuristic-gray hover:text-white border border-neon-purple/30'
-                }`}
-              >
-                Todas
-              </button>
-              {categories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => handleCategoryChange(category.id)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    selectedCategory === category.id
-                      ? 'bg-neon-purple text-white'
-                      : 'bg-dark-surface/50 text-futuristic-gray hover:text-white border border-neon-purple/30'
-                  }`}
-                >
-                  {category.name}
-                </button>
-              ))}
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-lime-green/5 to-neon-purple/5 opacity-0 focus-within:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
             </div>
 
             {/* Controls */}
-            <div className="flex items-center gap-4">
-              {/* Sort Options */}
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'date' | 'title' | 'category')}
-                className="bg-dark-surface/50 border border-neon-purple/30 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-lime-green"
-              >
-                <option value="date">Data</option>
-                <option value="title">Título</option>
-                <option value="category">Categoria</option>
-              </select>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              {/* Category Filter Dropdown */}
+              <div className="flex-1 min-w-0">
+                <label className="block text-xs text-futuristic-gray mb-1">Categoria</label>
+                <select
+                  value={selectedCategory || ''}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
+                  className="w-full bg-dark-surface/50 border border-neon-purple/30 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-lime-green focus:ring-2 focus:ring-lime-green/20 transition-all duration-300 hover:border-neon-purple/50 min-w-[140px]"
+                >
+                  <option value="">Todas Categorias</option>
+                  {(() => {
+                    console.log('🔍 [Articles] Renderizando dropdown - categories:', categories);
+                    return null;
+                  })()}
+                  {categories && categories.length > 0 ? (
+                    categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))
+                  ) : (
+                    <option disabled>Carregando categorias...</option>
+                  )}
+                </select>
+                {/* Debug info */}
+                <div className="text-xs text-gray-400 mt-1">
+                  Debug: {categories?.length || 0} categorias carregadas
+                </div>
+              </div>
 
-              {/* Virtualization Toggle */}
-              <label className="flex items-center gap-2 text-sm text-futuristic-gray">
-                <input
-                  type="checkbox"
-                  checked={enableVirtualization}
-                  onChange={(e) => setEnableVirtualization(e.target.checked)}
-                  className="rounded"
-                />
-                Virtualização
-              </label>
+              {/* Right Controls Group */}
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                {/* Sort Options */}
+                <div className="flex flex-col">
+                  <label className="text-xs text-futuristic-gray mb-1">Ordenar por</label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as 'date' | 'title' | 'category')}
+                    className="bg-dark-surface/50 border border-neon-purple/30 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-lime-green focus:ring-2 focus:ring-lime-green/20 transition-all duration-300 hover:border-neon-purple/50 min-w-[120px]"
+                  >
+                    <option value="date">Data</option>
+                    <option value="title">Título</option>
+                    <option value="category">Categoria</option>
+                  </select>
+                </div>
+
+                {/* Virtualization Toggle */}
+                <div className="flex flex-col items-center">
+                  <label className="text-xs text-futuristic-gray mb-1">Performance</label>
+                  <label className="flex items-center gap-2 text-sm text-futuristic-gray bg-dark-surface/30 px-3 py-2 rounded-lg border border-neon-purple/20 hover:border-neon-purple/40 transition-all duration-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={enableVirtualization}
+                      onChange={(e) => setEnableVirtualization(e.target.checked)}
+                      className="rounded border-neon-purple/30 text-lime-green focus:ring-lime-green/20 focus:ring-2"
+                    />
+                    <span className="whitespace-nowrap">Virtualização</span>
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Performance Metrics (Development) */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mt-4 p-3 bg-dark-surface/30 rounded-lg">
-              <div className="flex items-center gap-4 text-xs text-futuristic-gray">
-                <span>Performance: {metrics.grade}</span>
-                <span>Render: {metrics.renderTime.toFixed(1)}ms</span>
-                <span>Cache: {metrics.cacheHitRate.toFixed(1)}%</span>
-                <span>Artigos: {processedArticles.length}</span>
-                {cacheStats && (
-                  <>
-                    <span>Cache Size: {cacheStats.size}</span>
-                    <span>Memory: {(cacheStats.memoryUsage / 1024).toFixed(1)}KB</span>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
+
         </div>
 
         {/* Results Count */}
