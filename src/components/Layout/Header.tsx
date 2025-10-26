@@ -8,11 +8,21 @@ import AdvancedSearch from '../AdvancedSearch';
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isAdvancedSearchOpen, setIsAdvancedSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+
+  const navigation = [
+    { name: 'Home', href: '/' },
+    { name: 'IA & Tecnologia', href: '/categoria/ia-tecnologia' },
+    { name: 'Produtividade', href: '/categoria/produtividade' },
+    { name: 'Futuro', href: '/categoria/futuro' },
+    { name: 'Newsletter', href: '/newsletter' },
+  ];
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -52,10 +62,14 @@ const Header: React.FC = () => {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/artigos?search=${encodeURIComponent(searchQuery.trim())}`);
+      setIsAdvancedSearchOpen(true);
       setIsSearchOpen(false);
-      setSearchQuery('');
     }
+  };
+
+  const handleAdvancedSearchOpen = () => {
+    setIsAdvancedSearchOpen(true);
+    setIsSearchOpen(false);
   };
 
   const handleLogout = async () => {
@@ -68,54 +82,38 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-dark-bg/95 backdrop-blur-sm border-b border-neon-purple/20">
-      <div className="container mx-auto px-4">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-primary-dark/95 backdrop-blur-md border-b border-neon-purple/20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 group">
             <div className="relative">
-              <Brain className="w-8 h-8 text-lime-green group-hover:text-neon-purple transition-colors duration-300" />
-              <div className="absolute inset-0 bg-lime-green/20 rounded-full blur-md group-hover:bg-neon-purple/20 transition-colors duration-300"></div>
+              <Brain className="h-8 w-8 text-lime-green group-hover:animate-pulse-neon transition-all duration-300" />
+              <div className="absolute inset-0 bg-lime-green/20 rounded-full blur-md group-hover:blur-lg transition-all duration-300"></div>
             </div>
-            <span className="text-xl font-orbitron font-bold text-white group-hover:text-lime-green transition-colors duration-300">
-              AI Mindset
+            <span className="font-orbitron font-bold text-xl gradient-text">
+              AIMindset
             </span>
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <Link
-              to="/"
-              className={`text-sm font-medium transition-colors duration-300 ${
-                isActive('/') ? 'text-lime-green' : 'text-futuristic-gray hover:text-white'
-              }`}
-            >
-              Home
-            </Link>
-            <Link
-              to="/artigos"
-              className={`text-sm font-medium transition-colors duration-300 ${
-                isActive('/artigos') ? 'text-lime-green' : 'text-futuristic-gray hover:text-white'
-              }`}
-            >
-              Artigos
-            </Link>
-            <Link
-              to="/sobre"
-              className={`text-sm font-medium transition-colors duration-300 ${
-                isActive('/sobre') ? 'text-lime-green' : 'text-futuristic-gray hover:text-white'
-              }`}
-            >
-              Sobre
-            </Link>
-            <Link
-              to="/contato"
-              className={`text-sm font-medium transition-colors duration-300 ${
-                isActive('/contato') ? 'text-lime-green' : 'text-futuristic-gray hover:text-white'
-              }`}
-            >
-              Contato
-            </Link>
+            {navigation.map((item) => (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={`font-montserrat font-medium transition-all duration-300 relative group ${
+                  isActive(item.href)
+                    ? 'text-lime-green'
+                    : 'text-futuristic-gray hover:text-lime-green'
+                }`}
+              >
+                {item.name}
+                <span className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-lime-green transition-all duration-300 group-hover:w-full ${
+                  isActive(item.href) ? 'w-full' : ''
+                }`}></span>
+              </Link>
+            ))}
           </nav>
 
           {/* Search and User Actions */}
@@ -172,47 +170,25 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-neon-purple/20">
-            <nav className="flex flex-col space-y-4">
-              <Link
-                to="/"
-                onClick={() => setIsMenuOpen(false)}
-                className={`text-sm font-medium transition-colors duration-300 ${
-                  isActive('/') ? 'text-lime-green' : 'text-futuristic-gray hover:text-white'
-                }`}
-              >
-                Home
-              </Link>
-              <Link
-                to="/artigos"
-                onClick={() => setIsMenuOpen(false)}
-                className={`text-sm font-medium transition-colors duration-300 ${
-                  isActive('/artigos') ? 'text-lime-green' : 'text-futuristic-gray hover:text-white'
-                }`}
-              >
-                Artigos
-              </Link>
-              <Link
-                to="/sobre"
-                onClick={() => setIsMenuOpen(false)}
-                className={`text-sm font-medium transition-colors duration-300 ${
-                  isActive('/sobre') ? 'text-lime-green' : 'text-futuristic-gray hover:text-white'
-                }`}
-              >
-                Sobre
-              </Link>
-              <Link
-                to="/contato"
-                onClick={() => setIsMenuOpen(false)}
-                className={`text-sm font-medium transition-colors duration-300 ${
-                  isActive('/contato') ? 'text-lime-green' : 'text-futuristic-gray hover:text-white'
-                }`}
-              >
-                Contato
-              </Link>
-            </nav>
+          <div className="md:hidden">
+            <div className="px-2 pt-2 pb-3 space-y-1 bg-dark-surface/95 backdrop-blur-md rounded-lg mt-2 border border-neon-purple/20">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`block px-3 py-2 rounded-md font-montserrat font-medium transition-all duration-300 ${
+                    isActive(item.href)
+                      ? 'text-lime-green bg-lime-green/10'
+                      : 'text-futuristic-gray hover:text-lime-green hover:bg-lime-green/5'
+                  }`}
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </div>
           </div>
         )}
 
@@ -235,6 +211,13 @@ const Header: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Advanced Search Modal */}
+      <AdvancedSearch
+        isOpen={isAdvancedSearchOpen}
+        onClose={() => setIsAdvancedSearchOpen(false)}
+        initialQuery={searchQuery}
+      />
     </header>
   );
 };
