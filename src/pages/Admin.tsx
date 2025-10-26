@@ -41,7 +41,8 @@ import {
   Zap,
   Bell,
   MousePointer,
-  AlertTriangle
+  AlertTriangle,
+  Home
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import ArticleEditor from '../components/ArticleEditor';
@@ -542,6 +543,15 @@ export const Admin: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.location.href = '/'}
+                className="flex items-center space-x-2 border-neon-purple/30 text-neon-purple hover:bg-neon-purple/10"
+              >
+                <Home className="w-4 h-4" />
+                <span>Voltar para Home</span>
+              </Button>
               <Button
                 variant="outline"
                 size="sm"

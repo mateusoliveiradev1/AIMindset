@@ -14,7 +14,7 @@ const Header: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
 
   const navigation = [
     { name: 'Home', href: '/' },
@@ -27,7 +27,7 @@ const Header: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
 
   // Páginas onde o botão de busca não deve aparecer
-  const hiddenSearchPages = ['/admin', '/admin-login', '/about', '/contact', '/privacy'];
+  const hiddenSearchPages = ['/admin', '/admin/login', '/about', '/contact', '/privacy'];
   const shouldShowSearch = !hiddenSearchPages.some(page => location.pathname.startsWith(page));
 
   // Focar no input quando a busca é aberta
@@ -132,11 +132,13 @@ const Header: React.FC = () => {
             {/* User Menu */}
             {user ? (
               <div className="flex items-center space-x-2">
-                {user.role === 'super_admin' && (
+                {/* Admin Button - Only for authenticated super_admin */}
+                {user && user.role === 'super_admin' && isAuthenticated && (
                   <Link
                     to="/admin"
                     className="p-2 text-futuristic-gray hover:text-neon-purple transition-colors duration-300"
-                    aria-label="Admin"
+                    aria-label="Admin Panel"
+                    title="Painel Administrativo"
                   >
                     <Settings className="w-5 h-5" />
                   </Link>
@@ -151,7 +153,7 @@ const Header: React.FC = () => {
               </div>
             ) : (
               <Link
-                to="/admin-login"
+                to="/admin/login"
                 className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300"
                 aria-label="Login"
               >

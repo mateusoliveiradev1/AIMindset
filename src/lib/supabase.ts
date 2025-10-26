@@ -29,28 +29,63 @@ if (!finalUrl || !finalKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Criar cliente Supabase com configuração correta de headers
-export const supabase = createClient(finalUrl, finalKey, {
-  auth: {
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-    storageKey: 'supabase.auth.token',
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  },
-  global: {
-    headers: {
-      'x-client-info': 'aimindset-app',
-      'apikey': finalKey, // Garantir que a API key seja enviada nos headers
-      'Authorization': `Bearer ${finalKey}` // Header de autorização explícito
-    }
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    }
+// Global singleton para evitar múltiplas instâncias
+declare global {
+  var __supabase_singleton__: any;
+}
+
+let supabaseInstance: any = null;
+
+// Criar cliente Supabase com configuração correta de headers usando singleton
+export const supabase = (() => {
+  // Retornar instância existente se já foi criada
+  if (supabaseInstance) {
+    return supabaseInstance;
   }
-});
+
+  // Verificar se já existe uma instância global
+  if (typeof window !== 'undefined' && window.__supabase_singleton__) {
+    supabaseInstance = window.__supabase_singleton__;
+    return supabaseInstance;
+  }
+
+  if (typeof global !== 'undefined' && global.__supabase_singleton__) {
+    supabaseInstance = global.__supabase_singleton__;
+    return supabaseInstance;
+  }
+
+  // Criar nova instância apenas se não existir
+  supabaseInstance = createClient(finalUrl, finalKey, {
+    auth: {
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      storageKey: 'supabase.auth.token',
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    },
+    global: {
+      headers: {
+        'x-client-info': 'aimindset-app',
+        'apikey': finalKey, // Garantir que a API key seja enviada nos headers
+        'Authorization': `Bearer ${finalKey}` // Header de autorização explícito
+      }
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10
+      }
+    }
+  });
+
+  // Armazenar a instância globalmente
+  if (typeof window !== 'undefined') {
+    window.__supabase_singleton__ = supabaseInstance;
+  } else if (typeof global !== 'undefined') {
+    global.__supabase_singleton__ = supabaseInstance;
+  }
+
+  return supabaseInstance;
+})();
 
 
 // Função para verificar conectividade

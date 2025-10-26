@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { SecureStorage, ClientRateLimit } from '../utils/securityHeaders';
+import { supabase } from '../lib/supabase';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -11,10 +12,40 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const hasLoggedRef = useRef(false);
   const [securityCheck, setSecurityCheck] = useState(true);
+  const [realTimeAuthCheck, setRealTimeAuthCheck] = useState(true);
   const sessionTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // 🔥 VERIFICAÇÕES DE SEGURANÇA APRIMORADAS
+  // 🔥 VERIFICAÇÃO DE AUTENTICAÇÃO EM TEMPO REAL
   useEffect(() => {
+    const checkRealTimeAuth = async () => {
+      try {
+        // Verificar se a sessão do Supabase ainda é válida
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error || !session) {
+          console.warn('🚫 Sessão Supabase inválida ou expirada');
+          setRealTimeAuthCheck(false);
+          return;
+        }
+
+        // Verificar se o token ainda é válido
+        const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !supabaseUser) {
+          console.warn('🚫 Token de usuário inválido');
+          setRealTimeAuthCheck(false);
+          return;
+        }
+
+        setRealTimeAuthCheck(true);
+        console.log('✅ Verificação de autenticação em tempo real passou');
+      } catch (error) {
+        console.error('❌ Erro na verificação de autenticação em tempo real:', error);
+        setRealTimeAuthCheck(false);
+      }
+    };
+
+    // 🔥 VERIFICAÇÕES DE SEGURANÇA APRIMORADAS
     const performSecurityChecks = () => {
       try {
         // Check for suspicious activity
@@ -52,105 +83,99 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       }
     };
 
-    // 🔥 SEMPRE EXECUTAR VERIFICAÇÕES DE SEGURANÇA, MESMO SEM USUÁRIO
-    if (isAuthenticated) {
+    if (isAuthenticated && user) {
+      checkRealTimeAuth();
       performSecurityChecks();
       
-      // Set up session timeout
-      const resetTimeout = () => {
-        if (sessionTimeoutRef.current) {
-          clearTimeout(sessionTimeoutRef.current);
-        }
-        
-        sessionTimeoutRef.current = setTimeout(() => {
-          console.warn('⏰ Admin session timed out');
-          setSecurityCheck(false);
-        }, 30 * 60 * 1000); // 30 minutes
-      };
+      // Verificar autenticação a cada 30 segundos
+      const interval = setInterval(checkRealTimeAuth, 30000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, user]);
 
-      resetTimeout();
+  // 🔥 VERIFICAÇÃO ESPECÍFICA PARA SUPER ADMIN
+  const isSuperAdmin = user && user.role === 'super_admin';
 
-      // Reset timeout on user activity
-      const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-      const resetTimeoutHandler = () => {
-        SecureStorage.setItem('last_admin_activity', Date.now().toString());
-        resetTimeout();
-      };
-
-      activityEvents.forEach(event => {
-        document.addEventListener(event, resetTimeoutHandler, true);
+  // Log de debug apenas uma vez
+  useEffect(() => {
+    if (!hasLoggedRef.current && !isLoading) {
+      console.log('🔐 ProtectedRoute - Estado atual:', {
+        isAuthenticated,
+        isLoading,
+        userRole: user?.role,
+        isSuperAdmin,
+        securityCheck,
+        userEmail: user?.email
       });
+      hasLoggedRef.current = true;
+    }
+  }, [isAuthenticated, isLoading, user, isSuperAdmin, securityCheck]);
+
+  // 🔥 TIMEOUT DE SESSÃO AUTOMÁTICO
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      // Clear existing timeout
+      if (sessionTimeoutRef.current) {
+        clearTimeout(sessionTimeoutRef.current);
+      }
+
+      // Set new timeout for 2 hours
+      sessionTimeoutRef.current = setTimeout(() => {
+        console.warn('⏰ Session timeout - logging out user');
+        // Force logout after 2 hours
+        window.location.href = '/admin/login';
+      }, 2 * 60 * 60 * 1000); // 2 hours
 
       return () => {
         if (sessionTimeoutRef.current) {
           clearTimeout(sessionTimeoutRef.current);
         }
-        activityEvents.forEach(event => {
-          document.removeEventListener(event, resetTimeoutHandler, true);
-        });
       };
-    } else {
-      // 🔥 LIMPAR VERIFICAÇÕES DE SEGURANÇA QUANDO NÃO AUTENTICADO
-      setSecurityCheck(true); // Reset para permitir nova tentativa
-      if (sessionTimeoutRef.current) {
-        clearTimeout(sessionTimeoutRef.current);
-      }
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
 
-  // 🔥 LOG MELHORADO PARA DEBUG - APENAS UMA VEZ POR MUDANÇA DE ESTADO
-  useEffect(() => {
-    if (!hasLoggedRef.current) {
-      console.log('🔍 ProtectedRoute - Estado:', {
-        isAuthenticated,
-        isLoading,
-        hasUser: !!user,
-        userRole: user?.role,
-        userEmail: user?.email,
-        securityCheck
-      });
-      hasLoggedRef.current = true;
-    }
-  }, [isAuthenticated, isLoading, user, securityCheck]);
-
-  // Reset log flag quando qualquer estado relevante muda
-  useEffect(() => {
-    hasLoggedRef.current = false;
-  }, [isAuthenticated, isLoading, user, securityCheck]);
-
+  // 🔥 LOADING STATE
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-primary-dark flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="w-12 h-12 border-4 border-neon-purple/30 border-t-neon-purple rounded-full animate-spin"></div>
-          <p className="text-futuristic-gray font-roboto">Verificando autenticação...</p>
+      <div className="min-h-screen bg-dark-surface flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-green mx-auto mb-4"></div>
+          <p className="text-futuristic-gray">Verificando permissões...</p>
         </div>
       </div>
     );
   }
 
-  // 🔥 VERIFICAÇÕES DE SEGURANÇA APRIMORADAS
+  // 🔥 VERIFICAÇÃO DE SEGURANÇA FALHADA
   if (!securityCheck) {
-    console.warn('🚫 Security check failed. Redirecting to login.');
+    console.warn('🚫 Security check failed - redirecting to home');
+    return <Navigate to="/" replace />;
+  }
+
+  // 🔥 VERIFICAÇÃO DE AUTENTICAÇÃO EM TEMPO REAL FALHADA
+  if (!realTimeAuthCheck) {
+    console.warn('🚫 Real-time auth check failed - redirecting to login');
     return <Navigate to="/admin/login" replace />;
   }
 
+  // 🔥 NÃO AUTENTICADO
   if (!isAuthenticated) {
-    console.log('🔓 User not authenticated. Redirecting to login.');
+    console.warn('🚫 User not authenticated - redirecting to login');
     return <Navigate to="/admin/login" replace />;
   }
 
-  // 🔥 VERIFICAÇÃO DE USUÁRIO E ROLE MAIS ROBUSTA
-  if (!user) {
-    console.warn('⚠️ No user data available. Redirecting to login.');
-    return <Navigate to="/admin/login" replace />;
+  // 🔥 NÃO É SUPER ADMIN
+  if (!isSuperAdmin) {
+    console.warn('🚫 User is not super admin - redirecting to home', {
+      userRole: user?.role,
+      userEmail: user?.email
+    });
+    return <Navigate to="/" replace />;
   }
 
-  if (!['admin', 'super_admin'].includes(user.role)) {
-    console.warn('🚫 Insufficient privileges for admin access. User role:', user.role);
-    return <Navigate to="/admin/login" replace />;
-  }
-
+  // 🔥 ACESSO AUTORIZADO
+  console.log('✅ Access granted to super admin:', user?.email);
   return <>{children}</>;
 };
 

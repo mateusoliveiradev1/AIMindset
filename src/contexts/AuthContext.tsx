@@ -167,13 +167,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  // 🔥 INICIALIZAÇÃO COM VERIFICAÇÃO DE PERSISTÊNCIA E TRATAMENTO DE REFRESH TOKEN
-  // 🔥 INICIALIZAÇÃO SIMPLIFICADA SEM LOOPS INFINITOS
+  // 🔥 INICIALIZAÇÃO ÚNICA E CONTROLADA
   useEffect(() => {
     let isMounted = true;
     let initializationComplete = false;
 
     const initAuth = async () => {
+      // Evitar múltiplas inicializações
+      if (initializationComplete) {
+        console.log('⚠️ INICIALIZAÇÃO JÁ COMPLETA - IGNORANDO...');
+        return;
+      }
+
       try {
         console.log('🚀 INICIALIZANDO AUTH...');
         
@@ -365,36 +370,79 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    try {
-      console.log('🚪 LOGOUT LOCAL - SEM CHAMADAS HTTP...');
+    console.log('🚪 INICIANDO LOGOUT ROBUSTO...');
+    
+    // Função para limpeza local garantida
+    const performLocalCleanup = () => {
+      console.log('🧹 Executando limpeza local...');
       
       // Limpa estado local imediatamente
       setUser(null);
       setSupabaseUser(null);
       
-      // Limpa localStorage
-      localStorage.removeItem(USER_STORAGE_KEY);
-      localStorage.removeItem(SUPABASE_USER_STORAGE_KEY);
+      // Limpa TODOS os dados de autenticação do storage
+      try {
+        localStorage.removeItem(USER_STORAGE_KEY);
+        localStorage.removeItem(SUPABASE_USER_STORAGE_KEY);
+        sessionStorage.clear();
+      } catch (storageError) {
+        console.warn('⚠️ Erro ao limpar storage:', storageError);
+        // Tenta limpeza completa como fallback
+        try {
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch (fallbackError) {
+          console.error('💥 Erro crítico na limpeza de storage:', fallbackError);
+        }
+      }
       
-      // NÃO FAZER NENHUMA CHAMADA PARA SUPABASE
-      // Apenas limpar dados locais
+      // Limpa cookies relacionados ao Supabase
+      try {
+        document.cookie.split(";").forEach((c) => {
+          const eqPos = c.indexOf("=");
+          const name = eqPos > -1 ? c.substr(0, eqPos) : c;
+          const trimmedName = name.trim();
+          if (trimmedName.includes('supabase') || trimmedName.startsWith('sb-')) {
+            document.cookie = `${trimmedName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+            document.cookie = `${trimmedName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+          }
+        });
+      } catch (cookieError) {
+        console.warn('⚠️ Erro ao limpar cookies:', cookieError);
+      }
       
-      console.log('✅ LOGOUT LOCAL COMPLETO');
+      console.log('✅ Limpeza local concluída');
+    };
+
+    try {
+      // Tentar logout no Supabase com timeout robusto
+      console.log('🔄 Tentando logout no Supabase...');
       
-      // Redireciona imediatamente
-      window.location.href = '/admin/login';
+      const logoutPromise = supabase.auth.signOut();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout de logout')), 3000)
+      );
+      
+      try {
+        await Promise.race([logoutPromise, timeoutPromise]);
+        console.log('✅ Logout do Supabase bem-sucedido');
+      } catch (supabaseError) {
+        console.warn('⚠️ Erro/timeout no logout do Supabase:', supabaseError);
+        // Continua com limpeza local mesmo se Supabase falhar
+      }
       
     } catch (error) {
-      console.error('💥 ERRO NO LOGOUT:', error);
+      console.error('💥 Erro geral no processo de logout:', error);
+    } finally {
+      // SEMPRE executa limpeza local, independente do resultado do Supabase
+      performLocalCleanup();
       
-      // Força limpeza mesmo com erro
-      setUser(null);
-      setSupabaseUser(null);
-      localStorage.removeItem(USER_STORAGE_KEY);
-      localStorage.removeItem(SUPABASE_USER_STORAGE_KEY);
+      console.log('🏁 Logout finalizado - redirecionando...');
       
-      // Força redirecionamento
-      window.location.href = '/admin/login';
+      // Pequeno delay para garantir que a limpeza foi processada
+      setTimeout(() => {
+        window.location.replace('/');
+      }, 100);
     }
   };
 

@@ -10,18 +10,27 @@ declare global {
   var __supabase_admin_singleton__: any;
 }
 
+let adminInstance: any = null;
+
 export const supabaseAdmin = (() => {
+  // Retornar instância existente se já foi criada
+  if (adminInstance) {
+    return adminInstance;
+  }
+
   // Verificar se já existe uma instância global
-  if (typeof window !== 'undefined') {
-    if (window.__supabase_admin_singleton__) {
-      return window.__supabase_admin_singleton__;
-    }
-  } else if (global.__supabase_admin_singleton__) {
-    return global.__supabase_admin_singleton__;
+  if (typeof window !== 'undefined' && window.__supabase_admin_singleton__) {
+    adminInstance = window.__supabase_admin_singleton__;
+    return adminInstance;
+  }
+
+  if (typeof global !== 'undefined' && global.__supabase_admin_singleton__) {
+    adminInstance = global.__supabase_admin_singleton__;
+    return adminInstance;
   }
 
   // Criar nova instância apenas se não existir
-  const instance = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  adminInstance = createClient(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
@@ -36,12 +45,12 @@ export const supabaseAdmin = (() => {
 
   // Armazenar a instância globalmente
   if (typeof window !== 'undefined') {
-    window.__supabase_admin_singleton__ = instance;
-  } else {
-    global.__supabase_admin_singleton__ = instance;
+    window.__supabase_admin_singleton__ = adminInstance;
+  } else if (typeof global !== 'undefined') {
+    global.__supabase_admin_singleton__ = adminInstance;
   }
   
-  return instance;
+  return adminInstance;
 })();
 
 // Export alternativo para compatibilidade
