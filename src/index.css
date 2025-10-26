@@ -7,6 +7,12 @@
 /* Import do arquivo de navegação mobile */
 @import './styles/mobile-navigation.css';
 
+/* Import do arquivo de touch feedback */
+@import './styles/touch-feedback.css';
+
+/* Import do arquivo de acessibilidade */
+@import './styles/accessibility.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

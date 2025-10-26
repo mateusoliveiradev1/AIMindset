@@ -1,0 +1,170 @@
+/* Touch Feedback Styles - Otimizado para performance mobile */
+
+/* Base touch feedback para todos os elementos interativos */
+.touch-feedback {
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0); /* Force hardware acceleration */
+  will-change: transform;
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Efeito ripple instantâneo */
+.touch-feedback::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Estados de toque */
+.touch-feedback:active {
+  transform: scale(0.98);
+}
+
+.touch-feedback:active::before {
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%) scale(2);
+  opacity: 0;
+}
+
+/* Feedback específico para botões primários */
+.touch-feedback.btn-primary::before {
+  background: rgba(0, 255, 127, 0.4); /* lime-green */
+}
+
+/* Feedback específico para botões secundários */
+.touch-feedback.btn-secondary::before {
+  background: rgba(147, 51, 234, 0.4); /* neon-purple */
+}
+
+/* Feedback para cards e elementos de lista */
+.touch-feedback.card-touch::before {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Feedback para links */
+.touch-feedback.link-touch::before {
+  background: rgba(0, 255, 127, 0.3);
+}
+
+/* Otimizações para performance */
+.touch-feedback,
+.touch-feedback::before {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Suporte para dispositivos com hover */
+@media (hover: hover) {
+  .touch-feedback:hover {
+    transform: translateY(-2px);
+  }
+  
+  .touch-feedback:hover::before {
+    width: 100%;
+    height: 100%;
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0.1;
+  }
+}
+
+/* Feedback tátil para iOS */
+@supports (-webkit-touch-callout: none) {
+  .touch-feedback:active {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Animações otimizadas para 60fps */
+@media (prefers-reduced-motion: no-preference) {
+  .touch-feedback-enhanced {
+    transition: transform 0.08s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.08s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .touch-feedback-enhanced:active {
+    transform: scale(0.96);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Estados de focus para acessibilidade */
+.touch-feedback:focus-visible {
+  outline: 2px solid #00ff7f;
+  outline-offset: 2px;
+}
+
+/* Feedback para elementos pequenos (< 44px) */
+.touch-feedback.small-target {
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Feedback instantâneo para formulários */
+.touch-feedback.form-element:focus {
+  transform: scale(1.02);
+  transition: transform 0.1s ease-out;
+}
+
+/* Prevenção de double-tap zoom em iOS */
+.touch-feedback {
+  touch-action: manipulation;
+}
+
+/* Feedback visual para loading states */
+.touch-feedback.loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.touch-feedback.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* Feedback para elementos de navegação */
+.touch-feedback.nav-item:active {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Feedback para elementos de busca */
+.touch-feedback.search-element:focus {
+  box-shadow: 0 0 0 2px rgba(0, 255, 127, 0.3);
+}
+
+/* Otimização para telas de alta densidade */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .touch-feedback::before {
+    transform: translate(-50%, -50%) scale(0);
+    transition-duration: 0.12s;
+  }
+}

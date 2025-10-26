@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
+import { useTouchFeedback } from '../../hooks/useTouchFeedback';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
@@ -12,8 +13,15 @@ const Button: React.FC<ButtonProps> = ({
   size = 'md',
   className,
   children,
+  disabled,
   ...props
 }) => {
+  // Touch feedback hook
+  const { touchFeedbackProps } = useTouchFeedback({
+    type: variant === 'primary' ? 'primary' : variant === 'secondary' ? 'secondary' : 'primary',
+    disabled
+  });
+
   const baseClasses = 'inline-flex items-center justify-center font-montserrat font-semibold rounded-lg transition-all duration-300 hover-lift focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neon-purple disabled:opacity-50 disabled:cursor-not-allowed';
   
   const variants = {
@@ -31,12 +39,15 @@ const Button: React.FC<ButtonProps> = ({
   
   return (
     <button
+      {...touchFeedbackProps}
       className={cn(
         baseClasses,
         variants[variant],
         sizes[size],
+        touchFeedbackProps.className,
         className
       )}
+      disabled={disabled}
       {...props}
     >
       {children}

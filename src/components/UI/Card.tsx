@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
+import { useTouchFeedback } from '../../hooks/useTouchFeedback';
 
 interface CardProps {
   children: React.ReactNode;
@@ -16,6 +17,12 @@ const Card: React.FC<CardProps> = ({
   hover = true,
   onClick,
 }) => {
+  // Touch feedback apenas para cards clicáveis
+  const { touchFeedbackProps } = useTouchFeedback({
+    type: 'card',
+    disabled: !onClick
+  });
+
   const baseClasses = 'rounded-lg transition-all duration-300';
   
   const variants = {
@@ -28,10 +35,12 @@ const Card: React.FC<CardProps> = ({
   
   return (
     <div
+      {...(onClick ? touchFeedbackProps : {})}
       className={cn(
         baseClasses,
         variants[variant],
         hoverClasses,
+        onClick ? touchFeedbackProps.className : '',
         className,
         onClick && 'cursor-pointer'
       )}

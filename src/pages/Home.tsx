@@ -7,6 +7,8 @@ import SEOManager from '../components/SEO/SEOManager';
 import { useSEO } from '../hooks/useSEO';
 import { useArticles } from '../hooks/useArticles';
 import { OptimizedImage } from '../components/PerformanceManager';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PullToRefreshIndicator } from '../components/UI/PullToRefreshIndicator';
 
 const Home: React.FC = () => {
   const { categories } = useArticles();
@@ -15,6 +17,22 @@ const Home: React.FC = () => {
     fallbackTitle: 'AIMindset - Inteligência Artificial e Produtividade',
     fallbackDescription: 'Descubra como a inteligência artificial pode transformar sua produtividade. Artigos, dicas e insights sobre IA, automação e tecnologia.'
   });
+
+  // Pull-to-refresh functionality
+  const handleRefresh = async () => {
+    // Simular atualização dos dados
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Aqui você poderia recarregar os dados da API
+    console.log('Home atualizada!');
+  };
+
+  const {
+    isRefreshing,
+    pullDistance,
+    isPulling,
+    containerProps,
+    indicatorStyle
+  } = usePullToRefresh({ onRefresh: handleRefresh });
 
   // Pré-carregar metadados das categorias para navegação fluida
   useEffect(() => {
@@ -26,13 +44,19 @@ const Home: React.FC = () => {
   const metadata = getMetadata();
 
   return (
-    <>
+    <div {...containerProps}>
+      <PullToRefreshIndicator 
+        isRefreshing={isRefreshing}
+        isPulling={isPulling}
+        pullDistance={pullDistance}
+        style={indicatorStyle}
+      />
       <SEOManager metadata={metadata} />
       <Hero />
       <FeaturedArticles />
       <Categories />
       <NewsletterCTA />
-    </>
+    </div>
   );
 };
 

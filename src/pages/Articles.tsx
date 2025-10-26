@@ -4,12 +4,18 @@ import { Search, Filter, Calendar, Clock, Tag, ChevronLeft, ChevronRight } from 
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import { useArticles } from '../hooks/useArticles';
+import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { PullToRefreshIndicator } from '../components/UI/PullToRefreshIndicator';
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
+import { InfiniteScrollLoader } from '../components/UI/InfiniteScrollLoader';
 
 export const Articles: React.FC = () => {
   const { articles, categories, loading, refreshArticles } = useArticles();
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [displayedArticles, setDisplayedArticles] = useState<any[]>([]);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Load articles when component mounts
   useEffect(() => {
@@ -27,32 +33,91 @@ export const Articles: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const articlesPerPage = 9;
 
+  // Pull-to-refresh functionality
+  const handleRefresh = async () => {
+    // Simular atualização dos dados
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Aqui você poderia recarregar os dados da API
+    console.log('Artigos atualizados!');
+  };
+
+  const {
+    isRefreshing,
+    pullDistance,
+    isPulling,
+    containerProps,
+    indicatorStyle
+  } = usePullToRefresh({ onRefresh: handleRefresh });
+
   // Filtrar artigos
   const filteredArticles = useMemo(() => {
-    return articles.filter(article => {
-      const matchesSearch = article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           article.content.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      // Corrigir filtro por categoria - usar category_id
-      const matchesCategory = selectedCategory === 'all' || 
-                             categories.find(cat => cat.slug === selectedCategory)?.id === article.category_id;
-      
-      return matchesSearch && matchesCategory && article.published;
-    });
+    let filtered = articles;
+
+    // Filtrar por categoria
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(article => {
+        if (typeof article.category === 'object' && article.category?.slug) {
+          return article.category.slug === selectedCategory;
+        }
+        const category = categories.find(cat => cat.id === article.category_id);
+        return category?.slug === selectedCategory;
+      });
+    }
+
+    // Filtrar por termo de busca
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(article =>
+        article.title.toLowerCase().includes(term) ||
+        article.content.toLowerCase().includes(term) ||
+        (article.excerpt && article.excerpt.toLowerCase().includes(term)) ||
+        (article.tags && 
+          (typeof article.tags === 'string' 
+            ? article.tags.toLowerCase().includes(term)
+            : article.tags.some((tag: string) => tag.toLowerCase().includes(term))
+          )
+        )
+      );
+    }
+
+    return filtered.filter(article => article.published);
   }, [articles, searchTerm, selectedCategory, categories]);
 
-  // Paginação - resetar página quando filtros mudarem
-  const totalPages = Math.ceil(filteredArticles.length / articlesPerPage);
+  // Infinite scroll logic
+  const hasMore = displayedArticles.length < filteredArticles.length;
   
-  // Garantir que a página atual não exceda o total de páginas
-  React.useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(1);
-    }
-  }, [filteredArticles.length, totalPages, currentPage]);
-  
-  const startIndex = (currentPage - 1) * articlesPerPage;
-  const paginatedArticles = filteredArticles.slice(startIndex, startIndex + articlesPerPage);
+  const loadMoreArticles = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return;
+    
+    setIsLoadingMore(true);
+    
+    // Simular delay de carregamento para UX realista
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    const nextBatch = filteredArticles.slice(
+      displayedArticles.length,
+      displayedArticles.length + articlesPerPage
+    );
+    
+    setDisplayedArticles(prev => [...prev, ...nextBatch]);
+    setIsLoadingMore(false);
+  }, [filteredArticles, displayedArticles.length, articlesPerPage, isLoadingMore, hasMore]);
+
+  // Resetar artigos exibidos quando filtros mudarem
+  useEffect(() => {
+    const initialArticles = filteredArticles.slice(0, articlesPerPage);
+    setDisplayedArticles(initialArticles);
+    setCurrentPage(1);
+  }, [filteredArticles, articlesPerPage]);
+
+  // Infinite scroll hook
+  const { loadingRef } = useInfiniteScroll({
+    hasMore,
+    isLoading: isLoadingMore,
+    onLoadMore: loadMoreArticles,
+    threshold: 0.1,
+    rootMargin: '100px'
+  });
 
   // Formatar data
   const formatDate = (dateString: string) => {
@@ -71,7 +136,13 @@ export const Articles: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-dark-surface">
+    <div className="min-h-screen bg-dark-surface" {...containerProps}>
+      <PullToRefreshIndicator 
+        isRefreshing={isRefreshing}
+        isPulling={isPulling}
+        pullDistance={pullDistance}
+        style={indicatorStyle}
+      />
       {/* Header */}
       <div className="bg-darker-surface border-b border-neon-purple/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -153,9 +224,10 @@ export const Articles: React.FC = () => {
         </div>
 
         {/* Lista de artigos */}
-        {paginatedArticles.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            {paginatedArticles.map((article) => (
+        {displayedArticles.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+              {displayedArticles.map((article) => (
               <Card key={article.id} className="glass-effect hover-lift group">
                 <div className="p-6">
                   {/* Categoria */}
@@ -250,8 +322,16 @@ export const Articles: React.FC = () => {
                   </div>
                 </div>
               </Card>
-            ))}
-          </div>
+              ))}
+            </div>
+            
+            {/* Infinite scroll loader */}
+            <InfiniteScrollLoader
+              isLoading={isLoadingMore}
+              hasMore={hasMore}
+              loadingRef={loadingRef}
+            />
+          </>
         ) : (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🔍</div>
@@ -264,44 +344,7 @@ export const Articles: React.FC = () => {
           </div>
         )}
 
-        {/* Paginação */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-center space-x-4">
-            <Button
-              variant="outline"
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="flex items-center space-x-2"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span>Anterior</span>
-            </Button>
 
-            <div className="flex items-center space-x-2">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <Button
-                  key={page}
-                  variant={currentPage === page ? "primary" : "ghost"}
-                  size="sm"
-                  onClick={() => setCurrentPage(page)}
-                  className={currentPage === page ? "neon-glow" : ""}
-                >
-                  {page}
-                </Button>
-              ))}
-            </div>
-
-            <Button
-              variant="outline"
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="flex items-center space-x-2"
-            >
-              <span>Próximo</span>
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   );
