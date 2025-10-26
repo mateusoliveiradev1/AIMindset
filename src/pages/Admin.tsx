@@ -114,6 +114,23 @@ export const Admin: React.FC = () => {
   const [subscriberStatusFilter, setSubscriberStatusFilter] = useState<'all' | 'active' | 'inactive' | 'unsubscribed'>('all');
   const [subscriberDateFilter, setSubscriberDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'custom'>('all');
   
+  // Estados para filtros das atividades
+  const [activityFilters, setActivityFilters] = useState<string[]>([]);
+  const [showActivityFilters, setShowActivityFilters] = useState(false);
+
+  // Fechar dropdown de filtros quando clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (showActivityFilters && !target.closest('.activity-filter-dropdown')) {
+        setShowActivityFilters(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showActivityFilters]);
+  
   // Aplicar filtros automaticamente quando mudarem
   useEffect(() => {
     const delayedSearch = setTimeout(() => {
@@ -391,6 +408,31 @@ export const Admin: React.FC = () => {
       toast.error('Erro ao criar categoria. Tente novamente.');
     }
   };
+
+  // Funções para gerenciar filtros de atividades
+  const activityTypes = [
+    { id: 'article_published', label: 'Artigos', color: 'neon-purple' },
+    { id: 'campaign_sent', label: 'Campanhas', color: 'yellow-400' },
+    { id: 'new_comment', label: 'Comentários', color: 'blue-400' },
+    { id: 'new_feedback', label: 'Feedback', color: 'orange-400' },
+    { id: 'new_contact', label: 'Contatos', color: 'green-400' }
+  ];
+
+  const toggleActivityFilter = (filterType: string) => {
+    setActivityFilters(prev => 
+      prev.includes(filterType) 
+        ? prev.filter(f => f !== filterType)
+        : [...prev, filterType]
+    );
+  };
+
+  const clearActivityFilters = () => {
+    setActivityFilters([]);
+  };
+
+  const filteredActivities = recentActivities?.filter(activity => 
+    activityFilters.length === 0 || activityFilters.includes(activity.type)
+  ) || [];
 
   // Função para gerenciar campanhas
 
@@ -842,40 +884,109 @@ export const Admin: React.FC = () => {
               </div>
 
               {/* Últimas Atividades e Dados Recentes */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 <Card className="glass-effect">
-                  <div className="p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-orbitron font-bold text-white flex items-center">
-                        <Activity className="w-5 h-5 mr-2 text-neon-purple" />
-                        Últimas Atividades
+                  <div className="p-4 sm:p-6">
+                    <div className="flex items-center justify-between mb-4 gap-2">
+                      <h3 className="text-base sm:text-lg font-orbitron font-bold text-white flex items-center flex-1 min-w-0">
+                        <Activity className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-neon-purple flex-shrink-0" />
+                        <span className="truncate">Últimas Atividades</span>
                       </h3>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2 flex-shrink-0">
                         {loadingDashboard && (
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-neon-purple"></div>
                         )}
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="text-xs text-futuristic-gray hover:text-white"
-                          onClick={() => {/* TODO: Implementar filtros */}}
-                        >
-                          <Filter className="w-3 h-3 mr-1" />
-                          Filtrar
-                        </Button>
+                        <div className="relative activity-filter-dropdown">
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className={`text-xs transition-all duration-300 min-h-[36px] px-3 sm:px-2 ${
+                              activityFilters.length > 0 
+                                ? 'text-neon-purple bg-neon-purple/10 border border-neon-purple/20 hover:bg-neon-purple/20' 
+                                : 'text-futuristic-gray hover:text-white'
+                            }`}
+                            onClick={() => setShowActivityFilters(!showActivityFilters)}
+                          >
+                            <Filter className="w-4 h-4 sm:w-3 sm:h-3 mr-1" />
+                            <span className="hidden sm:inline">Filtrar</span>
+                            <span className="sm:hidden">Filtros</span>
+                            {activityFilters.length > 0 && (
+                              <span className="ml-1 px-1.5 py-0.5 bg-neon-purple text-white text-xs rounded-full min-w-[20px] text-center">
+                                {activityFilters.length}
+                              </span>
+                            )}
+                          </Button>
+                          
+                          {showActivityFilters && (
+                            <div className="absolute right-0 top-full mt-2 w-64 sm:w-72 md:w-80 lg:w-64 bg-darker-surface/95 backdrop-blur-sm border border-darker-surface/50 rounded-xl shadow-2xl z-50 p-3 sm:p-4 max-w-[calc(100vw-2rem)] sm:max-w-none">
+                              <div className="flex items-center justify-between mb-3">
+                                <h4 className="text-sm font-medium text-white truncate">Filtrar por tipo</h4>
+                                {activityFilters.length > 0 && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="text-xs text-futuristic-gray hover:text-white h-8 px-3 ml-2 flex-shrink-0 min-h-[32px] min-w-[60px]"
+                                    onClick={clearActivityFilters}
+                                  >
+                                    Limpar
+                                  </Button>
+                                )}
+                              </div>
+                              
+                              <div className="space-y-1 sm:space-y-2">
+                                {activityTypes.map((type) => (
+                                  <label
+                                    key={type.id}
+                                    className="flex items-center space-x-3 cursor-pointer group hover:bg-darker-surface/30 rounded-lg p-2 sm:p-3 transition-all duration-200 min-h-[44px] sm:min-h-[40px]"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={activityFilters.includes(type.id)}
+                                      onChange={() => toggleActivityFilter(type.id)}
+                                      className="sr-only"
+                                    />
+                                    <div className={`w-5 h-5 sm:w-4 sm:h-4 rounded border-2 flex items-center justify-center transition-all duration-200 flex-shrink-0 ${
+                                      activityFilters.includes(type.id)
+                                        ? `bg-${type.color}/20 border-${type.color} shadow-lg`
+                                        : 'border-futuristic-gray/30 group-hover:border-futuristic-gray/50'
+                                    }`}>
+                                      {activityFilters.includes(type.id) && (
+                                        <div className={`w-2.5 h-2.5 sm:w-2 sm:h-2 rounded-full bg-${type.color}`} />
+                                      )}
+                                    </div>
+                                    <span className={`text-sm sm:text-sm transition-colors duration-200 flex-1 ${
+                                      activityFilters.includes(type.id) 
+                                        ? 'text-white font-medium' 
+                                        : 'text-futuristic-gray group-hover:text-white'
+                                    }`}>
+                                      {type.label}
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                              
+                              <div className="mt-3 pt-3 border-t border-darker-surface/50">
+                                <p className="text-xs text-futuristic-gray/60 text-center sm:text-left">
+                                  {filteredActivities.length} de {recentActivities?.length || 0} atividades
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
+                    <div className="space-y-2 max-h-80 sm:max-h-96 overflow-y-auto custom-scrollbar">
                       {loadingDashboard ? (
                         <div className="flex items-center justify-center py-8">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neon-purple"></div>
                           <span className="ml-2 text-futuristic-gray">Carregando atividades...</span>
                         </div>
                       ) : recentActivities && recentActivities.length > 0 ? (
+                        filteredActivities.length > 0 ? (
                         <>
-                          {recentActivities.slice(0, 8).map((activity, index) => (
-                            <div key={index} className="group flex items-center space-x-3 p-3 bg-gradient-to-r from-darker-surface/20 to-darker-surface/40 rounded-xl hover:from-darker-surface/40 hover:to-darker-surface/60 transition-all duration-300 border border-transparent hover:border-neon-purple/20">
-                              <div className={`p-2.5 rounded-full transition-all duration-300 group-hover:scale-110 ${
+                          {filteredActivities.slice(0, 8).map((activity, index) => (
+                            <div key={index} className="group flex items-start sm:items-center space-x-3 p-3 sm:p-4 bg-gradient-to-r from-darker-surface/20 to-darker-surface/40 rounded-xl hover:from-darker-surface/40 hover:to-darker-surface/60 transition-all duration-300 border border-transparent hover:border-neon-purple/20 min-h-[60px] sm:min-h-[auto]">
+                              <div className={`p-2.5 sm:p-2 rounded-full transition-all duration-300 group-hover:scale-110 flex-shrink-0 ${
                 
                                 activity.type === 'article_published' ? 'bg-gradient-to-br from-neon-purple/30 to-neon-purple/10 shadow-lg shadow-neon-purple/20' :
                                 activity.type === 'campaign_sent' ? 'bg-gradient-to-br from-yellow-500/30 to-yellow-500/10 shadow-lg shadow-yellow-500/20' :
@@ -885,23 +996,23 @@ export const Admin: React.FC = () => {
                                 'bg-gradient-to-br from-gray-500/30 to-gray-500/10 shadow-lg shadow-gray-500/20'
                               }`}>
 
-                                {activity.type === 'article_published' && <FileText className="w-4 h-4 text-neon-purple" />}
+                                {activity.type === 'article_published' && <FileText className="w-5 h-5 sm:w-4 sm:h-4 text-neon-purple" />}
 
-                                {activity.type === 'campaign_sent' && <Send className="w-4 h-4 text-yellow-400" />}
-                                {activity.type === 'new_comment' && <MessageSquare className="w-4 h-4 text-blue-400" />}
-                                {activity.type === 'new_feedback' && <Zap className="w-4 h-4 text-orange-400" />}
-                                {activity.type === 'new_contact' && <Mail className="w-4 h-4 text-green-400" />}
+                                {activity.type === 'campaign_sent' && <Send className="w-5 h-5 sm:w-4 sm:h-4 text-yellow-400" />}
+                                {activity.type === 'new_comment' && <MessageSquare className="w-5 h-5 sm:w-4 sm:h-4 text-blue-400" />}
+                                {activity.type === 'new_feedback' && <Zap className="w-5 h-5 sm:w-4 sm:h-4 text-orange-400" />}
+                                {activity.type === 'new_contact' && <Mail className="w-5 h-5 sm:w-4 sm:h-4 text-green-400" />}
 
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-white text-sm font-medium leading-tight group-hover:text-gray-100 transition-colors">
+                                <p className="text-white text-sm sm:text-sm font-medium leading-tight group-hover:text-gray-100 transition-colors line-clamp-2 sm:line-clamp-1">
                                   {activity.message}
                                 </p>
-                                <div className="flex items-center justify-between mt-1">
-                                  <p className="text-futuristic-gray text-xs font-medium">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-2 sm:mt-1 space-y-1 sm:space-y-0">
+                                  <p className="text-futuristic-gray text-xs font-medium order-2 sm:order-1">
                                     {activity.time}
                                   </p>
-                                  <div className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  <div className={`px-2 py-1 sm:py-0.5 rounded-full text-xs font-medium self-start sm:self-auto order-1 sm:order-2 ${
                     
                                     activity.type === 'article_published' ? 'bg-neon-purple/10 text-neon-purple border border-neon-purple/20' :
 
@@ -923,27 +1034,45 @@ export const Admin: React.FC = () => {
                               </div>
                             </div>
                           ))}
-                          {recentActivities.length > 8 && (
+                          {filteredActivities.length > 8 && (
                             <div className="pt-3 border-t border-darker-surface/50">
                               <Button 
                                 size="sm" 
                                 variant="ghost" 
-                                className="w-full text-futuristic-gray hover:text-white hover:bg-darker-surface/30 transition-all duration-300"
+                                className="w-full text-futuristic-gray hover:text-white hover:bg-darker-surface/30 transition-all duration-300 min-h-[40px] text-sm"
                                 onClick={() => {/* TODO: Implementar ver mais */}}
                               >
-                                Ver mais {recentActivities.length - 8} atividades
+                                <span className="hidden sm:inline">Ver mais {filteredActivities.length - 8} atividades</span>
+                                <span className="sm:hidden">Ver mais ({filteredActivities.length - 8})</span>
                                 <ChevronRight className="w-4 h-4 ml-1" />
                               </Button>
                             </div>
                           )}
                         </>
-                      ) : (
-                        <div className="text-center py-12">
-                          <div className="bg-gradient-to-br from-futuristic-gray/10 to-futuristic-gray/5 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                            <Activity className="w-8 h-8 text-futuristic-gray" />
+                        ) : (
+                          <div className="text-center py-8 sm:py-12 px-4">
+                            <div className="bg-gradient-to-br from-futuristic-gray/10 to-futuristic-gray/5 rounded-full w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center mx-auto mb-4">
+                              <Filter className="w-6 h-6 sm:w-8 sm:h-8 text-futuristic-gray" />
+                            </div>
+                            <p className="text-futuristic-gray font-medium text-sm sm:text-base">Nenhuma atividade encontrada</p>
+                            <p className="text-futuristic-gray/60 text-xs sm:text-sm mt-1">Tente ajustar os filtros de busca</p>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="mt-3 text-neon-purple hover:text-neon-purple/80 min-h-[36px] px-4"
+                              onClick={clearActivityFilters}
+                            >
+                              Limpar filtros
+                            </Button>
                           </div>
-                          <p className="text-futuristic-gray font-medium">Nenhuma atividade recente</p>
-                          <p className="text-futuristic-gray/60 text-sm mt-1">As atividades aparecerão aqui conforme acontecem</p>
+                        )
+                      ) : (
+                        <div className="text-center py-8 sm:py-12 px-4">
+                          <div className="bg-gradient-to-br from-futuristic-gray/10 to-futuristic-gray/5 rounded-full w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center mx-auto mb-4">
+                            <Activity className="w-6 h-6 sm:w-8 sm:h-8 text-futuristic-gray" />
+                          </div>
+                          <p className="text-futuristic-gray font-medium text-sm sm:text-base">Nenhuma atividade recente</p>
+                          <p className="text-futuristic-gray/60 text-xs sm:text-sm mt-1">As atividades aparecerão aqui conforme acontecem</p>
                         </div>
                       )}
                     </div>
@@ -964,11 +1093,12 @@ export const Admin: React.FC = () => {
                         <Button 
                           size="sm" 
                           variant="ghost" 
-                          className="text-xs text-futuristic-gray hover:text-white"
+                          className="text-xs text-futuristic-gray hover:text-white min-h-[36px] px-3"
                           onClick={() => setActiveTab('articles')}
                         >
-                          Ver todos
-                          <ChevronRight className="w-3 h-3 ml-1" />
+                          <span className="hidden sm:inline">Ver todos</span>
+                          <span className="sm:hidden">Todos</span>
+                          <ChevronRight className="w-4 h-4 sm:w-3 sm:h-3 ml-1" />
                         </Button>
                       </div>
                     </div>
@@ -1009,17 +1139,17 @@ export const Admin: React.FC = () => {
                                       <Button 
                                         size="sm" 
                                         variant="ghost" 
-                                        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-neon-purple/20"
+                                        className="h-8 w-8 sm:h-7 sm:w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-neon-purple/20 min-h-[32px] min-w-[32px] sm:min-h-[28px] sm:min-w-[28px]"
                                         onClick={() => setEditingArticle(article)}
                                       >
-                                        <Edit3 className="w-3 h-3" />
+                                        <Edit3 className="w-4 h-4 sm:w-3 sm:h-3" />
                                       </Button>
                                       <Button 
                                         size="sm" 
                                         variant="ghost" 
-                                        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-blue-500/20"
+                                        className="h-8 w-8 sm:h-7 sm:w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-blue-500/20 min-h-[32px] min-w-[32px] sm:min-h-[28px] sm:min-w-[28px]"
                                       >
-                                        <Eye className="w-3 h-3" />
+                                        <Eye className="w-4 h-4 sm:w-3 sm:h-3" />
                                       </Button>
                                     </div>
                                   </div>
@@ -1036,10 +1166,11 @@ export const Admin: React.FC = () => {
                               <Button 
                                 size="sm" 
                                 variant="ghost" 
-                                className="w-full text-futuristic-gray hover:text-white hover:bg-darker-surface/30 transition-all duration-300"
+                                className="w-full text-futuristic-gray hover:text-white hover:bg-darker-surface/30 transition-all duration-300 min-h-[40px] text-sm"
                                 onClick={() => setActiveTab('articles')}
                               >
-                                Ver mais {articles.length - 6} artigos
+                                <span className="hidden sm:inline">Ver mais {articles.length - 6} artigos</span>
+                                <span className="sm:hidden">Ver mais ({articles.length - 6})</span>
                                 <ChevronRight className="w-4 h-4 ml-1" />
                               </Button>
                             </div>
@@ -1054,7 +1185,7 @@ export const Admin: React.FC = () => {
                           <p className="text-futuristic-gray/60 text-sm mt-1">Crie seu primeiro artigo para começar</p>
                           <Button 
                             size="sm" 
-                            className="mt-3 bg-neon-gradient hover:bg-neon-gradient/80"
+                            className="mt-3 bg-neon-gradient hover:bg-neon-gradient/80 min-h-[40px] px-4"
                             onClick={() => setActiveTab('editor')}
                           >
                             <PlusCircle className="w-4 h-4 mr-1" />
