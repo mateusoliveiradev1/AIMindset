@@ -59,11 +59,22 @@ const LazyImage: React.FC<LazyImageProps> = ({
     onError?.();
   };
 
-  // Gerar srcSet para diferentes densidades de tela
+  // Gerar srcSet para diferentes densidades de tela e tamanhos responsivos
   const generateSrcSet = (originalSrc: string) => {
     if (originalSrc.includes('trae-api-us.mchost.guru')) {
-      // Para imagens da API, adicionar parâmetros de qualidade
-      return `${originalSrc}&quality=75 1x, ${originalSrc}&quality=85 2x`;
+      // Para imagens da API, gerar múltiplos tamanhos e qualidades
+      const sizes = [
+        { width: 400, quality: 75, descriptor: '400w' },
+        { width: 800, quality: 80, descriptor: '800w' },
+        { width: 1200, quality: 85, descriptor: '1200w' },
+        { width: 1600, quality: 90, descriptor: '1600w' }
+      ];
+      
+      return sizes
+        .map(({ width, quality, descriptor }) => 
+          `${originalSrc}&width=${width}&quality=${quality} ${descriptor}`
+        )
+        .join(', ');
     }
     return originalSrc;
   };
@@ -106,6 +117,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
         ref={imgRef}
         src={isInView ? optimizedSrc : placeholder}
         srcSet={isInView ? srcSet : undefined}
+        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
         alt={alt}
         width={width}
         height={height}
@@ -116,6 +128,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
         onLoad={handleLoad}
         onError={handleError}
         decoding="async"
+        fetchpriority={loading === 'eager' ? 'high' : 'low'}
       />
 
       {/* Fallback para erro */}
