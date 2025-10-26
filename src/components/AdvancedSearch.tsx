@@ -14,6 +14,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useAdvancedSearch } from '../hooks/useAdvancedSearch';
+import { useMobileUsability } from '@/hooks/useMobileUsability';
 import Card from './UI/Card';
 import Button from './UI/Button';
 
@@ -42,6 +43,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
     hasActiveFilters
   } = useAdvancedSearch();
 
+  const { isTouchDevice, addTouchFeedback } = useMobileUsability();
   const [showFilters, setShowFilters] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -201,15 +203,16 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
         {/* Search Input */}
         <div className="p-6 border-b border-neon-purple/20">
           <form onSubmit={handleSearchSubmit} className="relative">
-            <div className="relative">
+            <div className="relative mobile-form-field">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-futuristic-gray w-5 h-5" />
               <input
                 ref={searchInputRef}
-                type="text"
+                type="search"
                 value={filters.query}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 placeholder="Digite sua busca..."
-                className="w-full pl-12 pr-4 py-4 bg-dark-surface/50 border border-neon-purple/30 rounded-xl text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green transition-all duration-300 text-lg"
+                autoComplete="search"
+                className="w-full pl-12 pr-4 py-4 bg-dark-surface/50 border border-neon-purple/30 rounded-xl text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green transition-all duration-300 text-lg prevent-zoom touch-target"
               />
               {isSearching && (
                 <Loader2 className="absolute right-4 top-1/2 transform -translate-y-1/2 text-lime-green w-5 h-5 animate-spin" />
@@ -272,7 +275,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
             <button
               type="button"
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center space-x-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300"
+              className="flex items-center space-x-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 touch-target touch-feedback"
             >
               <Filter className="w-4 h-4" />
               <span>Filtros avançados</span>
@@ -296,14 +299,14 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
             <div className="mt-4 p-4 bg-dark-surface/30 rounded-lg border border-neon-purple/20">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Category Filter */}
-                <div>
+                <div className="mobile-form-field">
                   <label className="block text-sm font-medium text-futuristic-gray mb-2">
                     Categoria
                   </label>
                   <select
                     value={filters.category}
                     onChange={(e) => updateFilters({ category: e.target.value })}
-                    className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/30 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
+                    className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/30 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors prevent-zoom touch-target"
                   >
                     <option value="all">Todas as categorias</option>
                     {categories.map((category) => (
@@ -315,14 +318,14 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({
                 </div>
 
                 {/* Date Range Filter */}
-                <div>
+                <div className="mobile-form-field">
                   <label className="block text-sm font-medium text-futuristic-gray mb-2">
                     Período
                   </label>
                   <select
                     value={filters.dateRange}
                     onChange={(e) => updateFilters({ dateRange: e.target.value as any })}
-                    className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/30 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
+                    className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/30 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors prevent-zoom touch-target"
                   >
                     <option value="all">Todos os períodos</option>
                     <option value="week">Última semana</option>

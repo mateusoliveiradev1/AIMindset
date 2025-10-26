@@ -1,0 +1,371 @@
+/* ===== MOBILE NAVIGATION ANIMATIONS ===== */
+
+/* Animações do menu hamburger */
+.mobile-menu-button {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-menu-button:hover {
+  transform: scale(1.05);
+}
+
+.mobile-menu-button:active {
+  transform: scale(0.95);
+}
+
+/* Animação do ícone hamburger para X */
+.hamburger-icon {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hamburger-icon.open {
+  transform: rotate(180deg);
+}
+
+/* Animações do menu mobile */
+.mobile-nav {
+  animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: top;
+}
+
+.mobile-nav.closing {
+  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scaleY(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scaleY(0.95);
+  }
+}
+
+/* Animações dos itens do menu */
+.mobile-nav-item {
+  animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: both;
+}
+
+.mobile-nav-item:nth-child(1) { animation-delay: 0.1s; }
+.mobile-nav-item:nth-child(2) { animation-delay: 0.15s; }
+.mobile-nav-item:nth-child(3) { animation-delay: 0.2s; }
+.mobile-nav-item:nth-child(4) { animation-delay: 0.25s; }
+.mobile-nav-item:nth-child(5) { animation-delay: 0.3s; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Efeito ripple para itens do menu */
+.mobile-nav-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.mobile-nav-item::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(163, 230, 53, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.mobile-nav-item:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Swipe gestures indicators */
+.swipe-indicator {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.swipe-indicator.left {
+  left: 10px;
+  animation: swipeLeft 1.5s infinite;
+}
+
+.swipe-indicator.right {
+  right: 10px;
+  animation: swipeRight 1.5s infinite;
+}
+
+.swipe-indicator.up {
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: swipeUp 1.5s infinite;
+}
+
+@keyframes swipeLeft {
+  0%, 100% { transform: translateY(-50%) translateX(0); opacity: 0.3; }
+  50% { transform: translateY(-50%) translateX(-10px); opacity: 0.7; }
+}
+
+@keyframes swipeRight {
+  0%, 100% { transform: translateY(-50%) translateX(0); opacity: 0.3; }
+  50% { transform: translateY(-50%) translateX(10px); opacity: 0.7; }
+}
+
+@keyframes swipeUp {
+  0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.3; }
+  50% { transform: translateX(-50%) translateY(-10px); opacity: 0.7; }
+}
+
+/* Melhorias para navegação por gestos */
+.gesture-navigation {
+  position: relative;
+  touch-action: pan-y;
+}
+
+.gesture-navigation.swiping {
+  transition: transform 0.1s ease-out;
+}
+
+/* Feedback visual para swipe */
+.swipe-feedback {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(163, 230, 53, 0.9);
+  color: #000;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.swipe-feedback.show {
+  opacity: 1;
+}
+
+/* Animações suaves para transições de página */
+.page-transition {
+  animation: pageSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes pageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Melhorias para navegação por tabs */
+.mobile-tabs {
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-behavior: smooth;
+}
+
+.mobile-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-tab {
+  flex-shrink: 0;
+  min-width: 120px;
+  padding: 12px 16px;
+  text-align: center;
+  border-bottom: 2px solid transparent;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.mobile-tab.active {
+  border-bottom-color: #a3e635;
+  background: rgba(163, 230, 53, 0.1);
+}
+
+.mobile-tab::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: #a3e635;
+  transition: all 0.3s ease;
+  transform: translateX(-50%);
+}
+
+.mobile-tab:hover::after {
+  width: 80%;
+}
+
+.mobile-tab.active::after {
+  width: 100%;
+}
+
+/* Navegação por breadcrumbs otimizada para mobile */
+.mobile-breadcrumbs {
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-behavior: smooth;
+  padding: 8px 0;
+}
+
+.mobile-breadcrumbs::-webkit-scrollbar {
+  display: none;
+}
+
+.breadcrumb-item {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #9ca3af;
+  transition: color 0.3s ease;
+}
+
+.breadcrumb-item:last-child {
+  color: #a3e635;
+  font-weight: 500;
+}
+
+.breadcrumb-separator {
+  margin: 0 8px;
+  color: #6b7280;
+}
+
+.breadcrumb-item a {
+  color: inherit;
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumb-item a:hover {
+  background: rgba(163, 230, 53, 0.1);
+  color: #a3e635;
+}
+
+/* Otimizações para performance em mobile */
+.mobile-nav,
+.mobile-nav-item,
+.mobile-tab,
+.breadcrumb-item {
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Melhorias para acessibilidade em mobile */
+@media (prefers-reduced-motion: reduce) {
+  .mobile-nav,
+  .mobile-nav-item,
+  .mobile-tab,
+  .breadcrumb-item,
+  .swipe-indicator {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Ajustes para diferentes tamanhos de tela mobile */
+@media (max-width: 480px) {
+  .mobile-nav-item {
+    padding: 16px 12px;
+    font-size: 16px;
+  }
+  
+  .mobile-tab {
+    min-width: 100px;
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+  
+  .breadcrumb-item {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 360px) {
+  .mobile-nav-item {
+    padding: 14px 10px;
+    font-size: 15px;
+  }
+  
+  .mobile-tab {
+    min-width: 80px;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+}
+
+/* Estados de loading para navegação */
+.nav-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(163, 230, 53, 0.2),
+    transparent
+  );
+  animation: loading-shimmer 1.5s infinite;
+}
+
+@keyframes loading-shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}

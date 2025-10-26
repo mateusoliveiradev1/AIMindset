@@ -1,0 +1,283 @@
+/* ===================================
+   MOBILE USABILITY ENHANCEMENTS
+   Melhorias de usabilidade mobile sem alterar visual
+   =================================== */
+
+/* Touch Target Optimization - Áreas de toque mínimo 44px */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  position: relative;
+}
+
+/* Melhor área de toque para botões pequenos */
+.touch-target::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 44px;
+  min-height: 44px;
+  z-index: -1;
+}
+
+/* Touch Feedback - Feedback visual para interações */
+.touch-feedback {
+  transition: transform 0.1s ease, opacity 0.1s ease;
+  -webkit-tap-highlight-color: rgba(59, 130, 246, 0.1);
+}
+
+.touch-feedback:active {
+  transform: scale(0.98);
+  opacity: 0.8;
+}
+
+/* Melhor espaçamento para elementos interativos em mobile */
+@media (max-width: 768px) {
+  .interactive-spacing > * + * {
+    margin-top: 8px;
+  }
+  
+  .interactive-spacing button + button,
+  .interactive-spacing a + a,
+  .interactive-spacing .clickable + .clickable {
+    margin-left: 12px;
+  }
+}
+
+/* Otimização de formulários para mobile */
+.mobile-form-field {
+  touch-action: manipulation;
+}
+
+.mobile-form-field input,
+.mobile-form-field textarea,
+.mobile-form-field select {
+  font-size: 16px; /* Previne zoom no iOS */
+  padding: 12px 16px;
+  border-radius: 8px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mobile-form-field input:focus,
+.mobile-form-field textarea:focus,
+.mobile-form-field select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Melhor UX para checkboxes e radios em mobile */
+.mobile-checkbox,
+.mobile-radio {
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* Scroll otimizado para mobile */
+.mobile-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+/* Prevenção de zoom acidental */
+.prevent-zoom {
+  touch-action: manipulation;
+}
+
+/* Melhor área de toque para links pequenos */
+.mobile-link {
+  padding: 8px 4px;
+  margin: -8px -4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.mobile-link:active {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Otimização para gestos de swipe */
+.swipe-container {
+  touch-action: pan-x;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Melhor feedback para botões de ação */
+.action-button {
+  position: relative;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+.action-button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.3s ease, height 0.3s ease;
+}
+
+.action-button:active::after {
+  width: 200px;
+  height: 200px;
+}
+
+/* Otimização para modais em mobile */
+@media (max-width: 768px) {
+  .mobile-modal {
+    margin: 0;
+    max-height: 100vh;
+    border-radius: 16px 16px 0 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .mobile-modal.open {
+    transform: translateY(0);
+  }
+}
+
+/* Melhor espaçamento para navegação mobile */
+.mobile-nav {
+  padding: 12px 16px;
+}
+
+.mobile-nav-item {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+  touch-action: manipulation;
+}
+
+.mobile-nav-item:active {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Otimização para tabelas em mobile */
+@media (max-width: 768px) {
+  .mobile-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .mobile-table-row {
+    display: block;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 16px;
+  }
+  
+  .mobile-table-cell {
+    display: block;
+    padding: 4px 0;
+  }
+}
+
+/* Performance otimizada para animações */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Melhor contraste para acessibilidade */
+.high-contrast {
+  color: #1f2937;
+  background-color: #ffffff;
+}
+
+.high-contrast-inverse {
+  color: #ffffff;
+  background-color: #1f2937;
+}
+
+/* Otimização para loading states */
+.mobile-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+  padding: 20px;
+}
+
+.mobile-loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Melhor UX para dropdowns em mobile */
+@media (max-width: 768px) {
+  .mobile-dropdown {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+    max-height: 70vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Otimização para cards em mobile */
+.mobile-card {
+  touch-action: manipulation;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mobile-card:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Melhor UX para paginação em mobile */
+@media (max-width: 768px) {
+  .mobile-pagination {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+  }
+  
+  .mobile-pagination-item {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    touch-action: manipulation;
+  }
+}

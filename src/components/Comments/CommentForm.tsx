@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Send, Loader2 } from 'lucide-react';
+import { useMobileUsability } from '../../hooks/useMobileUsability';
 import type { CommentFormData } from '../../hooks/useComments';
 
 interface CommentFormProps {
@@ -13,6 +14,8 @@ export const CommentForm: React.FC<CommentFormProps> = ({ onSubmit, submitting }
     content: ''
   });
   const [errors, setErrors] = useState<Partial<CommentFormData>>({});
+  const { isTouchDevice, addTouchFeedback } = useMobileUsability();
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<CommentFormData> = {};
@@ -53,6 +56,13 @@ export const CommentForm: React.FC<CommentFormProps> = ({ onSubmit, submitting }
     }
   };
 
+  // Adicionar feedback tátil ao botão de submit
+  useEffect(() => {
+    if (isTouchDevice && submitButtonRef.current) {
+      addTouchFeedback(submitButtonRef.current);
+    }
+  }, [isTouchDevice, addTouchFeedback]);
+
   const handleInputChange = (field: keyof CommentFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Limpar erro do campo quando o usuário começar a digitar
@@ -62,14 +72,14 @@ export const CommentForm: React.FC<CommentFormProps> = ({ onSubmit, submitting }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-darker-surface/30 backdrop-blur-sm border border-neon-purple/20 hover:border-neon-purple/40 transition-all duration-300 hover:shadow-lg hover:shadow-neon-purple/10 rounded-lg p-6">
+    <form onSubmit={handleSubmit} className="bg-darker-surface/30 backdrop-blur-sm border border-neon-purple/20 hover:border-neon-purple/40 transition-all duration-300 hover:shadow-lg hover:shadow-neon-purple/10 rounded-lg p-6 mobile-form">
       <h3 className="text-lg font-semibold font-orbitron text-white mb-4 bg-gradient-to-r from-neon-purple to-lime-green bg-clip-text text-transparent">
         Deixe seu comentário
       </h3>
       
       <div className="space-y-4">
         {/* Campo Nome */}
-        <div>
+        <div className="mobile-form-field">
           <label htmlFor="user_name" className="block text-sm font-medium text-futuristic-gray mb-1">
             Nome *
           </label>
@@ -79,11 +89,12 @@ export const CommentForm: React.FC<CommentFormProps> = ({ onSubmit, submitting }
             value={formData.user_name}
             onChange={(e) => handleInputChange('user_name', e.target.value)}
             disabled={submitting}
+            autoComplete="name"
             className={`
               w-full px-3 py-2 border rounded-md shadow-sm text-sm bg-darker-surface/50 text-white placeholder-futuristic-gray/60
               focus:outline-none focus:ring-2 focus:ring-neon-purple focus:border-neon-purple
               disabled:bg-darker-surface/20 disabled:text-futuristic-gray/50 disabled:cursor-not-allowed
-              transition-all duration-300
+              transition-all duration-300 prevent-zoom touch-target
               ${errors.user_name 
                 ? 'border-red-400/50 focus:ring-red-400 focus:border-red-400' 
                 : 'border-neon-purple/30 hover:border-neon-purple/50'
@@ -98,7 +109,7 @@ export const CommentForm: React.FC<CommentFormProps> = ({ onSubmit, submitting }
         </div>
 
         {/* Campo Comentário */}
-        <div>
+        <div className="mobile-form-field">
           <label htmlFor="content" className="block text-sm font-medium text-futuristic-gray mb-1">
             Comentário *
           </label>
@@ -112,7 +123,7 @@ export const CommentForm: React.FC<CommentFormProps> = ({ onSubmit, submitting }
               w-full px-3 py-2 border rounded-md shadow-sm text-sm resize-vertical bg-darker-surface/50 text-white placeholder-futuristic-gray/60
               focus:outline-none focus:ring-2 focus:ring-neon-purple focus:border-neon-purple
               disabled:bg-darker-surface/20 disabled:text-futuristic-gray/50 disabled:cursor-not-allowed
-              transition-all duration-300
+              transition-all duration-300 prevent-zoom touch-target
               ${errors.content 
                 ? 'border-red-400/50 focus:ring-red-400 focus:border-red-400' 
                 : 'border-neon-purple/30 hover:border-neon-purple/50'
@@ -136,11 +147,12 @@ export const CommentForm: React.FC<CommentFormProps> = ({ onSubmit, submitting }
         {/* Botão Submit */}
         <div className="flex justify-end">
           <button
+            ref={submitButtonRef}
             type="submit"
             disabled={submitting || !formData.user_name.trim() || !formData.content.trim()}
             className={`
               flex items-center gap-2 px-6 py-2 rounded-md font-medium text-sm
-              transition-all duration-300 transform
+              transition-all duration-300 transform touch-target touch-feedback action-button
               ${submitting || !formData.user_name.trim() || !formData.content.trim()
                 ? 'bg-darker-surface/50 text-futuristic-gray/50 cursor-not-allowed border border-futuristic-gray/20'
                 : 'bg-gradient-to-r from-neon-purple to-lime-green text-white hover:from-neon-purple/80 hover:to-lime-green/80 hover:scale-105 active:scale-95 hover:shadow-lg hover:shadow-neon-purple/20'

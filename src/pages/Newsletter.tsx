@@ -7,6 +7,7 @@ import { sanitizeName, sanitizeEmail, validators, RateLimiter } from '../utils/s
 import { useNewsletter } from '../hooks/useNewsletter';
 import { useSEO } from '../hooks/useSEO';
 import SEOManager from '../components/SEO/SEOManager';
+import { useMobileUsability } from '../hooks/useMobileUsability';
 
 const Newsletter: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -16,6 +17,9 @@ const Newsletter: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [rateLimitError, setRateLimitError] = useState<string>('');
   const [focusedField, setFocusedField] = useState<string>('');
+
+  // Mobile usability hook
+  const { isTouchDevice, addTouchFeedback } = useMobileUsability();
 
   // Hook para dados reais da newsletter
   const { stats, loading: statsLoading, error: statsError, subscribe } = useNewsletter();
@@ -50,6 +54,14 @@ const Newsletter: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Add touch feedback for form submission
+    if (isTouchDevice) {
+      const submitButton = e.currentTarget.querySelector('button[type="submit"]') as HTMLElement;
+      if (submitButton) {
+        addTouchFeedback(submitButton, e as any);
+      }
+    }
     
     if (!validateForm()) {
       return;
@@ -201,7 +213,7 @@ const Newsletter: React.FC = () => {
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6 mobile-form">
                 {rateLimitError && (
                   <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-lg animate-shake">
                     <p className="text-red-400 text-sm font-medium text-center">
@@ -212,7 +224,7 @@ const Newsletter: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Name Field */}
-                  <div className="space-y-2">
+                  <div className="space-y-2 mobile-form-field">
                     <label className="block text-sm font-medium text-futuristic-gray">
                       Nome Completo
                     </label>
@@ -223,7 +235,8 @@ const Newsletter: React.FC = () => {
                         onChange={(e) => setName(e.target.value)}
                         onFocus={() => setFocusedField('name')}
                         onBlur={() => setFocusedField('')}
-                        className={`w-full px-4 py-4 bg-darker-surface border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all ${
+                        autoComplete="name"
+                        className={`w-full px-4 py-4 bg-darker-surface border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all prevent-zoom touch-target ${
                           validationErrors.name 
                             ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
                             : focusedField === 'name'
@@ -243,7 +256,7 @@ const Newsletter: React.FC = () => {
                   </div>
 
                   {/* Email Field */}
-                  <div className="space-y-2">
+                  <div className="space-y-2 mobile-form-field">
                     <label className="block text-sm font-medium text-futuristic-gray">
                       Email
                     </label>
@@ -254,7 +267,8 @@ const Newsletter: React.FC = () => {
                         onChange={(e) => setEmail(e.target.value)}
                         onFocus={() => setFocusedField('email')}
                         onBlur={() => setFocusedField('')}
-                        className={`w-full px-4 py-4 bg-darker-surface border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all ${
+                        autoComplete="email"
+                        className={`w-full px-4 py-4 bg-darker-surface border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all prevent-zoom touch-target ${
                           validationErrors.email 
                             ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
                             : focusedField === 'email'
@@ -277,7 +291,7 @@ const Newsletter: React.FC = () => {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-4 text-lg font-semibold bg-neon-gradient hover:bg-neon-gradient/80 transform hover:scale-105 transition-all duration-300 relative overflow-hidden group"
+                  className="w-full py-4 text-lg font-semibold bg-neon-gradient hover:bg-neon-gradient/80 transform hover:scale-105 transition-all duration-300 relative overflow-hidden group touch-target touch-feedback action-button"
                 >
                   {isLoading ? (
                     <div className="flex items-center justify-center space-x-2">

@@ -1,6 +1,12 @@
 /* Otimização de fontes - carregamento assíncrono com font-display swap */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
+/* Mobile Usability Enhancements */
+@import './styles/mobile-usability.css';
+
+/* Import do arquivo de navegação mobile */
+@import './styles/mobile-navigation.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

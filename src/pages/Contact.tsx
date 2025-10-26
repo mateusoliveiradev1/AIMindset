@@ -7,6 +7,7 @@ import { useContactStats } from '../hooks/useContactStats';
 import { sanitizeName, sanitizeEmail, sanitizeMessage, validators, RateLimiter } from '../utils/security';
 import SEOManager from '../components/SEO/SEOManager';
 import { useSEO } from '../hooks/useSEO';
+import { useMobileUsability } from '../hooks/useMobileUsability';
 
 export const Contact: React.FC = () => {
   const { submitContact, loading } = useContacts();
@@ -18,6 +19,9 @@ export const Contact: React.FC = () => {
     messagesThisWeek,
     loading: statsLoading 
   } = useContactStats();
+
+  // Mobile usability hook
+  const { isTouchDevice, addTouchFeedback } = useMobileUsability();
 
   // SEO para página de contato
   const { getMetadata } = useSEO({ 
@@ -73,6 +77,14 @@ export const Contact: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Add touch feedback for form submission
+    if (isTouchDevice) {
+      const submitButton = e.currentTarget.querySelector('button[type="submit"]') as HTMLElement;
+      if (submitButton) {
+        addTouchFeedback(submitButton, e as any);
+      }
+    }
     
     // Verificar rate limiting
     if (!RateLimiter.canPerformAction('contact_form', 3, 300000)) { // 3 tentativas por 5 minutos
@@ -371,11 +383,14 @@ export const Contact: React.FC = () => {
                     </div>
                   )}
 
-                  <form onSubmit={handleSubmit} className="space-y-6">
+                  // Mobile usability hook
+                  const { isTouchDevice, addTouchFeedback } = useMobileUsability();
+
+                  <form onSubmit={handleSubmit} className="space-y-6 mobile-form">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label htmlFor="name" className="block text-sm font-orbitron font-medium text-white mb-2">
-                          Nome Completo *
+                      <div className="mobile-form-field">
+                        <label htmlFor="name" className="block text-sm font-medium text-futuristic-gray mb-2">
+                          Nome *
                         </label>
                         <input
                           type="text"
@@ -383,22 +398,20 @@ export const Contact: React.FC = () => {
                           name="name"
                           value={formData.name}
                           onChange={handleChange}
-                          required
-                          maxLength={100}
-                          className={`w-full px-4 py-3 bg-primary-dark border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all ${
-                            errors.name 
-                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
-                              : 'border-neon-purple/30 focus:border-lime-green focus:ring-lime-green/20'
+                          autoComplete="name"
+                          className={`w-full px-4 py-3 bg-darker-surface border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green transition-all duration-300 prevent-zoom touch-target ${
+                            errors.name ? 'border-red-500' : 'border-neon-purple/30'
                           }`}
                           placeholder="Seu nome completo"
+                          required
                         />
                         {errors.name && (
-                          <p className="mt-1 text-sm text-red-500">{errors.name}</p>
+                          <p className="mt-1 text-sm text-red-400">{errors.name}</p>
                         )}
                       </div>
 
-                      <div>
-                        <label htmlFor="email" className="block text-sm font-orbitron font-medium text-white mb-2">
+                      <div className="mobile-form-field">
+                        <label htmlFor="email" className="block text-sm font-medium text-futuristic-gray mb-2">
                           Email *
                         </label>
                         <input
@@ -407,23 +420,21 @@ export const Contact: React.FC = () => {
                           name="email"
                           value={formData.email}
                           onChange={handleChange}
-                          required
-                          maxLength={255}
-                          className={`w-full px-4 py-3 bg-primary-dark border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all ${
-                            errors.email 
-                              ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
-                              : 'border-neon-purple/30 focus:border-lime-green focus:ring-lime-green/20'
+                          autoComplete="email"
+                          className={`w-full px-4 py-3 bg-darker-surface border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green transition-all duration-300 prevent-zoom touch-target ${
+                            errors.email ? 'border-red-500' : 'border-neon-purple/30'
                           }`}
                           placeholder="seu@email.com"
+                          required
                         />
                         {errors.email && (
-                          <p className="mt-1 text-sm text-red-500">{errors.email}</p>
+                          <p className="mt-1 text-sm text-red-400">{errors.email}</p>
                         )}
                       </div>
                     </div>
 
-                    <div>
-                      <label htmlFor="subject" className="block text-sm font-orbitron font-medium text-white mb-2">
+                    <div className="mobile-form-field">
+                      <label htmlFor="subject" className="block text-sm font-medium text-futuristic-gray mb-2">
                         Assunto *
                       </label>
                       <select
@@ -431,27 +442,25 @@ export const Contact: React.FC = () => {
                         name="subject"
                         value={formData.subject}
                         onChange={handleChange}
-                        required
-                        className={`w-full px-4 py-3 bg-primary-dark border rounded-lg text-white focus:outline-none focus:ring-2 transition-all ${
-                          errors.subject 
-                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
-                            : 'border-neon-purple/30 focus:border-lime-green focus:ring-lime-green/20'
+                        className={`w-full px-4 py-3 bg-darker-surface border rounded-lg text-white focus:outline-none focus:border-lime-green transition-all duration-300 touch-target ${
+                          errors.subject ? 'border-red-500' : 'border-neon-purple/30'
                         }`}
+                        required
                       >
                         <option value="">Selecione um assunto</option>
-                        <option value="Parceria">Parceria & Colaboração</option>
-                        <option value="Suporte">Suporte Técnico</option>
-                        <option value="Feedback">Feedback & Sugestões</option>
-                        <option value="Privacidade">Questões de Privacidade</option>
-                        <option value="Geral">Assunto Geral</option>
+                        <option value="Parcerias & Colaborações">Parcerias & Colaborações</option>
+                        <option value="Suporte Técnico">Suporte Técnico</option>
+                        <option value="Feedback & Sugestões">Feedback & Sugestões</option>
+                        <option value="Questões de Privacidade">Questões de Privacidade</option>
+                        <option value="Outros">Outros</option>
                       </select>
                       {errors.subject && (
-                        <p className="mt-1 text-sm text-red-500">{errors.subject}</p>
+                        <p className="mt-1 text-sm text-red-400">{errors.subject}</p>
                       )}
                     </div>
 
-                    <div>
-                      <label htmlFor="message" className="block text-sm font-orbitron font-medium text-white mb-2">
+                    <div className="mobile-form-field">
+                      <label htmlFor="message" className="block text-sm font-medium text-futuristic-gray mb-2">
                         Mensagem *
                       </label>
                       <textarea
@@ -459,44 +468,43 @@ export const Contact: React.FC = () => {
                         name="message"
                         value={formData.message}
                         onChange={handleChange}
-                        required
                         rows={6}
-                        maxLength={5000}
-                        className={`w-full px-4 py-3 bg-primary-dark border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 transition-all resize-none ${
-                          errors.message 
-                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' 
-                            : 'border-neon-purple/30 focus:border-lime-green focus:ring-lime-green/20'
+                        className={`w-full px-4 py-3 bg-darker-surface border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green transition-all duration-300 resize-none prevent-zoom touch-target ${
+                          errors.message ? 'border-red-500' : 'border-neon-purple/30'
                         }`}
                         placeholder="Descreva sua mensagem detalhadamente..."
+                        required
                       />
                       <div className="flex justify-between items-center mt-1">
-                        {errors.message ? (
-                          <p className="text-sm text-red-500">{errors.message}</p>
-                        ) : (
-                          <p className="text-sm text-futuristic-gray">
-                            Mínimo 10 caracteres
-                          </p>
+                        {errors.message && (
+                          <p className="text-sm text-red-400">{errors.message}</p>
                         )}
-                        <p className="text-sm text-futuristic-gray">
+                        <p className="text-xs text-futuristic-gray ml-auto">
                           {formData.message.length}/5000
                         </p>
                       </div>
                     </div>
 
+                    {rateLimitError && (
+                      <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+                        <p className="text-red-400 text-sm">{rateLimitError}</p>
+                      </div>
+                    )}
+
                     <Button
                       type="submit"
                       disabled={loading}
-                      className="w-full bg-neon-gradient hover:bg-neon-gradient-hover text-white font-orbitron font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                      className="w-full bg-gradient-to-r from-lime-green to-electric-blue hover:from-lime-green/80 hover:to-electric-blue/80 text-dark-surface font-semibold py-3 px-6 rounded-lg transition-all duration-300 hover-lift touch-target touch-feedback action-button"
                     >
                       {loading ? (
-                        <div className="flex items-center justify-center space-x-2">
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span>Enviando...</span>
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-dark-surface mr-2"></div>
+                          Enviando...
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center space-x-2">
-                          <Send className="w-5 h-5" />
-                          <span>Enviar Mensagem</span>
+                        <div className="flex items-center justify-center">
+                          <Send className="mr-2 h-5 w-5" />
+                          Enviar Mensagem
                         </div>
                       )}
                     </Button>
