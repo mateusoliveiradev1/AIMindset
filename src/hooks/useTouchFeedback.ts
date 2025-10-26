@@ -135,7 +135,6 @@ export const useTouchFeedback = (options: TouchFeedbackOptions = {}) => {
 
   // Props para aplicar ao elemento
   const touchFeedbackProps = {
-    ref: elementRef,
     onTouchStart: handleTouchStart,
     onMouseDown: handleMouseDown,
     className: `touch-feedback ${type ? `btn-${type}` : ''} ${disabled ? 'disabled' : ''}`,

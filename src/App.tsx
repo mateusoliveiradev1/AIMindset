@@ -15,17 +15,20 @@ import { AccessibilityManager } from './components/AccessibilityManager';
 import { CriticalCSS } from './components/Performance/CriticalCSS';
 import { WebVitalsOptimizer } from './components/Performance/WebVitalsOptimizer';
 import { ResourceOptimizer } from './components/Performance/ResourceOptimizer';
+import { useServiceWorker } from './hooks/useServiceWorker';
+import { ProgressiveEnhancementProvider } from './components/ProgressiveEnhancement/ProgressiveEnhancement';
+import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
+import { Card } from './components/UI/Card';
+import { Button } from './components/UI/Button';
 
-// Lazy loading de páginas para code splitting
-const Home = lazy(() => import('./pages/Home'));
+// Lazy loading otimizado com chunks nomeados
+import LazyComponents from './components/LazyComponents';
+
+// Componentes que não estão no LazyComponents ainda
 const Category = lazy(() => import('./pages/Category'));
 const Categories = lazy(() => import('./pages/Categories'));
 const Article = lazy(() => import('./pages/Article'));
-const Articles = lazy(() => import('./pages/Articles'));
-const AllArticles = lazy(() => import('./pages/AllArticles'));
-const Contact = lazy(() => import('./pages/Contact'));
 const Newsletter = lazy(() => import('./pages/Newsletter'));
-const About = lazy(() => import('./pages/About'));
 const Privacy = lazy(() => import('./pages/Privacy'));
 const Admin = lazy(() => import('./pages/Admin').then(module => ({ default: module.Admin })));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
@@ -44,12 +47,34 @@ const PageLoader = () => (
 function AppContent() {
   // Hook para scroll automático ao topo em mudanças de rota
   useScrollToTop();
+  
+  // Hook para Service Worker
+  const { register, isSupported, isRegistered, hasUpdate, skipWaiting } = useServiceWorker();
 
   // Initialize security headers and protections
   useEffect(() => {
     SecurityHeaders.initialize();
     initializeSecurityConfig();
   }, []);
+
+  // Registrar Service Worker
+  useEffect(() => {
+    if (isSupported && !isRegistered) {
+      register().catch(console.error);
+    }
+  }, [isSupported, isRegistered, register]);
+
+  // Mostrar notificação de atualização disponível
+  useEffect(() => {
+    if (hasUpdate) {
+      const shouldUpdate = window.confirm(
+        'Uma nova versão está disponível. Deseja atualizar agora?'
+      );
+      if (shouldUpdate) {
+        skipWaiting();
+      }
+    }
+  }, [hasUpdate, skipWaiting]);
 
   return (
     <>
@@ -60,20 +85,24 @@ function AppContent() {
       <ResourceOptimizer>
         <Suspense fallback={<PageLoader />}>
           <Routes>
-          {/* Public routes with Layout */}
-          <Route path="/" element={<Layout><Home /></Layout>} />
+          {/* Public routes with Layout - usando componentes lazy otimizados */}
+          <Route path="/" element={<Layout><LazyComponents.Home /></Layout>} />
           <Route path="/categoria" element={<Layout><Categories /></Layout>} />
           <Route path="/categoria/:slug" element={<Layout><Category /></Layout>} />
           <Route path="/artigo/:slug" element={<Layout><Article /></Layout>} />
-          <Route path="/artigos" element={<Layout><AllArticles /></Layout>} />
-          <Route path="/contato" element={<Layout><Contact /></Layout>} />
+          <Route path="/artigos" element={<Layout><LazyComponents.AllArticles /></Layout>} />
+          <Route path="/contato" element={<Layout><LazyComponents.Contact /></Layout>} />
           <Route path="/newsletter" element={<Layout><Newsletter /></Layout>} />
-          <Route path="/sobre" element={<Layout><About /></Layout>} />
+          <Route path="/sobre" element={<Layout><LazyComponents.About /></Layout>} />
           <Route path="/politica-privacidade" element={<Layout><Privacy /></Layout>} />
           
           {/* Admin routes without Layout */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          
+          {/* Performance Test routes - usando componentes lazy otimizados */}
+          <Route path="/performance-test" element={<Layout><LazyComponents.PerformanceTest /></Layout>} />
+          <Route path="/scalability-test" element={<Layout><LazyComponents.ScalabilityTest /></Layout>} />
         </Routes>
       </Suspense>
       
@@ -86,49 +115,70 @@ function AppContent() {
 
 function App() {
   return (
-    <CriticalCSS>
-      <HelmetProvider>
-        <AuthProvider>
-          <ToastProvider>
-            <PerformanceManager
-              criticalResources={[]}
-              prefetchResources={[
-                '/artigos',
-                '/categorias',
-                '/sobre',
-                '/contato'
-              ]}
-              enableImageOptimization={true}
-              enableLazyLoading={true}
-              cacheStrategy="moderate"
-            >
-              <AccessibilityManager
-                enableAutoAria={true}
-                enableKeyboardNavigation={true}
-                enableScreenReaderOptimizations={true}
-                enableFocusManagement={true}
-                announcePageChanges={true}
-              >
-                <Router>
-                  <AppContent />
-                </Router>
-              </AccessibilityManager>
-            </PerformanceManager>
-          </ToastProvider>
-          <Toaster 
-            theme="dark"
-            position="bottom-right"
-            toastOptions={{
-              style: {
-                background: '#1A1A1A',
-                color: '#B0B0B0',
-                border: '1px solid rgba(106, 13, 173, 0.3)',
-              },
-            }}
-          />
-        </AuthProvider>
-      </HelmetProvider>
-    </CriticalCSS>
+    <ErrorBoundary
+      fallback={
+        <div className="min-h-screen bg-dark-surface flex items-center justify-center p-4">
+          <Card className="max-w-md w-full text-center">
+            <div className="text-4xl mb-4">🚨</div>
+            <h2 className="text-xl font-bold text-white mb-4">Erro na Aplicação</h2>
+            <p className="text-futuristic-gray mb-6">
+              Algo deu errado. Tente recarregar a página.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <Button onClick={() => window.location.reload()} className="bg-gradient-to-r from-lime-green to-neon-purple">
+                🔄 Recarregar
+              </Button>
+            </div>
+          </Card>
+        </div>
+      }
+    >
+      <ProgressiveEnhancementProvider>
+        <CriticalCSS>
+          <HelmetProvider>
+            <AuthProvider>
+              <ToastProvider>
+                <PerformanceManager
+                  criticalResources={[]}
+                  prefetchResources={[
+                    '/artigos',
+                    '/categorias',
+                    '/sobre',
+                    '/contato'
+                  ]}
+                  enableImageOptimization={true}
+                  enableLazyLoading={true}
+                  cacheStrategy="moderate"
+                >
+                  <AccessibilityManager
+                    enableAutoAria={true}
+                    enableKeyboardNavigation={true}
+                    enableScreenReaderOptimizations={true}
+                    enableFocusManagement={true}
+                    announcePageChanges={true}
+                  >
+                    <Router>
+                      <AppContent />
+                    </Router>
+                  </AccessibilityManager>
+                </PerformanceManager>
+              </ToastProvider>
+              <Toaster 
+                theme="dark"
+                position="bottom-right"
+                toastOptions={{
+                  style: {
+                    background: '#1A1A1A',
+                    color: '#B0B0B0',
+                    border: '1px solid rgba(106, 13, 173, 0.3)',
+                  },
+                }}
+              />
+            </AuthProvider>
+          </HelmetProvider>
+        </CriticalCSS>
+      </ProgressiveEnhancementProvider>
+    </ErrorBoundary>
   );
 }
 

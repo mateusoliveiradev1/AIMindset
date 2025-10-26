@@ -6,16 +6,17 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   children: React.ReactNode;
+  ref?: React.Ref<HTMLButtonElement>;
 }
 
-const Button: React.FC<ButtonProps> = ({
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
   variant = 'primary',
   size = 'md',
   className,
   children,
   disabled,
   ...props
-}) => {
+}, ref) => {
   // Touch feedback hook
   const { touchFeedbackProps } = useTouchFeedback({
     type: variant === 'primary' ? 'primary' : variant === 'secondary' ? 'secondary' : 'primary',
@@ -39,6 +40,7 @@ const Button: React.FC<ButtonProps> = ({
   
   return (
     <button
+      ref={ref}
       {...touchFeedbackProps}
       className={cn(
         baseClasses,
@@ -53,7 +55,7 @@ const Button: React.FC<ButtonProps> = ({
       {children}
     </button>
   );
-};
+});
 
 export default Button;
 export { Button };

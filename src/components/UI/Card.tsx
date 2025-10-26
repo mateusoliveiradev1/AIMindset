@@ -8,15 +8,16 @@ interface CardProps {
   variant?: 'default' | 'glass' | 'neon';
   hover?: boolean;
   onClick?: () => void;
+  ref?: React.Ref<HTMLDivElement>;
 }
 
-const Card: React.FC<CardProps> = ({
+const Card = React.forwardRef<HTMLDivElement, CardProps>(({
   children,
   className,
   variant = 'default',
   hover = true,
   onClick,
-}) => {
+}, ref) => {
   // Touch feedback apenas para cards clicáveis
   const { touchFeedbackProps } = useTouchFeedback({
     type: 'card',
@@ -35,6 +36,7 @@ const Card: React.FC<CardProps> = ({
   
   return (
     <div
+      ref={ref}
       {...(onClick ? touchFeedbackProps : {})}
       className={cn(
         baseClasses,
@@ -49,7 +51,7 @@ const Card: React.FC<CardProps> = ({
       {children}
     </div>
   );
-};
+});
 
 export default Card;
 export { Card };

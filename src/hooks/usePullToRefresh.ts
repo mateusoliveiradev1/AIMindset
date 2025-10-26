@@ -7,12 +7,22 @@ interface UsePullToRefreshOptions {
   enabled?: boolean;
 }
 
+export interface PullToRefreshProps {
+  containerRef: React.RefObject<HTMLDivElement>;
+  isRefreshing: boolean;
+  isPulling: boolean;
+  pullDistance: number;
+  pullToRefreshStyle: React.CSSProperties;
+  refreshIndicatorStyle: React.CSSProperties;
+  isThresholdReached: boolean;
+}
+
 export const usePullToRefresh = ({
   onRefresh,
   threshold = 80,
   resistance = 2.5,
   enabled = true
-}: UsePullToRefreshOptions) => {
+}: UsePullToRefreshOptions): PullToRefreshProps => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [isPulling, setIsPulling] = useState(false);

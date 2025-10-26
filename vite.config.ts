@@ -1,140 +1,119 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import tsconfigPaths from "vite-tsconfig-paths";
-import { traeBadgePlugin } from 'vite-plugin-trae-solo-badge';
+import path from 'path'
+import { visualizer } from 'rollup-plugin-visualizer'
 
-// https://vite.dev/config/
+// https://vitejs.dev/config/
 export default defineConfig({
-  // Configuração para carregar variáveis de ambiente
-  envPrefix: 'VITE_',
-  
-  server: {
-    // Configurações para suportar payloads grandes
-    timeout: 300000, // 5 minutos de timeout
-    maxPayload: 50 * 1024 * 1024, // 50MB de payload máximo
-    headers: {
-      'X-Content-Type-Options': 'nosniff',
-      'X-Frame-Options': 'DENY',
-      'X-XSS-Protection': '1; mode=block',
-      'Referrer-Policy': 'strict-origin-when-cross-origin',
-      'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
-      'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com; media-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
-    }
+  plugins: [
+    react(),
+    // Bundle analyzer para desenvolvimento
+    process.env.ANALYZE && visualizer({
+      filename: 'dist/stats.html',
+      open: true,
+      gzipSize: true,
+      brotliSize: true,
+    })
+  ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
   },
   build: {
-    sourcemap: false,
+    // Otimizações de build para performance
+    target: 'es2020',
     minify: 'terser',
     terserOptions: {
       compress: {
         drop_console: true,
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn'],
-        passes: 3,
-        unsafe_arrows: true,
-        unsafe_methods: true,
-        unsafe_proto: true,
-        unsafe_regexp: true
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
       },
-      mangle: {
-        safari10: true,
-        toplevel: true
-      },
-      format: {
-        comments: false
-      }
     },
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          // Vendor chunks - mais granular para melhor cache
-          if (id.includes('node_modules')) {
-            if (id.includes('react') && !id.includes('react-dom') && !id.includes('react-router')) {
-              return 'react-core';
-            }
-            if (id.includes('react-dom')) {
-              return 'react-dom';
-            }
-            if (id.includes('@supabase')) {
-              return 'supabase';
-            }
-            if (id.includes('lucide-react')) {
-              return 'icons';
-            }
-            if (id.includes('react-markdown') || id.includes('remark') || id.includes('rehype')) {
-              return 'markdown';
-            }
-            if (id.includes('react-router')) {
-              return 'router';
-            }
-            if (id.includes('react-helmet')) {
-              return 'helmet';
-            }
-            if (id.includes('framer-motion')) {
-              return 'animations';
-            }
-            // Separar bibliotecas grandes
-            if (id.includes('lodash') || id.includes('date-fns') || id.includes('moment')) {
-              return 'utils';
-            }
-            return 'vendor';
-          }
-          
-          // App chunks por funcionalidade - mais específico
-          if (id.includes('/pages/Admin') || id.includes('/components/Admin/')) {
-            return 'admin';
-          }
-          if (id.includes('/pages/')) {
-            if (id.includes('Article')) {
-              return 'article-pages';
-            }
-            return 'pages';
-          }
-          if (id.includes('/components/Performance/')) {
-            return 'performance';
-          }
-          if (id.includes('/components/UI/')) {
-            return 'ui-components';
-          }
-          if (id.includes('/hooks/')) {
-            return 'hooks';
-          }
-          if (id.includes('/components/')) {
-            return 'components';
-          }
+        // Code splitting manual para chunks otimizados
+        manualChunks: {
+          // Vendor chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['lucide-react', 'sonner', 'react-helmet-async']
         },
-        // Otimizar nomes de chunks para produção
+        // Nomes de chunks mais limpos
         chunkFileNames: (chunkInfo) => {
-          const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').pop() : 'chunk';
-          return `assets/[name]-[hash].js`;
+          const facadeModuleId = chunkInfo.facadeModuleId
+            ? chunkInfo.facadeModuleId.split('/').pop()?.replace('.tsx', '').replace('.ts', '')
+            : 'chunk'
+          return `js/${facadeModuleId}-[hash].js`
         },
-        entryFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]'
+        entryFileNames: 'js/[name]-[hash].js',
+        assetFileNames: (assetInfo) => {
+          const info = assetInfo.name?.split('.') || []
+          const ext = info[info.length - 1]
+          if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext || '')) {
+            return `images/[name]-[hash][extname]`
+          }
+          if (/css/i.test(ext || '')) {
+            return `css/[name]-[hash][extname]`
+          }
+          return `assets/[name]-[hash][extname]`
+        }
+      },
+      // Tree shaking otimizado
+      treeshake: {
+        moduleSideEffects: false,
+        propertyReadSideEffects: false,
+        unknownGlobalSideEffects: false
       }
     },
-    chunkSizeWarningLimit: 800,
-    // Otimizações adicionais
-    target: 'es2020',
+    // Configurações de chunk size
+    chunkSizeWarningLimit: 1000,
+    // Sourcemaps apenas em desenvolvimento
+    sourcemap: process.env.NODE_ENV === 'development',
+    // Otimizações CSS
     cssCodeSplit: true,
-    assetsInlineLimit: 4096
+    cssMinify: true,
+    // Preload modules
+    modulePreload: {
+      polyfill: true
+    }
   },
-  plugins: [
-    react({
-      babel: {
-        plugins: [
-          'react-dev-locator',
-        ],
-      },
-    }),
-    traeBadgePlugin({
-      variant: 'dark',
-      position: 'bottom-right',
-      prodOnly: true,
-      clickable: true,
-      clickUrl: 'https://www.trae.ai/solo?showJoin=1',
-      autoTheme: true,
-      autoThemeTarget: '#root'
-    }), 
-    tsconfigPaths()
-  ],
+  // Otimizações de desenvolvimento
+  server: {
+    port: 5173,
+    host: true,
+    // HMR otimizado
+    hmr: {
+      overlay: true
+    }
+  },
+  // Otimizações de dependências
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      'lucide-react',
+      'sonner'
+    ],
+    exclude: [
+      // Excluir dependências que devem ser carregadas dinamicamente
+    ]
+  },
+  // Configurações de preview
+  preview: {
+    port: 4173,
+    host: true
+  },
+  // Configurações de CSS
+  css: {
+    devSourcemap: true,
+    modules: {
+      localsConvention: 'camelCase'
+    }
+  },
+  // Configurações de worker
+  worker: {
+    format: 'es'
+  }
 })

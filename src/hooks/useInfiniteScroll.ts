@@ -8,13 +8,18 @@ interface UseInfiniteScrollOptions {
   rootMargin?: string;
 }
 
+export interface InfiniteScrollReturn {
+  loadMoreRef: React.RefObject<HTMLDivElement>;
+  isMounted: boolean;
+}
+
 export const useInfiniteScroll = ({
   hasMore,
   isLoading,
   onLoadMore,
   threshold = 0.1,
   rootMargin = '100px'
-}: UseInfiniteScrollOptions) => {
+}: UseInfiniteScrollOptions): InfiniteScrollReturn => {
   const [isMounted, setIsMounted] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadingRef = useRef<HTMLDivElement | null>(null);
@@ -61,7 +66,7 @@ export const useInfiniteScroll = ({
   }, []);
 
   return {
-    loadingRef,
+    loadMoreRef: loadingRef,
     isMounted
   };
 };

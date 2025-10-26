@@ -33,6 +33,16 @@ export interface Article {
   reading_time?: string | number; // Adicionado para compatibilidade com componentes
   read_time?: number | string;
   // views removido - coluna não existe na tabela
+  
+  // Propriedades adicionais para compatibilidade com componentes existentes
+  imageUrl?: string; // Alias para image_url
+  publishedAt?: string; // Alias para created_at
+  updatedAt?: string; // Alias para updated_at
+  readTime?: number; // Alias para read_time
+  views?: number; // Para componentes que usam views
+  likes?: number; // Para componentes que usam likes
+  featured?: boolean; // Para componentes que usam featured
+  author?: string; // Para componentes que usam author como string
 }
 
 export interface NewsletterSubscriber {

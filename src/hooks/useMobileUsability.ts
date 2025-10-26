@@ -13,7 +13,7 @@ export const useMobileUsability = () => {
   }, []);
 
   // Adiciona feedback visual para elementos touch
-  const addTouchFeedback = useCallback((element: HTMLElement) => {
+  const addTouchFeedback = useCallback((element: HTMLElement, event?: TouchEvent | MouseEvent) => {
     if (!isTouchDevice()) return;
 
     element.classList.add('touch-feedback');
@@ -50,6 +50,18 @@ export const useMobileUsability = () => {
       element.classList.remove('touch-active');
       touchStartRef.current = null;
     };
+
+    // Se um evento foi passado, cria o ripple imediatamente
+    if (event && 'touches' in event) {
+      createRippleEffect(element, event.touches[0]);
+    } else if (event && 'clientX' in event) {
+      // Para eventos de mouse, simula um touch
+      const fakeTouch = {
+        clientX: event.clientX,
+        clientY: event.clientY
+      } as Touch;
+      createRippleEffect(element, fakeTouch);
+    }
 
     element.addEventListener('touchstart', handleTouchStart, { passive: true });
     element.addEventListener('touchend', handleTouchEnd, { passive: true });
@@ -214,44 +226,107 @@ export const useMobileUsability = () => {
     const inputs = document.querySelectorAll('input, textarea, select');
     inputs.forEach((input) => {
       const htmlInput = input as HTMLInputElement;
-      if (htmlInput.style.fontSize === '' || parseFloat(htmlInput.style.fontSize) < 16) {
+      
+      // Adiciona classe para prevenir zoom
+      htmlInput.classList.add('prevent-zoom');
+      
+      // Garante que o font-size seja pelo menos 16px para prevenir zoom no iOS
+      const computedStyle = window.getComputedStyle(htmlInput);
+      const fontSize = parseFloat(computedStyle.fontSize);
+      
+      if (fontSize < 16) {
         htmlInput.style.fontSize = '16px';
       }
     });
   }, [isTouchDevice]);
 
-  // Inicializa otimizações mobile
-  useEffect(() => {
+  // Melhora a experiência de scroll
+  const optimizeScrolling = useCallback(() => {
     if (!isTouchDevice()) return;
 
-    // Aplica otimizações iniciais
-    optimizeTouchTargets();
-    optimizeForms();
-    preventAccidentalZoom();
+    // Adiciona momentum scrolling para iOS
+    (document.body.style as any).webkitOverflowScrolling = 'touch';
+    
+    // Otimiza elementos scrolláveis
+    const scrollableElements = document.querySelectorAll('[data-scrollable], .overflow-auto, .overflow-y-auto, .overflow-x-auto');
+    scrollableElements.forEach((element) => {
+      const htmlElement = element as HTMLElement;
+      (htmlElement.style as any).webkitOverflowScrolling = 'touch';
+      htmlElement.style.overscrollBehavior = 'contain';
+    });
+  }, [isTouchDevice]);
 
-    // Observer para novos elementos
-    const observer = new MutationObserver(() => {
+  // Inicializa otimizações mobile
+  useEffect(() => {
+    if (isTouchDevice()) {
       optimizeTouchTargets();
       optimizeForms();
       preventAccidentalZoom();
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [optimizeTouchTargets, optimizeForms, preventAccidentalZoom, isTouchDevice]);
+      optimizeScrolling();
+      
+      // Adiciona classes CSS globais para mobile
+      document.body.classList.add('touch-device');
+      
+      // Adiciona estilos CSS se não existirem
+      if (!document.querySelector('#mobile-usability-styles')) {
+        const style = document.createElement('style');
+        style.id = 'mobile-usability-styles';
+        style.textContent = `
+          .touch-target {
+            min-height: 44px !important;
+            min-width: 44px !important;
+            padding: 8px !important;
+          }
+          
+          .touch-feedback {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+          }
+          
+          .touch-active {
+            transform: scale(0.98);
+            opacity: 0.8;
+          }
+          
+          .mobile-form-field {
+            font-size: 16px !important;
+          }
+          
+          .prevent-zoom {
+            font-size: 16px !important;
+          }
+          
+          .mobile-form {
+            -webkit-tap-highlight-color: transparent;
+          }
+          
+          .touch-device * {
+            -webkit-tap-highlight-color: transparent;
+          }
+          
+          @media (hover: none) and (pointer: coarse) {
+            .hover\\:scale-105:hover {
+              transform: scale(1.02) !important;
+            }
+            
+            .hover\\:shadow-lg:hover {
+              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+            }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }
+  }, [isTouchDevice, optimizeTouchTargets, optimizeForms, preventAccidentalZoom, optimizeScrolling]);
 
   return {
     isTouchDevice: isTouchDevice(),
     addTouchFeedback,
     addSwipeSupport,
-    createRippleEffect,
     optimizeTouchTargets,
-    optimizeForms
+    optimizeForms,
+    preventAccidentalZoom,
+    optimizeScrolling
   };
 };

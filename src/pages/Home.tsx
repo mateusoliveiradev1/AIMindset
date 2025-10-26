@@ -6,7 +6,6 @@ import NewsletterCTA from '../components/Home/NewsletterCTA';
 import SEOManager from '../components/SEO/SEOManager';
 import { useSEO } from '../hooks/useSEO';
 import { useArticles } from '../hooks/useArticles';
-import { OptimizedImage } from '../components/PerformanceManager';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '../components/UI/PullToRefreshIndicator';
 
@@ -27,11 +26,13 @@ const Home: React.FC = () => {
   };
 
   const {
+    containerRef,
     isRefreshing,
     pullDistance,
     isPulling,
-    containerProps,
-    indicatorStyle
+    pullToRefreshStyle,
+    refreshIndicatorStyle,
+    isThresholdReached
   } = usePullToRefresh({ onRefresh: handleRefresh });
 
   // Pré-carregar metadados das categorias para navegação fluida
@@ -44,12 +45,12 @@ const Home: React.FC = () => {
   const metadata = getMetadata();
 
   return (
-    <div {...containerProps}>
+    <div ref={containerRef} style={pullToRefreshStyle}>
       <PullToRefreshIndicator 
         isRefreshing={isRefreshing}
         isPulling={isPulling}
-        pullDistance={pullDistance}
-        style={indicatorStyle}
+        isThresholdReached={isThresholdReached}
+        style={refreshIndicatorStyle}
       />
       <SEOManager metadata={metadata} />
       <Hero />

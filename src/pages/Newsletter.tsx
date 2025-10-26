@@ -83,9 +83,9 @@ const Newsletter: React.FC = () => {
       const sanitizedEmail = sanitizeEmail(email);
 
       // Usar o hook para inscrever
-      const success = await subscribe(sanitizedEmail, sanitizedName);
+      const result = await subscribe(sanitizedEmail);
 
-      if (success) {
+      if (result.success) {
         setIsSubscribed(true);
         toast.success('Inscrição realizada com sucesso! 🎉');
         
@@ -94,8 +94,8 @@ const Newsletter: React.FC = () => {
         setName('');
         setValidationErrors({});
       } else {
-        toast.error('Erro ao realizar inscrição. Tente novamente.');
-      }
+          toast.error(result.error || 'Erro ao realizar inscrição. Tente novamente.');
+        }
     } catch (error) {
       console.error('Erro na inscrição:', error);
       toast.error('Erro interno. Tente novamente mais tarde.');

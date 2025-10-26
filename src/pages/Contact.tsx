@@ -383,9 +383,6 @@ export const Contact: React.FC = () => {
                     </div>
                   )}
 
-                  // Mobile usability hook
-                  const { isTouchDevice, addTouchFeedback } = useMobileUsability();
-
                   <form onSubmit={handleSubmit} className="space-y-6 mobile-form">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="mobile-form-field">

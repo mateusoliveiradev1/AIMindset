@@ -7,9 +7,9 @@ interface CampaignEditorProps {
   isOpen: boolean;
   onClose: () => void;
   templates: CampaignTemplate[];
-  onSendCampaign: (campaign: CampaignDraft) => Promise<boolean>;
-  onSendTestEmail: (email: string, subject: string, content: string) => Promise<boolean>;
-  onCreateTemplate: (template: Omit<CampaignTemplate, 'id' | 'created_at'>) => Promise<boolean>;
+  onSendCampaign: (campaign: CampaignDraft) => Promise<{ success: boolean; data?: any; error?: any }>;
+  onSendTestEmail: (email: string, subject: string, content: string) => Promise<{ success: boolean; data?: any; error?: any }>;
+  onCreateTemplate: (template: Omit<CampaignTemplate, 'id' | 'created_at'>) => Promise<{ success: boolean; data?: any; error?: any }>;
   loading: boolean;
   subscribersCount: number;
 }
@@ -90,8 +90,8 @@ export const CampaignEditor: React.FC<CampaignEditorProps> = ({
       send_immediately: sendImmediately
     };
 
-    const success = await onSendCampaign(campaignData);
-    if (success) {
+    const result = await onSendCampaign(campaignData);
+    if (result.success) {
       onClose();
     }
   };
@@ -125,8 +125,8 @@ export const CampaignEditor: React.FC<CampaignEditorProps> = ({
       preview_text: previewText
     };
 
-    const success = await onCreateTemplate(template);
-    if (success) {
+    const result = await onCreateTemplate(template);
+    if (result.success) {
       setShowTemplateForm(false);
       setTemplateName('');
     }

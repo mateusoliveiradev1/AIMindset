@@ -73,6 +73,9 @@ export interface UseArticlesReturn {
   categories: Category[];
   loading: boolean;
   error: string | null;
+  hasMore: boolean;
+  loadMore: () => Promise<void>;
+  refresh: () => Promise<void>;
   createArticle: (article: Omit<Article, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
   updateArticle: (id: string, article: Partial<Article>) => Promise<boolean>;
   updateArticlePublished: (id: string, published: boolean) => Promise<boolean>; // 🚨 FUNÇÃO DE EMERGÊNCIA
@@ -92,6 +95,8 @@ export const useArticles = (): UseArticlesReturn => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true); // Changed back to true for initial load
   const [error, setError] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
 
   const fetchArticles = useCallback(async () => {
     try {
@@ -715,6 +720,32 @@ export const useArticles = (): UseArticlesReturn => {
     }
   };
 
+  // Load more articles for infinite scroll
+  const loadMore = useCallback(async (): Promise<void> => {
+    if (!hasMore || loading) return;
+    
+    try {
+      setLoading(true);
+      const nextPage = page + 1;
+      
+      // Simulate pagination - in real app, you'd fetch next page from API
+      // For now, just mark as no more data after first load
+      setHasMore(false);
+      setPage(nextPage);
+    } catch (err) {
+      console.error('Error loading more articles:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [hasMore, loading, page]);
+
+  // Refresh function alias
+  const refresh = useCallback(async (): Promise<void> => {
+    setPage(1);
+    setHasMore(true);
+    await refreshArticles();
+  }, [refreshArticles]);
+
   // Initialize data on mount
   useEffect(() => {
     refreshArticles();
@@ -725,6 +756,9 @@ export const useArticles = (): UseArticlesReturn => {
     categories,
     loading,
     error,
+    hasMore,
+    loadMore,
+    refresh,
     createArticle,
     updateArticle,
     updateArticlePublished, // 🚨 FUNÇÃO DE EMERGÊNCIA PARA PUBLISHED
