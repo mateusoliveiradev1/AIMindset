@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase, supabaseServiceClient } from '../lib/supabase';
 import { supabaseAdmin } from '../lib/supabase-admin';
 import type { Article, Category } from '../lib/supabase';
+import { supabaseWithRetry } from '../utils/supabaseRetry';
 
 export type { Article, Category };
 
@@ -94,46 +95,20 @@ export const useArticles = (): UseArticlesReturn => {
 
   const fetchArticles = useCallback(async () => {
     try {
+      setLoading(true);
       setError(null);
-      console.log('🔄 [useArticles] Buscando artigos do Supabase...');
+      console.log('🚀 [useArticles] Iniciando busca de artigos...');
 
       // Verificar se o Supabase está configurado
       if (!supabase) {
         throw new Error('Supabase não está configurado');
       }
 
-      // Tentar primeiro com cliente normal, depois com admin se necessário
-      let data, fetchError;
-      
-      try {
-        console.log('📡 [useArticles] Fazendo query para artigos...');
-        const result = await supabase
-          .from('articles')
-          .select(`
-            *,
-            category:categories (
-              id,
-              name,
-              slug,
-              description
-            )
-          `)
-          .order('created_at', { ascending: false });
-
-        console.log('📊 [useArticles] Resultado da query:', result);
-        data = result.data;
-        fetchError = result.error;
-      } catch (queryError) {
-        console.error('❌ [useArticles] Erro na query:', queryError);
-        fetchError = queryError;
-      }
-
-      // Se falhou com cliente normal, tentar com admin
-      if (fetchError || !data) {
-        console.warn('⚠️ [useArticles] Tentando com supabaseAdmin...');
-        
-        try {
-          const adminResult = await supabaseAdmin
+      // Função para buscar artigos com retry
+      const fetchWithRetry = async () => {
+        // Tentar primeiro com cliente normal
+        const normalResult = await supabaseWithRetry(
+          () => supabase
             .from('articles')
             .select(`
               *,
@@ -144,16 +119,39 @@ export const useArticles = (): UseArticlesReturn => {
                 description
               )
             `)
-            .order('created_at', { ascending: false });
-          
-          data = adminResult.data;
-          fetchError = adminResult.error;
-          console.log('📊 [useArticles] Resultado com admin:', { data: data?.length, error: fetchError });
-        } catch (adminError) {
-          console.error('❌ [useArticles] Erro com admin:', adminError);
-          fetchError = adminError;
+            .order('created_at', { ascending: false }),
+          'Fetch Articles (Normal Client)'
+        );
+
+        if (normalResult.success && normalResult.data) {
+          return { data: normalResult.data, error: null };
         }
-      }
+
+        // Se falhou com cliente normal, tentar com admin
+        console.warn('⚠️ [useArticles] Tentando com supabaseAdmin...');
+        const adminResult = await supabaseWithRetry(
+          () => supabaseAdmin
+            .from('articles')
+            .select(`
+              *,
+              category:categories (
+                id,
+                name,
+                slug,
+                description
+              )
+            `)
+            .order('created_at', { ascending: false }),
+          'Fetch Articles (Admin Client)'
+        );
+
+        return { 
+          data: adminResult.data, 
+          error: adminResult.error || normalResult.error 
+        };
+      };
+
+      const { data, error: fetchError } = await fetchWithRetry();
 
       // Se ainda não há dados, usar dados mock como fallback
       if (fetchError || !data || data.length === 0) {
@@ -178,6 +176,8 @@ export const useArticles = (): UseArticlesReturn => {
       } catch (mockError) {
         console.error('❌ Erro ao carregar dados mock:', mockError);
       }
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -185,32 +185,38 @@ export const useArticles = (): UseArticlesReturn => {
     try {
       console.log('🔄 [useArticles] Buscando categorias do Supabase...');
       
-      // Tentar primeiro com cliente normal, depois com admin se necessário
-      let data, fetchError;
-      
-      try {
-        console.log('📡 [useArticles] Fazendo query para categorias...');
-        const result = await supabase
-          .from('categories')
-          .select('*')
-          .order('name', { ascending: true });
-        
-        console.log('📊 [useArticles] Resultado da query categorias:', result);
-        data = result.data;
-        fetchError = result.error;
-      } catch (networkError) {
-        console.warn('⚠️ Erro de rede com cliente normal para categories, tentando com admin...', networkError);
-        
-        // Fallback para cliente admin
-        const adminResult = await supabaseAdmin
-          .from('categories')
-          .select('*')
-          .order('name', { ascending: true });
-        
-        console.log('📊 [useArticles] Resultado com admin categorias:', { data: adminResult.data?.length, error: adminResult.error });
-        data = adminResult.data;
-        fetchError = adminResult.error;
-      }
+      // Função para buscar categorias com retry
+      const fetchWithRetry = async () => {
+        // Tentar primeiro com cliente normal
+        const normalResult = await supabaseWithRetry(
+          () => supabase
+            .from('categories')
+            .select('*')
+            .order('name', { ascending: true }),
+          'Fetch Categories (Normal Client)'
+        );
+
+        if (normalResult.success && normalResult.data) {
+          return { data: normalResult.data, error: null };
+        }
+
+        // Se falhou com cliente normal, tentar com admin
+        console.warn('⚠️ [useArticles] Tentando categorias com supabaseAdmin...');
+        const adminResult = await supabaseWithRetry(
+          () => supabaseAdmin
+            .from('categories')
+            .select('*')
+            .order('name', { ascending: true }),
+          'Fetch Categories (Admin Client)'
+        );
+
+        return { 
+          data: adminResult.data, 
+          error: adminResult.error || normalResult.error 
+        };
+      };
+
+      const { data, error: fetchError } = await fetchWithRetry();
 
       if (fetchError) {
         console.error('❌ Error fetching categories:', fetchError);

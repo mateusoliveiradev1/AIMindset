@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase, supabaseServiceClient } from '../lib/supabase';
 import { toast } from 'sonner';
+import { supabaseWithRetry } from '../utils/supabaseRetry';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -199,24 +200,32 @@ export const useNewsletter = () => {
       // Always use service client for admin operations
       const client = supabaseServiceClient;
       
-      let query = client.from('newsletter_subscribers').select('*', { count: 'exact' });
+      // Função para buscar assinantes com retry
+      const fetchWithRetry = async () => {
+        let query = client.from('newsletter_subscribers').select('*', { count: 'exact' });
 
-      // Apply search filter
-      if (searchTerm) {
-        query = query.or(`email.ilike.%${searchTerm}%,name.ilike.%${searchTerm}%`);
-      }
+        // Apply search filter
+        if (searchTerm) {
+          query = query.or(`email.ilike.%${searchTerm}%,name.ilike.%${searchTerm}%`);
+        }
 
-      // Apply status filter
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
-      }
+        // Apply status filter
+        if (statusFilter !== 'all') {
+          query = query.eq('status', statusFilter);
+        }
 
-      // Apply pagination
-      const from = (page - 1) * ITEMS_PER_PAGE;
-      const to = from + ITEMS_PER_PAGE - 1;
-      query = query.range(from, to).order('subscribed_at', { ascending: false });
+        // Apply pagination
+        const from = (page - 1) * ITEMS_PER_PAGE;
+        const to = from + ITEMS_PER_PAGE - 1;
+        query = query.range(from, to).order('subscribed_at', { ascending: false });
 
-      const result = await query;
+        return query;
+      };
+
+      const result = await supabaseWithRetry(
+        fetchWithRetry,
+        `Fetch Subscribers (${requestId})`
+      );
 
       if (result.error) {
         throw result.error;
@@ -261,11 +270,14 @@ export const useNewsletter = () => {
       const from = (page - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
 
-      const result = await client
-        .from('newsletter_campaigns')
-        .select('*', { count: 'exact' })
-        .range(from, to)
-        .order('created_at', { ascending: false });
+      const result = await supabaseWithRetry(
+        () => client
+          .from('newsletter_campaigns')
+          .select('*', { count: 'exact' })
+          .range(from, to)
+          .order('created_at', { ascending: false }),
+        `Fetch Campaigns (${requestId})`
+      );
 
       if (result.error) {
         throw result.error;

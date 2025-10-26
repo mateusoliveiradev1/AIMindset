@@ -119,10 +119,11 @@ export const useTableOfContents = (
         const level = parseInt(element.tagName.charAt(1));
         const text = element.textContent || '';
         
-        // Create or use existing ID
+        // Create or use existing ID - usar o mesmo padrão do ReactMarkdown
         let id = element.id;
         if (!id) {
-          id = `heading-${index}-${text.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+          const tagName = element.tagName.toLowerCase();
+          id = `heading-${tagName}-${text.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
           element.id = id;
         }
 
@@ -296,16 +297,27 @@ export const useTableOfContents = (
   }, [toc, throttledSetActiveId]);
 
   const scrollToHeading = useCallback((id: string) => {
+    console.log('🎯 [TOC DEBUG] Tentando navegar para:', id);
     const element = document.getElementById(id);
     if (element) {
-      const headerOffset = 100; // Offset for fixed header
-      const elementPosition = element.offsetTop;
+      console.log('✅ [TOC DEBUG] Elemento encontrado:', element);
+      const headerOffset = 100;
+      const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
       const offsetPosition = elementPosition - headerOffset;
+
+      console.log('📍 [TOC DEBUG] Posições:', {
+        elementPosition,
+        headerOffset,
+        offsetPosition,
+        currentScroll: window.pageYOffset
+      });
 
       window.scrollTo({
         top: offsetPosition,
         behavior: 'smooth'
       });
+    } else {
+      console.error('❌ [TOC DEBUG] Elemento não encontrado com ID:', id);
     }
   }, []);
 

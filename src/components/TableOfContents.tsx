@@ -13,15 +13,19 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [isAtComments, setIsAtComments] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
   const [screenSize, setScreenSize] = useState<'small' | 'medium' | 'large'>('medium');
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // DEBUG: Log quando o componente é renderizado
-  console.log('🎯 [TOC DEBUG] TableOfContents renderizado com props:', { articleSlug, className });
+  const modalRef = useRef<HTMLDivElement>(null);
 
   // Hook deve ser chamado no topo do componente
-  const { toc, activeId } = useTableOfContents('#article-content', [articleSlug]);
+  const { toc, activeId, scrollToHeading } = useTableOfContents('#article-content', [articleSlug]);
+
+  // DEBUG: Log quando o componente é renderizado
+  console.log('🎯 [TOC DEBUG] TableOfContents renderizado com props:', { className, articleSlug });
+  console.log('🎯 [TOC DEBUG] TOC items:', toc);
+  console.log('🎯 [TOC DEBUG] Active ID:', activeId);
 
   // DEBUG: Log do estado do TOC
   console.log('📋 [TOC DEBUG] Estado do TOC:', { 
@@ -50,91 +54,146 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
-  // Controlar visibilidade baseada no scroll
+  // Detectar scroll para mostrar/esconder o botão e detectar seção de comentários
   useEffect(() => {
     const handleScroll = () => {
-      const scrollY = window.scrollY;
-      const shouldShow = scrollY > 200;
-      
-      if (shouldShow !== isVisible) {
-        setIsVisible(shouldShow);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
       }
-    };
 
-    // Mostrar imediatamente se há conteúdo
-    if (toc && toc.length > 0) {
-      setIsVisible(true);
-    }
+      scrollTimeoutRef.current = setTimeout(() => {
+        const scrollY = window.scrollY;
+        const windowHeight = window.innerHeight;
+        
+        // DEBUG: Log do scroll
+        console.log('📏 [TOC DEBUG] Scroll:', { scrollY, tocLength: toc.length });
+        
+        // Procurar pela seção de comentários usando diferentes seletores possíveis
+        const commentSelectors = [
+          '[data-testid="comment-section"]',
+          '.comment-section',
+          '#comments',
+          '[class*="CommentSection"]',
+          '[class*="comment"]'
+        ];
+        
+        let commentsElement = null;
+        for (const selector of commentSelectors) {
+          commentsElement = document.querySelector(selector);
+          if (commentsElement) {
+            console.log('💬 [TOC DEBUG] Encontrou seção de comentários com seletor:', selector);
+            break;
+          }
+        }
+        
+        // Se não encontrou pelos seletores, procurar por texto que contenha "comentário"
+        if (!commentsElement) {
+          const allElements = document.querySelectorAll('*');
+          for (const element of allElements) {
+            const text = element.textContent?.toLowerCase() || '';
+            if (text.includes('comentário') && text.includes('deixe') || 
+                text.includes('comentário') && element.tagName === 'H3') {
+              commentsElement = element.closest('div, section, article') || element;
+              console.log('💬 [TOC DEBUG] Encontrou seção de comentários por texto');
+              break;
+            }
+          }
+        }
+        
+        let isAtCommentsSection = false;
+        if (commentsElement) {
+          const rect = commentsElement.getBoundingClientRect();
+          // Considera que chegou na seção de comentários quando ela está visível na viewport
+          isAtCommentsSection = rect.top <= windowHeight * 0.7; // 70% da altura da tela
+          console.log('💬 [TOC DEBUG] Posição dos comentários:', { rectTop: rect.top, threshold: windowHeight * 0.7, isAtCommentsSection });
+        } else {
+          console.log('💬 [TOC DEBUG] Seção de comentários não encontrada');
+        }
+        
+        setIsAtComments(isAtCommentsSection);
+        
+        // TEMPORÁRIO: Mostrar o botão sempre que scroll > 200 e há TOC (ignorar comentários por enquanto)
+        const shouldShow = scrollY > 200 && toc.length > 0;
+        console.log('👁️ [TOC DEBUG] Visibilidade:', { shouldShow, scrollY, tocLength: toc.length, isAtCommentsSection });
+        setIsVisible(shouldShow);
+      }, 10);
+    };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [isVisible, toc]);
-
-  const handleScrollToHeading = useCallback((headingId: string, closeModal = false) => {
-    const element = document.getElementById(headingId);
-    if (element) {
-      const yOffset = -80;
-      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      
-      window.scrollTo({ top: y, behavior: 'smooth' });
-      
-      if (closeModal) {
-        setIsModalOpen(false);
-      }
-    }
-  }, []);
-
-  // Fechar modal ao pressionar ESC
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && isModalOpen) {
-        setIsModalOpen(false);
-      }
-    };
-
-    if (isModalOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [isModalOpen]);
-
-  // Prevenir scroll do body quando modal está aberto
-  useEffect(() => {
-    if (isModalOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
+    handleScroll(); // Check initial state
 
     return () => {
-      document.body.style.overflow = 'unset';
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
     };
-  }, [isModalOpen]);
+  }, [toc.length]);
 
-  // Adicionar listeners de touch para mobile
+  // Função para scroll suave para o heading - usando a função do hook
+  const handleScrollToHeading = useCallback((headingId: string, closeModal: boolean = false) => {
+    console.log('🎯 [TOC COMPONENT DEBUG] Tentando navegar para:', headingId);
+    
+    // Usar a função scrollToHeading do hook que já tem a lógica correta
+    scrollToHeading(headingId);
+
+    if (closeModal) {
+      setIsModalOpen(false);
+    }
+  }, [scrollToHeading]);
+
+  // Melhor gerenciamento do scroll do body - evita deslocamento
   useEffect(() => {
-    if (!isDesktop) {
-      const handleTouchStart = (e: TouchEvent) => {
-        if (isModalOpen) {
-          e.preventDefault();
-        }
-      };
-
-      const handleTouchEnd = (e: TouchEvent) => {
-        if (isModalOpen) {
-          e.preventDefault();
-        }
-      };
-
-      document.addEventListener('touchstart', handleTouchStart, { passive: false });
-      document.addEventListener('touchend', handleTouchEnd, { passive: false });
-
+    if (isModalOpen && !isDesktop) {
+      // Salvar a posição atual do scroll
+      const scrollY = window.scrollY;
+      
+      // Aplicar estilos para prevenir scroll sem deslocar o conteúdo
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+      
       return () => {
-        document.removeEventListener('touchstart', handleTouchStart);
-        document.removeEventListener('touchend', handleTouchEnd);
+        // Restaurar estilos e posição do scroll
+        const bodyTop = document.body.style.top;
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        
+        if (bodyTop) {
+          const scrollY = parseInt(bodyTop || '0') * -1;
+          window.scrollTo(0, scrollY);
+        }
       };
     }
-  }, [isDesktop, isModalOpen, handleScrollToHeading]);
+  }, [isModalOpen, isDesktop]);
+
+  // Fechar modal ao clicar fora ou pressionar ESC
+  useEffect(() => {
+    if (!isModalOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        setIsModalOpen(false);
+      }
+    };
+
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsModalOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscapeKey);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [isModalOpen]);
 
   // Early return se não há itens
   if (!toc || toc.length === 0) {
@@ -146,7 +205,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
 
   return (
     <>
-      {/* Botão flutuante para mobile/tablet */}
+      {/* Botão flutuante para mobile/tablet - Melhorado para touch */}
       {!isDesktop && (
         <button
           onClick={(e) => {
@@ -154,71 +213,117 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
             e.stopPropagation();
             setIsModalOpen(true);
           }}
-          className={`fixed bottom-6 right-6 z-[9999] bg-neon-purple hover:bg-neon-purple/80 text-white p-3 rounded-full shadow-lg transition-all duration-500 hover:scale-110 backdrop-blur-sm ${
+          className={`fixed bottom-6 right-6 z-[9999] bg-neon-purple hover:bg-neon-purple/80 active:bg-neon-purple/90 text-white rounded-full shadow-lg transition-all duration-300 hover:scale-110 active:scale-95 backdrop-blur-sm touch-manipulation ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
           }`}
+          style={{
+            // Área de toque maior para mobile
+            minWidth: '56px',
+            minHeight: '56px',
+            padding: '16px',
+            WebkitTapHighlightColor: 'transparent'
+          }}
           title="Índice do artigo"
           type="button"
+          aria-label="Abrir índice do artigo"
         >
-          <List className="h-5 w-5" />
+          <List className="h-6 w-6" />
         </button>
       )}
 
-      {/* Modal para mobile/tablet */}
+      {/* Modal para mobile/tablet - Posicionamento fixo melhorado */}
       {!isDesktop && isModalOpen && (
         <div 
-          className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) {
-              setIsModalOpen(false);
-            }
+          className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center"
+          style={{
+            // Garantir que o modal não afete o layout da página
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0
           }}
         >
-          {/* Backdrop */}
+          {/* Backdrop com melhor suporte a touch */}
           <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
             onClick={() => setIsModalOpen(false)}
+            style={{ touchAction: 'none' }}
           />
           
-          {/* Modal Content */}
-          <div className="relative bg-darker-surface border border-futuristic-gray/20 rounded-lg w-full max-w-md max-h-[80vh] overflow-hidden shadow-2xl">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-futuristic-gray/20 bg-darker-surface/80 backdrop-blur-sm">
-              <h3 className="font-orbitron font-semibold text-white">Índice</h3>
+          {/* Modal Content - Otimizado para mobile */}
+          <div 
+            ref={modalRef}
+            className="relative bg-darker-surface border border-futuristic-gray/20 w-full max-w-md max-h-[85vh] sm:max-h-[80vh] overflow-hidden shadow-2xl transition-all duration-300 sm:rounded-lg rounded-t-lg sm:m-4 mb-0"
+            style={{
+              // Melhor posicionamento para mobile
+              marginBottom: '0',
+              borderBottomLeftRadius: '0',
+              borderBottomRightRadius: '0'
+            }}
+          >
+            {/* Header com área de toque maior */}
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-futuristic-gray/20 bg-darker-surface/95 backdrop-blur-sm">
+              <h3 className="font-orbitron font-semibold text-white text-lg">Índice</h3>
               <button
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   setIsModalOpen(false);
                 }}
-                className="text-futuristic-gray hover:text-white transition-colors p-1 rounded-md hover:bg-futuristic-gray/10"
+                className="text-futuristic-gray hover:text-white active:text-neon-purple transition-colors rounded-md hover:bg-futuristic-gray/10 active:bg-futuristic-gray/20 touch-manipulation"
+                style={{
+                  minWidth: '44px',
+                  minHeight: '44px',
+                  padding: '12px',
+                  WebkitTapHighlightColor: 'transparent'
+                }}
                 type="button"
+                aria-label="Fechar índice"
               >
-                <X className="h-5 w-5" />
+                <X className="h-6 w-6" />
               </button>
             </div>
             
-            {/* TOC Items */}
-            <div className="p-4 max-h-[60vh] overflow-y-auto">
+            {/* TOC Items com scroll otimizado para touch */}
+            <div 
+              className="p-4 sm:p-6 max-h-[calc(85vh-80px)] sm:max-h-[calc(80vh-80px)] overflow-y-auto"
+              style={{
+                // Melhor scroll em dispositivos touch
+                WebkitOverflowScrolling: 'touch',
+                overscrollBehavior: 'contain'
+              }}
+            >
               {toc && toc.length > 0 ? (
                 <nav>
-                  <ul className="space-y-2">
+                  <ul className="space-y-3">
                     {toc.map((item) => (
                       <li key={item.id}>
                         <button
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
+                            console.log('🎯 [TOC MODAL CLICK DEBUG] Clicou no item:', item.id, item.text);
                             handleScrollToHeading(item.id, true);
                           }}
-                          className={`w-full text-left px-3 py-2 rounded-lg transition-all duration-300 ${
+                          className={`w-full text-left rounded-lg transition-all duration-200 touch-manipulation ${
                             activeId === item.id
-                              ? 'bg-neon-purple/20 text-neon-purple border-l-2 border-neon-purple'
-                              : 'text-futuristic-gray hover:text-white hover:bg-futuristic-gray/10'
+                              ? 'bg-neon-purple/20 text-neon-purple border-l-4 border-neon-purple shadow-sm'
+                              : 'text-futuristic-gray hover:text-white hover:bg-futuristic-gray/10 active:bg-futuristic-gray/20'
                           }`}
-                          style={{ paddingLeft: `${(item.level - 1) * 12 + 12}px` }}
+                          style={{ 
+                            paddingLeft: `${(item.level - 1) * 16 + 16}px`,
+                            paddingRight: '16px',
+                            paddingTop: '12px',
+                            paddingBottom: '12px',
+                            minHeight: '48px', // Área de toque adequada
+                            fontSize: '16px', // Tamanho de fonte adequado para mobile
+                            lineHeight: '1.4',
+                            WebkitTapHighlightColor: 'transparent'
+                          }}
                           type="button"
                           data-heading-id={item.id}
+                          aria-label={`Ir para ${item.text}`}
                         >
                           {item.text}
                         </button>
@@ -227,7 +332,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
                   </ul>
                 </nav>
               ) : (
-                <p className="text-futuristic-gray text-center py-8">
+                <p className="text-futuristic-gray text-center py-8 text-base">
                   Nenhum cabeçalho encontrado no artigo.
                 </p>
               )}
@@ -236,7 +341,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
         </div>
       )}
 
-      {/* Sidebar para desktop */}
+      {/* Sidebar para desktop - Mantido como estava */}
       {isDesktop && (
         <div 
           className={`fixed top-20 left-6 ${
@@ -274,6 +379,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
+                            console.log('🎯 [TOC CLICK DEBUG] Clicou no item:', item.id, item.text);
                             handleScrollToHeading(item.id);
                           }}
                           className={`w-full text-left ${

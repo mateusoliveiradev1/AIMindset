@@ -293,43 +293,58 @@ const Article: React.FC = () => {
                     p: ({ children }) => <p className="mb-4 leading-relaxed">{children}</p>,
                     h1: ({ children, ...props }) => {
                       console.log('🎯 [MARKDOWN DEBUG] H1 renderizado:', children);
+                      const id = `heading-h1-${String(children).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+                      console.log('🎯 [MARKDOWN DEBUG] H1 ID gerado:', id);
                       return (
-                        <h1 {...props} className="text-2xl font-bold mb-4 text-white">
+                        <h1 {...props} id={id} className="text-2xl font-bold mb-4 text-white">
                           {children}
                         </h1>
                       );
                     },
                     h2: ({ children, ...props }) => {
                       console.log('🎯 [MARKDOWN DEBUG] H2 renderizado:', children);
+                      const id = `heading-h2-${String(children).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+                      console.log('🎯 [MARKDOWN DEBUG] H2 ID gerado:', id);
                       return (
-                        <h2 {...props} className="text-xl font-bold mb-3 text-white">
+                        <h2 {...props} id={id} className="text-xl font-bold mb-3 text-white">
                           {children}
                         </h2>
                       );
                     },
                     h3: ({ children, ...props }) => {
                       console.log('🎯 [MARKDOWN DEBUG] H3 renderizado:', children);
+                      const id = `heading-h3-${String(children).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+                      console.log('🎯 [MARKDOWN DEBUG] H3 ID gerado:', id);
                       return (
-                        <h3 {...props} className="text-lg font-bold mb-2 text-white">
+                        <h3 {...props} id={id} className="text-lg font-bold mb-2 text-white">
                           {children}
                         </h3>
                       );
                     },
-                    h4: ({ children, ...props }) => (
-                      <h4 {...props} className="text-base font-bold mb-2 text-white">
-                        {children}
-                      </h4>
-                    ),
-                    h5: ({ children, ...props }) => (
-                      <h5 {...props} className="text-sm font-bold mb-2 text-white">
-                        {children}
-                      </h5>
-                    ),
-                    h6: ({ children, ...props }) => (
-                      <h6 {...props} className="text-xs font-bold mb-2 text-white">
-                        {children}
-                      </h6>
-                    ),
+                    h4: ({ children, ...props }) => {
+                      const id = `heading-h4-${String(children).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+                      return (
+                        <h4 {...props} id={id} className="text-base font-bold mb-2 text-white">
+                          {children}
+                        </h4>
+                      );
+                    },
+                    h5: ({ children, ...props }) => {
+                      const id = `heading-h5-${String(children).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+                      return (
+                        <h5 {...props} id={id} className="text-sm font-bold mb-2 text-white">
+                          {children}
+                        </h5>
+                      );
+                    },
+                    h6: ({ children, ...props }) => {
+                      const id = `heading-h6-${String(children).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+                      return (
+                        <h6 {...props} id={id} className="text-xs font-bold mb-2 text-white">
+                          {children}
+                        </h6>
+                      );
+                    },
                     ul: ({ children }) => <ul className="list-disc list-inside mb-4 space-y-2">{children}</ul>,
                     ol: ({ children }) => <ol className="list-decimal list-inside mb-4 space-y-2">{children}</ol>,
                     li: ({ children }) => <li className="mb-1">{children}</li>,
