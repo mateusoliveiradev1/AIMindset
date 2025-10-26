@@ -118,7 +118,6 @@ export const useAdvancedSearch = () => {
 
   // Resultados da busca
   const searchResults = useMemo(() => {
-    setIsSearching(true);
     
     let filteredArticles = articles.filter(article => {
       // Filtrar apenas artigos publicados (não excluídos)
@@ -170,7 +169,6 @@ export const useAdvancedSearch = () => {
         .filter(result => result.relevanceScore > 0)
         .sort((a, b) => b.relevanceScore - a.relevanceScore);
 
-      setTimeout(() => setIsSearching(false), 300);
       return results;
     }
 
@@ -181,9 +179,15 @@ export const useAdvancedSearch = () => {
       matchedFields: []
     }));
 
-    setTimeout(() => setIsSearching(false), 300);
     return results;
   }, [articles, filters]);
+
+  // Usar useEffect para controlar o estado de loading
+  useEffect(() => {
+    setIsSearching(true);
+    const timer = setTimeout(() => setIsSearching(false), 100);
+    return () => clearTimeout(timer);
+  }, [filters]);
 
   // Sugestões baseadas no que o usuário está digitando
   const suggestions = useMemo(() => {

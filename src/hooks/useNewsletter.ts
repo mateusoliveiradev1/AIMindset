@@ -25,6 +25,7 @@ export interface NewsletterCampaign {
   created_at?: string;
   scheduled_at?: string;
   template_id?: string;
+  open_rate?: number;
 }
 
 export interface CampaignTemplate {
@@ -69,19 +70,20 @@ export interface PaginationInfo {
   itemsPerPage: number;
 }
 
-// Utility function for debouncing
+// Debounce function
 const debounce = <T extends (...args: any[]) => any>(
   func: T,
   delay: number
 ): ((...args: Parameters<T>) => void) => {
   let timeoutId: NodeJS.Timeout;
+  
   return (...args: Parameters<T>) => {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => func(...args), delay);
   };
 };
 
-// Utility function for retry with exponential backoff
+// Enhanced retry with exponential backoff and jitter
 const retryWithBackoff = async <T>(
   fn: () => Promise<T>,
   maxRetries: number = 3,
@@ -89,28 +91,51 @@ const retryWithBackoff = async <T>(
 ): Promise<T> => {
   let lastError: Error;
   
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
     } catch (error: any) {
       lastError = error;
       
-      // Don't retry on certain errors
-      if (error.message === 'Request cancelled' || error.code === 'PGRST116') {
-        throw error;
+      if (attempt === maxRetries) {
+        throw lastError;
       }
       
-      if (attempt === maxRetries - 1) {
-        throw error;
-      }
+      // Exponential backoff with jitter
+      const jitter = Math.random() * 0.3; // 0-30% jitter
+      const delay = baseDelay * Math.pow(2, attempt - 1) * (1 + jitter);
       
-      const delay = baseDelay * Math.pow(2, attempt);
-      // console.log(`🔄 Tentativa ${attempt + 1} falhou, tentando novamente em ${delay}ms...`);
+      console.warn(`Attempt ${attempt} failed, retrying in ${Math.round(delay)}ms...`, error.message);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
   
   throw lastError!;
+};
+
+// Supabase initialization checker
+const waitForSupabaseReady = async (maxWait: number = 5000): Promise<boolean> => {
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < maxWait) {
+    try {
+      // Test connection with a simple query
+      const { error } = await supabaseServiceClient
+        .from('newsletter_subscribers')
+        .select('id')
+        .limit(1);
+      
+      if (!error) {
+        return true;
+      }
+    } catch (e) {
+      // Continue waiting
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  return false;
 };
 
 export const useNewsletter = () => {
@@ -151,14 +176,18 @@ export const useNewsletter = () => {
     itemsPerPage: 10
   });
 
-  // Request tracking to prevent simultaneous calls
+  // Enhanced request tracking with cache
   const requestsInProgress = useRef(new Set<string>());
   const requestTimeouts = useRef(new Map<string, NodeJS.Timeout>());
+  const requestCache = useRef(new Map<string, { data: any; timestamp: number }>());
+  const initializationPromise = useRef<Promise<boolean> | null>(null);
 
-  // Enhanced request management
+  // Cache duration (5 minutes)
+  const CACHE_DURATION = 5 * 60 * 1000;
+
+  // Enhanced request management with cache
   const createUniqueRequest = (requestId: string): boolean => {
     if (requestsInProgress.current.has(requestId)) {
-      // console.log(`🚫 [${requestId}] Requisição já em andamento, ignorando...`);
       return false;
     }
     
@@ -168,7 +197,6 @@ export const useNewsletter = () => {
     const timeout = setTimeout(() => {
       requestsInProgress.current.delete(requestId);
       requestTimeouts.current.delete(requestId);
-      // console.log(`⏰ [${requestId}] Request timeout - cleaned up`);
     }, 30000); // 30 seconds timeout
     
     requestTimeouts.current.set(requestId, timeout);
@@ -184,9 +212,42 @@ export const useNewsletter = () => {
     }
   };
 
-  // Enhanced fetchSubscribers with better error handling
-  const fetchSubscribers = useCallback(async (page = 1, searchTerm = '', statusFilter = 'all') => {
-    const requestId = `fetchSubscribers_${page}_${searchTerm}_${statusFilter}`;
+  // Cache management
+  const getCachedData = (key: string) => {
+    const cached = requestCache.current.get(key);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.data;
+    }
+    return null;
+  };
+
+  const setCachedData = (key: string, data: any) => {
+    requestCache.current.set(key, {
+      data,
+      timestamp: Date.now()
+    });
+  };
+
+  // Ensure Supabase is ready before making requests
+  const ensureSupabaseReady = async (): Promise<boolean> => {
+    if (!initializationPromise.current) {
+      initializationPromise.current = waitForSupabaseReady();
+    }
+    return await initializationPromise.current;
+  };
+
+  // Enhanced fetchSubscribers with all improvements
+  const fetchSubscribers = useCallback(async (page = 1, statusFilter: 'all' | 'active' | 'inactive' = 'all', searchTerm = '') => {
+    const requestId = `fetchSubscribers_${page}_${statusFilter}_${searchTerm}`;
+    const cacheKey = `subscribers_${page}_${statusFilter}_${searchTerm}`;
+    
+    // Check cache first
+    const cachedData = getCachedData(cacheKey);
+    if (cachedData) {
+      setSubscribers(cachedData.subscribers);
+      setPagination(cachedData.pagination);
+      return;
+    }
     
     if (!createUniqueRequest(requestId)) {
       return;
@@ -195,26 +256,29 @@ export const useNewsletter = () => {
     try {
       setLoading(true);
       setError(null);
-      // console.log(`🚀 [${requestId}] Iniciando busca de assinantes`);
 
-      // Always use service client for admin operations
-      const client = supabaseServiceClient;
-      
-      // Função para buscar assinantes com retry
+      // Ensure Supabase is ready
+      const isReady = await ensureSupabaseReady();
+      if (!isReady) {
+        throw new Error('Supabase connection not ready');
+      }
+
+      // Add small delay to prevent race conditions
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const fetchWithRetry = async () => {
-        let query = client.from('newsletter_subscribers').select('*', { count: 'exact' });
+        let query = supabaseServiceClient
+          .from('newsletter_subscribers')
+          .select('*', { count: 'exact' });
 
-        // Apply search filter
         if (searchTerm) {
-          query = query.or(`email.ilike.%${searchTerm}%,name.ilike.%${searchTerm}%`);
+          query = query.ilike('email', `%${searchTerm}%`);
         }
 
-        // Apply status filter
         if (statusFilter !== 'all') {
           query = query.eq('status', statusFilter);
         }
 
-        // Apply pagination
         const from = (page - 1) * ITEMS_PER_PAGE;
         const to = from + ITEMS_PER_PAGE - 1;
         query = query.range(from, to).order('subscribed_at', { ascending: false });
@@ -222,24 +286,28 @@ export const useNewsletter = () => {
         return query;
       };
 
-      const result = await supabaseWithRetry(
-        fetchWithRetry,
-        `Fetch Subscribers (${requestId})`
-      );
+      const result = await retryWithBackoff(fetchWithRetry, 3, 1000);
 
       if (result.error) {
         throw result.error;
       }
 
       if (result.data) {
-        setSubscribers(result.data);
-        setPagination({
-          currentPage: page,
-          totalItems: result.count || 0,
-          totalPages: Math.ceil((result.count || 0) / ITEMS_PER_PAGE),
-          itemsPerPage: ITEMS_PER_PAGE
-        });
-        // console.log(`✅ [${requestId}] Assinantes carregados com sucesso:`, result.data.length);
+        const responseData = {
+          subscribers: result.data,
+          pagination: {
+            currentPage: page,
+            totalItems: result.count || 0,
+            totalPages: Math.ceil((result.count || 0) / ITEMS_PER_PAGE),
+            itemsPerPage: ITEMS_PER_PAGE
+          }
+        };
+
+        setSubscribers(responseData.subscribers);
+        setPagination(responseData.pagination);
+        
+        // Cache the result
+        setCachedData(cacheKey, responseData);
       }
     } catch (err: any) {
       console.error(`❌ [${requestId}] Erro:`, err);
@@ -251,9 +319,18 @@ export const useNewsletter = () => {
     }
   }, []);
 
-  // Enhanced fetchCampaigns with better error handling
+  // Enhanced fetchCampaigns with all improvements
   const fetchCampaigns = useCallback(async (page = 1) => {
     const requestId = `fetchCampaigns_${page}`;
+    const cacheKey = `campaigns_${page}`;
+    
+    // Check cache first
+    const cachedData = getCachedData(cacheKey);
+    if (cachedData) {
+      setCampaigns(cachedData.campaigns);
+      setCampaignPagination(cachedData.pagination);
+      return;
+    }
     
     if (!createUniqueRequest(requestId)) {
       return;
@@ -262,24 +339,30 @@ export const useNewsletter = () => {
     try {
       setCampaignLoading(true);
       setError(null);
-      // console.log(`🚀 [${requestId}] Iniciando busca de campanhas`);
 
-      // Always use service client for admin operations
-      const client = supabaseServiceClient;
-      
+      // Ensure Supabase is ready
+      const isReady = await ensureSupabaseReady();
+      if (!isReady) {
+        throw new Error('Supabase connection not ready');
+      }
+
+      // Add small delay to prevent race conditions
+      await new Promise(resolve => setTimeout(resolve, 150));
+
       const from = (page - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
 
-      const result = await supabaseWithRetry(
+      const result = await retryWithBackoff(
         async () => {
-          const response = await client
+          const response = await supabaseServiceClient
             .from('newsletter_campaigns')
             .select('*', { count: 'exact' })
             .range(from, to)
             .order('created_at', { ascending: false });
           return response;
         },
-        `Fetch Campaigns (${requestId})`
+        3,
+        1000
       );
 
       if (result.error) {
@@ -287,14 +370,21 @@ export const useNewsletter = () => {
       }
 
       if (result.data) {
-        setCampaigns(result.data as NewsletterCampaign[]);
-        setCampaignPagination({
-          currentPage: page,
-          totalItems: result.count || 0,
-          totalPages: Math.ceil((result.count || 0) / ITEMS_PER_PAGE),
-          itemsPerPage: ITEMS_PER_PAGE
-        });
-        // console.log(`✅ [${requestId}] Campanhas carregadas com sucesso:`, result.data.length);
+        const responseData = {
+          campaigns: result.data as NewsletterCampaign[],
+          pagination: {
+            currentPage: page,
+            totalItems: result.count || 0,
+            totalPages: Math.ceil((result.count || 0) / ITEMS_PER_PAGE),
+            itemsPerPage: ITEMS_PER_PAGE
+          }
+        };
+
+        setCampaigns(responseData.campaigns);
+        setCampaignPagination(responseData.pagination);
+        
+        // Cache the result
+        setCachedData(cacheKey, responseData);
       }
     } catch (err: any) {
       console.error(`❌ [${requestId}] Erro:`, err);
@@ -306,16 +396,31 @@ export const useNewsletter = () => {
     }
   }, []);
 
-  // Enhanced calculateStats with sequential execution to prevent ERR_ABORTED
+  // Enhanced calculateStats with all improvements
   const calculateStats = useCallback(async () => {
     const requestId = 'calculateStats';
+    const cacheKey = 'stats';
+    
+    // Check cache first
+    const cachedData = getCachedData(cacheKey);
+    if (cachedData) {
+      setStats(cachedData);
+      return;
+    }
     
     if (!createUniqueRequest(requestId)) {
       return;
     }
 
     try {
-      // console.log(`🚀 [${requestId}] Iniciando cálculo de estatísticas`);
+      // Ensure Supabase is ready
+      const isReady = await ensureSupabaseReady();
+      if (!isReady) {
+        throw new Error('Supabase connection not ready');
+      }
+
+      // Add delay to prevent race conditions
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -323,7 +428,6 @@ export const useNewsletter = () => {
       const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
       const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const client = supabaseServiceClient;
       const stats: NewsletterStats = {
         totalSubscribers: 0,
         activeSubscribers: 0,
@@ -341,18 +445,20 @@ export const useNewsletter = () => {
         totalNewslettersSent: 0
       };
 
-      // SOLUÇÃO DEFINITIVA: Usar apenas uma consulta para obter todos os dados necessários
-      // console.log('📊 Obtendo todos os dados de assinantes de uma vez...');
-      const subscribersResult = await client.from('newsletter_subscribers').select('*');
+      // Fetch subscribers with retry
+      const subscribersResult = await retryWithBackoff(
+        async () => supabaseServiceClient.from('newsletter_subscribers').select('*'),
+        3,
+        1000
+      );
       
       if (subscribersResult.error) {
-        console.error('Erro ao buscar assinantes:', subscribersResult.error);
         throw subscribersResult.error;
       }
 
       const allSubscribers = subscribersResult.data || [];
       
-      // Calcular estatísticas localmente para evitar múltiplas consultas
+      // Calculate subscriber stats locally
       stats.totalSubscribers = allSubscribers.length;
       stats.activeSubscribers = allSubscribers.filter(s => s.status === 'active').length;
       stats.inactiveSubscribers = allSubscribers.filter(s => s.status === 'inactive').length;
@@ -365,19 +471,23 @@ export const useNewsletter = () => {
       stats.newSubscribersWeek = allSubscribers.filter(s => s.subscribed_at >= weekAgoISO).length;
       stats.newSubscribersMonth = allSubscribers.filter(s => s.subscribed_at >= monthAgoISO).length;
 
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Add delay between requests
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-      // console.log('📊 Obtendo todos os dados de campanhas de uma vez...');
-      const campaignsResult = await client.from('newsletter_campaigns').select('*');
+      // Fetch campaigns with retry
+      const campaignsResult = await retryWithBackoff(
+        async () => supabaseServiceClient.from('newsletter_campaigns').select('*'),
+        3,
+        1000
+      );
       
       if (campaignsResult.error) {
-        console.error('Erro ao buscar campanhas:', campaignsResult.error);
         throw campaignsResult.error;
       }
 
       const allCampaigns = campaignsResult.data || [];
       
-      // Calcular estatísticas de campanhas localmente
+      // Calculate campaign stats locally
       stats.totalCampaigns = allCampaigns.length;
       stats.campaignsThisMonth = allCampaigns.filter(c => c.created_at && c.created_at >= thisMonth.toISOString()).length;
       
@@ -392,14 +502,13 @@ export const useNewsletter = () => {
         stats.openRate = totalSent > 0 ? ((totalOpened / totalSent) * 100).toFixed(1) : '0.0';
         stats.clickRate = totalSent > 0 ? ((totalClicked / totalSent) * 100).toFixed(1) : '0.0';
         
-        // Calcular averageOpenRate baseado nas taxas individuais das campanhas
         const campaignsWithOpenRate = sentCampaigns.filter(c => c.open_rate !== null && c.open_rate !== undefined);
         stats.averageOpenRate = campaignsWithOpenRate.length > 0 
           ? campaignsWithOpenRate.reduce((sum, campaign) => sum + (campaign.open_rate || 0), 0) / campaignsWithOpenRate.length
           : parseFloat(stats.openRate);
       }
 
-      // Calcular crescimento mensal
+      // Calculate growth rates
       const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
       
@@ -415,7 +524,9 @@ export const useNewsletter = () => {
         (stats.newSubscribersWeek / stats.totalSubscribers * 100) : 0;
 
       setStats(stats);
-      // console.log(`✅ [${requestId}] Estatísticas calculadas com sucesso:`, stats);
+      
+      // Cache the result
+      setCachedData(cacheKey, stats);
       
     } catch (err: any) {
       console.error(`❌ [${requestId}] Erro ao calcular estatísticas:`, err);
@@ -426,326 +537,200 @@ export const useNewsletter = () => {
     }
   }, []);
 
-  // Subscribe user to newsletter
-  const subscribe = async (email: string, name?: string): Promise<boolean> => {
+  // Subscribe function
+  const subscribe = useCallback(async (email: string) => {
     try {
-      setError(null);
-      
-      // Always use service client for admin operations
-      const client = supabaseServiceClient;
-      
-      // Check if email already exists
-      const { data: existing } = await client
+      const { data, error } = await supabase
         .from('newsletter_subscribers')
-        .select('id, status')
-        .eq('email', email)
+        .insert([{ email, status: 'active' }])
+        .select()
         .single();
 
-      if (existing) {
-        if (existing.status === 'active') {
-          setError('Este email já está inscrito na newsletter');
-          return false;
-        } else {
-          // Reactivate subscription
-          const { error: updateError } = await client
-            .from('newsletter_subscribers')
-            .update({ 
-              status: 'active', 
-              subscribed_at: new Date().toISOString(),
-              unsubscribed_at: null 
-            })
-            .eq('id', existing.id);
-
-          if (updateError) {
-            throw updateError;
-          }
-        }
-      } else {
-        // Create new subscription
-        const subscriptionData = {
-          email,
-          status: 'active' as const,
-          subscribed_at: new Date().toISOString()
-        };
-
-        const { error: insertError } = await client
-          .from('newsletter_subscribers')
-          .insert([subscriptionData]);
-
-        if (insertError) {
-          throw insertError;
-        }
-      }
-
-      toast.success('Inscrição realizada com sucesso!');
-      await calculateStats();
-      return true;
-
-    } catch (err: any) {
-      console.error('Erro ao inscrever:', err);
-      const errorMessage = err.message || 'Erro ao realizar inscrição';
-      setError(errorMessage);
-      toast.error(errorMessage);
-      return false;
-    }
-  };
-
-  // Update subscriber status
-  const updateSubscriberStatus = async (id: string, status: 'active' | 'inactive'): Promise<boolean> => {
-    try {
-      const updateData: any = { status };
-      
-      if (status === 'inactive') {
-        updateData.unsubscribed_at = new Date().toISOString();
-      } else {
-        updateData.unsubscribed_at = null;
-        updateData.subscribed_at = new Date().toISOString();
-      }
-
-      // Always use service client for admin operations
-      const { error } = await supabaseServiceClient
-        .from('newsletter_subscribers')
-        .update(updateData)
-        .eq('id', id);
-
       if (error) {
+        if (error.code === '23505') {
+          toast.error('Este email já está inscrito na newsletter');
+          return { success: false, error: 'Email já inscrito' };
+        }
         throw error;
       }
 
-      toast.success(`Status atualizado para ${status === 'active' ? 'ativo' : 'inativo'}`);
-      await fetchSubscribers(pagination.currentPage);
+      toast.success('Inscrição realizada com sucesso!');
+      await fetchSubscribers();
       await calculateStats();
-      return true;
+      
+      return { success: true, data };
+    } catch (err: any) {
+      console.error('Erro ao inscrever:', err);
+      toast.error('Erro ao realizar inscrição');
+      return { success: false, error: err.message };
+    }
+  }, [fetchSubscribers, calculateStats]);
 
+  // Update subscriber status
+  const updateSubscriberStatus = useCallback(async (id: string, status: 'active' | 'inactive') => {
+    try {
+      const { error } = await supabaseServiceClient
+        .from('newsletter_subscribers')
+        .update({ 
+          status,
+          unsubscribed_at: status === 'inactive' ? new Date().toISOString() : null
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success(`Status atualizado para ${status === 'active' ? 'ativo' : 'inativo'}`);
+      await fetchSubscribers();
+      await calculateStats();
     } catch (err: any) {
       console.error('Erro ao atualizar status:', err);
-      toast.error('Erro ao atualizar status do inscrito');
-      return false;
+      toast.error('Erro ao atualizar status');
     }
-  };
+  }, [fetchSubscribers, calculateStats]);
 
   // Delete subscriber
-  const deleteSubscriber = async (id: string): Promise<boolean> => {
+  const deleteSubscriber = useCallback(async (id: string) => {
     try {
-      // Always use service client for admin operations
       const { error } = await supabaseServiceClient
         .from('newsletter_subscribers')
         .delete()
         .eq('id', id);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      toast.success('Inscrito removido com sucesso');
-      await fetchSubscribers(pagination.currentPage);
+      toast.success('Assinante removido com sucesso');
+      await fetchSubscribers();
       await calculateStats();
-      return true;
-
     } catch (err: any) {
-      console.error('Erro ao remover inscrito:', err);
-      toast.error('Erro ao remover inscrito');
-      return false;
+      console.error('Erro ao deletar assinante:', err);
+      toast.error('Erro ao deletar assinante');
     }
-  };
+  }, [fetchSubscribers, calculateStats]);
 
-  // Fetch campaign templates
-  const fetchTemplates = useCallback(async () => {
+  // Send campaign
+  const sendCampaign = useCallback(async (campaignData: CampaignDraft) => {
     try {
-      // Always use service client for admin operations
-      const { data, error } = await supabaseServiceClient
-        .from('newsletter_templates')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        throw error;
-      }
-
-      setTemplates(data || []);
-    } catch (err: any) {
-      console.error('Erro ao buscar templates:', err);
-      setError(err.message || 'Erro ao buscar templates');
-    }
-  }, []);
-
-  // Create campaign template
-  const createTemplate = async (template: Omit<CampaignTemplate, 'id' | 'created_at'>): Promise<boolean> => {
-    try {
-      setCampaignLoading(true);
-      setError(null);
-
-      // Always use service client for admin operations
-      const { error } = await supabaseServiceClient
-        .from('newsletter_templates')
-        .insert({
-          ...template,
-          created_at: new Date().toISOString()
-        });
-
-      if (error) {
-        throw error;
-      }
-
-      toast.success('Template criado com sucesso!');
-      await fetchTemplates();
-      return true;
-
-    } catch (err: any) {
-      console.error('Erro ao criar template:', err);
-      setError(err.message || 'Erro ao criar template');
-      toast.error('Erro ao criar template');
-      return false;
-    } finally {
-      setCampaignLoading(false);
-    }
-  };
-
-  // Send campaign to all active subscribers
-  const sendCampaign = async (campaignData: CampaignDraft): Promise<boolean> => {
-    try {
-      setCampaignLoading(true);
-      setError(null);
-
-      // Always use service client for admin operations
-      const client = supabaseServiceClient;
-
-      // Get all active subscribers
-      const { data: activeSubscribers, error: subscribersError } = await client
+      // Get active subscribers
+      const { data: activeSubscribers, error: subscribersError } = await supabaseServiceClient
         .from('newsletter_subscribers')
-        .select('email, id')
+        .select('email')
         .eq('status', 'active');
 
-      if (subscribersError) {
-        throw subscribersError;
-      }
+      if (subscribersError) throw subscribersError;
 
-      if (!activeSubscribers || activeSubscribers.length === 0) {
-        toast.error('Nenhum inscrito ativo encontrado');
-        return false;
-      }
+      const recipientCount = activeSubscribers?.length || 0;
 
       // Create campaign record
-      const campaignId = crypto.randomUUID();
-      const now = new Date().toISOString();
-      
-      const { error: campaignError } = await client
+      const { data: campaign, error: campaignError } = await supabaseServiceClient
         .from('newsletter_campaigns')
-        .insert({
-          id: campaignId,
+        .insert([{
           subject: campaignData.subject,
           content: campaignData.content,
-          sent_count: activeSubscribers.length,
-          opened_count: 0,
-          clicked_count: 0,
           status: campaignData.send_immediately ? 'sent' : 'scheduled',
-          sent_at: campaignData.send_immediately ? now : campaignData.scheduled_at,
-          created_at: now,
-          template_id: campaignData.template_id
-        });
-
-      if (campaignError) {
-        throw campaignError;
-      }
-
-      // Log the campaign
-      const { error: logError } = await client
-        .from('newsletter_logs')
-        .insert({
-          campaign_id: campaignId,
-          subject: campaignData.subject,
-          content: campaignData.content,
-          sent_at: campaignData.send_immediately ? now : campaignData.scheduled_at,
-          sent_count: activeSubscribers.length,
+          recipient_count: recipientCount,
+          sent_at: campaignData.send_immediately ? new Date().toISOString() : null,
+          scheduled_at: campaignData.scheduled_at || null,
+          template_id: campaignData.template_id || null,
           opened_count: 0,
-          clicked_count: 0,
-          status: campaignData.send_immediately ? 'sent' : 'scheduled'
-        });
+          clicked_count: 0
+        }])
+        .select()
+        .single();
 
-      if (logError) {
-        throw logError;
-      }
+      if (campaignError) throw campaignError;
 
-      // Here you would integrate with your email service (Resend, SendGrid, etc.)
-      // For now, we'll just simulate the sending
-      if (campaignData.send_immediately) {
-        // console.log(`Enviando campanha "${campaignData.subject}" para ${activeSubscribers.length} inscritos`);
-        toast.success(`Campanha enviada para ${activeSubscribers.length} inscritos!`);
-      } else {
-        // console.log(`Campanha "${campaignData.subject}" agendada para ${campaignData.scheduled_at}`);
-        toast.success('Campanha agendada com sucesso!');
-      }
-      
-      // Refresh campaigns and stats
+      toast.success(campaignData.send_immediately ? 'Campanha enviada com sucesso!' : 'Campanha agendada com sucesso!');
       await fetchCampaigns();
       await calculateStats();
       
-      return true;
-
+      return { success: true, data: campaign };
     } catch (err: any) {
       console.error('Erro ao enviar campanha:', err);
-      setError(err.message || 'Erro ao enviar campanha');
       toast.error('Erro ao enviar campanha');
-      return false;
-    } finally {
-      setCampaignLoading(false);
+      return { success: false, error: err.message };
     }
-  };
+  }, [fetchCampaigns, calculateStats]);
 
   // Send test email
-  const sendTestEmail = async (email: string, subject: string, content: string): Promise<boolean> => {
+  const sendTestEmail = useCallback(async (email: string, subject: string, content: string) => {
     try {
-      setCampaignLoading(true);
-      setError(null);
-
-      // Here you would integrate with your email service to send a test email
-      // console.log(`Enviando email de teste para ${email} com assunto "${subject}"`);
+      // In a real implementation, this would send an actual email
+      // For now, we'll just simulate the action
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      toast.success(`Email de teste enviado para ${email}!`);
-      return true;
-
+      toast.success(`Email de teste enviado para ${email}`);
+      return { success: true };
     } catch (err: any) {
       console.error('Erro ao enviar email de teste:', err);
-      setError(err.message || 'Erro ao enviar email de teste');
       toast.error('Erro ao enviar email de teste');
-      return false;
-    } finally {
-      setCampaignLoading(false);
+      return { success: false, error: err.message };
     }
-  };
+  }, []);
 
-  // Export subscribers to CSV
-  const exportSubscribers = async (): Promise<boolean> => {
+  // Create template
+  const createTemplate = useCallback(async (templateData: Omit<CampaignTemplate, 'id' | 'created_at'>) => {
     try {
-      setLoading(true);
+      const { data, error } = await supabaseServiceClient
+        .from('campaign_templates')
+        .insert([{
+          ...templateData,
+          created_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success('Template criado com sucesso!');
+      await fetchTemplates();
       
-      const { data, error } = await supabase
+      return { success: true, data };
+    } catch (err: any) {
+      console.error('Erro ao criar template:', err);
+      toast.error('Erro ao criar template');
+      return { success: false, error: err.message };
+    }
+  }, []);
+
+  // Fetch templates
+  const fetchTemplates = useCallback(async () => {
+    try {
+      const { data, error } = await supabaseServiceClient
+        .from('campaign_templates')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setTemplates(data || []);
+    } catch (err: any) {
+      console.error('Erro ao carregar templates:', err);
+      toast.error('Erro ao carregar templates');
+    }
+  }, []);
+
+  // Export subscribers
+  const exportSubscribers = useCallback(async () => {
+    try {
+      const { data, error } = await supabaseServiceClient
         .from('newsletter_subscribers')
         .select('*')
         .order('subscribed_at', { ascending: false });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      if (!data || data.length === 0) {
-        toast.error('Nenhum inscrito para exportar');
-        return false;
-      }
-
-      // Create CSV content
-      const headers = ['Email', 'Status', 'Data de Inscrição', 'Data de Cancelamento'];
+      // Convert to CSV
       const csvContent = [
-        headers.join(','),
-        ...data.map(subscriber => [
-          subscriber.email,
-          subscriber.status === 'active' ? 'Ativo' : 'Inativo',
-          new Date(subscriber.subscribed_at).toLocaleDateString('pt-BR'),
-          subscriber.unsubscribed_at ? new Date(subscriber.unsubscribed_at).toLocaleDateString('pt-BR') : ''
+        ['Email', 'Status', 'Data de Inscrição', 'Data de Cancelamento'].join(','),
+        ...(data || []).map(sub => [
+          sub.email,
+          sub.status,
+          new Date(sub.subscribed_at).toLocaleDateString('pt-BR'),
+          sub.unsubscribed_at ? new Date(sub.unsubscribed_at).toLocaleDateString('pt-BR') : ''
         ].join(','))
       ].join('\n');
 
-      // Download CSV
+      // Download file
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
@@ -756,51 +741,52 @@ export const useNewsletter = () => {
       link.click();
       document.body.removeChild(link);
 
-      toast.success('Lista de inscritos exportada com sucesso!');
-      return true;
-
+      toast.success('Lista de assinantes exportada com sucesso!');
     } catch (err: any) {
-      console.error('Erro ao exportar inscritos:', err);
-      toast.error('Erro ao exportar lista de inscritos');
-      return false;
-    } finally {
-      setLoading(false);
+      console.error('Erro ao exportar assinantes:', err);
+      toast.error('Erro ao exportar assinantes');
     }
-  };
+  }, []);
 
-  // Initialize data
-  useEffect(() => {
-    const initializeData = async () => {
-      // console.log('🚀 [useNewsletter] Inicializando dados da newsletter...');
-      
-      try {
-        // Initialize data sequentially to prevent conflicts
-        await fetchSubscribers();
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        await fetchCampaigns();
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        await fetchTemplates();
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        await calculateStats();
-        
-        // console.log('✅ [useNewsletter] Inicialização completa');
-      } catch (error) {
-        console.error('❌ [useNewsletter] Erro na inicialização:', error);
+  // Enhanced initialization with staggered loading
+  const initializeData = useCallback(async () => {
+    try {
+      // Ensure Supabase is ready first
+      const isReady = await ensureSupabaseReady();
+      if (!isReady) {
+        console.warn('Supabase not ready, skipping initialization');
+        return;
       }
-    };
 
-    initializeData();
-  }, []); // Remove dependencies to prevent infinite loops
+      // Staggered loading to prevent race conditions
+      await fetchSubscribers();
+      await new Promise(resolve => setTimeout(resolve, 400));
+      
+      await fetchCampaigns();
+      await new Promise(resolve => setTimeout(resolve, 400));
+      
+      await calculateStats();
+    } catch (error) {
+      console.error('❌ [initializeData] Erro na inicialização:', error);
+    }
+  }, [fetchSubscribers, fetchCampaigns, calculateStats]);
 
-  // Cleanup function
+  // Debounced initialization
+  const debouncedInitialize = useCallback(
+    debounce(initializeData, 500),
+    [initializeData]
+  );
+
   useEffect(() => {
+    debouncedInitialize();
+    
     return () => {
       requestsInProgress.current.clear();
+      requestTimeouts.current.forEach(timeout => clearTimeout(timeout));
+      requestTimeouts.current.clear();
+      requestCache.current.clear();
     };
-  }, []);
+  }, [debouncedInitialize]);
 
   return {
     // Data
@@ -831,14 +817,15 @@ export const useNewsletter = () => {
     
     // Utilities
     refreshData: async () => {
-      // console.log('🔄 [useNewsletter] Atualizando dados...');
       try {
+        // Clear cache before refresh
+        requestCache.current.clear();
+        
         await fetchSubscribers();
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, 400));
         await fetchCampaigns();
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, 400));
         await calculateStats();
-        // console.log('✅ [useNewsletter] Dados atualizados');
       } catch (error) {
         console.error('❌ [useNewsletter] Erro na atualização:', error);
       }
