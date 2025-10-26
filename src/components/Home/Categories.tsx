@@ -45,8 +45,25 @@ const Categories: React.FC = () => {
           </div>
         ) : mainCategories.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-futuristic-gray text-lg">Nenhuma categoria principal encontrada.</p>
-            <p className="text-futuristic-gray text-sm mt-2">Verifique se as categorias IA & Tecnologia, Produtividade e Futuro existem!</p>
+            <p className="text-red-400 text-lg font-semibold mb-4">❌ Categorias principais não encontradas!</p>
+            <div className="bg-dark-gray/50 p-6 rounded-lg max-w-2xl mx-auto">
+              <p className="text-futuristic-gray text-sm mb-2">
+                <strong>Total de categorias carregadas:</strong> {categories?.length || 0}
+              </p>
+              <p className="text-futuristic-gray text-sm mb-2">
+                <strong>Slugs procurados:</strong> {mainCategorySlugs.join(', ')}
+              </p>
+              {categories && categories.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-futuristic-gray text-sm mb-2"><strong>Categorias disponíveis:</strong></p>
+                  <ul className="text-xs text-futuristic-gray space-y-1">
+                    {categories.map(cat => (
+                      <li key={cat.id}>• {cat.name} (slug: {cat.slug})</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

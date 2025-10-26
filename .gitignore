@@ -22,3 +22,38 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Temporary and debug files
+test_*.cjs
+test_*.js
+debug_*.js
+debug_*.html
+diagnose_*.cjs
+fix_*.cjs
+fix_*.sql
+temp_*.txt
+check_*.cjs
+check_*.sql
+clean_*.cjs
+create_*.cjs
+setup_*.cjs
+reset_*.cjs
+update_*.cjs
+emergency_*.cjs
+performance_*.cjs
+force_*.cjs
+list_*.sql
+teste_*.html
+
+# Development and testing files
+*.test.js
+*.spec.js
+coverage/
+.nyc_output/
+
+# Environment and cache
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.cache/

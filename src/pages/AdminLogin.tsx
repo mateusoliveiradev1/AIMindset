@@ -48,30 +48,33 @@ const AdminLogin: React.FC = () => {
     }
 
     try {
+      console.log('🚀 INICIANDO LOGIN COM:', sanitizedEmail);
       const success = await login(sanitizedEmail, password);
       
       if (success) {
-        console.log('🎯 LOGIN SUCESSO - FORÇANDO REDIRECIONAMENTO ABSOLUTO...');
+        console.log('✅ LOGIN REALIZADO COM SUCESSO!');
         showToast('success', 'Login realizado com sucesso!');
         
         // Limpar dados sensíveis do formulário
         secureCleanup.clearFormData(e.target as HTMLFormElement);
         
-        // SOLUÇÃO DEFINITIVA: window.location.replace (força redirecionamento absoluto)
-        console.log('🚨 USANDO window.location.replace("/admin") - REDIRECIONAMENTO FORÇADO!');
-        window.location.replace('/admin');
+        // Redirecionamento imediato e forçado
+        console.log('🔄 REDIRECIONANDO PARA /admin...');
+        window.location.href = '/admin';
         
       } else {
+        console.log('❌ LOGIN FALHOU - CREDENCIAIS INVÁLIDAS');
         setError('Credenciais inválidas ou usuário não é administrador');
-        showToast('error', 'Acesso negado');
+        showToast('error', 'Credenciais inválidas');
         
         // Limpar senha em caso de erro
         setPassword('');
       }
     } catch (error: any) {
-      console.error('Erro no login:', error);
-      setError(`Erro no login: ${error.message || 'Erro interno'}`);
-      showToast('error', `Erro: ${error.message || 'Erro interno'}`);
+      // Este catch não deveria ser executado mais, mas mantemos para segurança
+      console.error('💥 ERRO INESPERADO NO LOGIN:', error);
+      setError('Erro interno do sistema. Tente novamente.');
+      showToast('error', 'Erro interno do sistema');
       
       // Limpar senha em caso de erro
       setPassword('');

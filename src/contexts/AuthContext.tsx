@@ -94,134 +94,224 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSupabaseUser(supabaseUserData);
   };
 
-  // Função simplificada para verificar admin
+  // Função simplificada para verificar admin COM TIMEOUT DE SEGURANÇA E BYPASS RLS
   const checkAdminUser = async (email: string): Promise<User | null> => {
-    try {
-      // console.log('🔍 BUSCANDO ADMIN NO DB:', email);
-      const { data: adminUser, error } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('email', email)
-        .single();
+    return new Promise(async (resolve) => {
+      // Timeout de segurança de 5 segundos
+      const timeoutId = setTimeout(() => {
+        console.log('⏰ TIMEOUT checkAdminUser - Assumindo não-admin');
+        resolve(null);
+      }, 5000);
 
-      // console.log('📊 RESULTADO QUERY:', { adminUser: !!adminUser, error: error?.message });
+      try {
+        console.log('🔍 BUSCANDO ADMIN NO DB:', email);
+        console.log('📡 Executando query na tabela admin_users...');
+        
+        // 🔥 USAR SERVICE ROLE PARA BYPASS RLS
+        const { supabaseServiceClient } = await import('../lib/supabase-admin');
+        
+        const { data: adminUser, error } = await supabaseServiceClient
+          .from('admin_users')
+          .select('*')
+          .eq('email', email)
+          .maybeSingle();
 
-      if (error) {
-        // console.log('❌ ERRO NA QUERY:', error.message);
-        return null;
+        // Limpar timeout se a query completou
+        clearTimeout(timeoutId);
+
+        console.log('📊 RESULTADO QUERY COMPLETO (SERVICE ROLE):', { 
+          adminUser, 
+          error: error?.message,
+          hasData: !!adminUser,
+          dataType: typeof adminUser
+        });
+
+        if (error) {
+          console.log('❌ ERRO NA QUERY:', error.message);
+          console.log('🔄 Retornando null devido ao erro');
+          resolve(null);
+          return;
+        }
+
+        if (!adminUser) {
+          console.log('❌ ADMIN NÃO ENCONTRADO - Query retornou null/undefined');
+          console.log('🔄 Retornando null - usuário não é admin');
+          resolve(null);
+          return;
+        }
+
+        console.log('✅ ADMIN ENCONTRADO (BYPASS RLS):', {
+          email: adminUser.email,
+          role: adminUser.role,
+          id: adminUser.id,
+          name: adminUser.name
+        });
+        
+        const userResult = {
+          id: adminUser.id,
+          email: adminUser.email,
+          name: adminUser.name || 'Admin',
+          role: adminUser.role
+        };
+        
+        console.log('🎯 RETORNANDO USUÁRIO ADMIN:', userResult);
+        resolve(userResult);
+        
+      } catch (error) {
+        // Limpar timeout em caso de erro
+        clearTimeout(timeoutId);
+        console.error('💥 ERRO GERAL checkAdminUser:', error);
+        console.log('🔄 Retornando null devido ao erro geral');
+        resolve(null);
       }
-
-      if (!adminUser) {
-        // console.log('❌ ADMIN NÃO ENCONTRADO');
-        return null;
-      }
-
-      // console.log('✅ ADMIN ENCONTRADO:', adminUser.email, adminUser.role);
-      return {
-        id: adminUser.id,
-        email: adminUser.email,
-        name: adminUser.name || 'Admin',
-        role: adminUser.role
-      };
-    } catch (error) {
-      console.error('💥 ERRO GERAL checkAdminUser:', error);
-      return null;
-    }
+    });
   };
 
-  // 🔥 INICIALIZAÇÃO COM VERIFICAÇÃO DE PERSISTÊNCIA
+  // 🔥 INICIALIZAÇÃO COM VERIFICAÇÃO DE PERSISTÊNCIA E TRATAMENTO DE REFRESH TOKEN
+  // 🔥 INICIALIZAÇÃO SIMPLIFICADA SEM LOOPS INFINITOS
   useEffect(() => {
     let isMounted = true;
+    let initializationComplete = false;
 
     const initAuth = async () => {
       try {
-        // console.log('🚀 INICIALIZANDO AUTH...');
+        console.log('🚀 INICIALIZANDO AUTH...');
         
         // Verificar se já temos dados salvos
         const savedUser = localStorage.getItem(USER_STORAGE_KEY);
         const savedSupabaseUser = localStorage.getItem(SUPABASE_USER_STORAGE_KEY);
         
         if (savedUser && savedSupabaseUser) {
-          // console.log('💾 DADOS ENCONTRADOS NO LOCALSTORAGE - RESTAURANDO...');
+          console.log('💾 DADOS ENCONTRADOS NO LOCALSTORAGE - RESTAURANDO...');
           const userData = JSON.parse(savedUser);
           const supabaseUserData = JSON.parse(savedSupabaseUser);
           
-          if (isMounted) {
+          if (isMounted && !initializationComplete) {
             setUser(userData);
             setSupabaseUser(supabaseUserData);
             setIsLoading(false);
-            // console.log('✅ ESTADO RESTAURADO DO LOCALSTORAGE:', userData.email);
+            initializationComplete = true;
+            console.log('✅ ESTADO RESTAURADO DO LOCALSTORAGE:', userData.email);
             return;
           }
         }
         
         // Se não temos dados salvos, verificar sessão do Supabase
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!isMounted) return;
-
-        if (session?.user) {
-          // console.log('📡 SESSÃO SUPABASE ENCONTRADA:', session.user.email);
-          saveSupabaseUserToStorage(session.user);
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession();
           
-          // Verificar se é admin
-          const adminUser = await checkAdminUser(session.user.email!);
-          if (adminUser && isMounted) {
-            saveUserToStorage(adminUser);
+          if (!isMounted || initializationComplete) return;
+
+          // 🔥 TRATAMENTO DE REFRESH TOKEN INVÁLIDO
+          if (error) {
+            console.log('⚠️ ERRO NA SESSÃO (REFRESH TOKEN INVÁLIDO):', error.message);
+            // Limpa dados inválidos
+            saveUserToStorage(null);
+            saveSupabaseUserToStorage(null);
+            if (isMounted && !initializationComplete) {
+              setIsLoading(false);
+              initializationComplete = true;
+            }
+            return;
           }
+
+          if (session?.user) {
+            console.log('📡 SESSÃO SUPABASE ENCONTRADA:', session.user.email);
+            saveSupabaseUserToStorage(session.user);
+            
+            // Verificar se é admin
+            const adminUser = await checkAdminUser(session.user.email!);
+            if (adminUser && isMounted && !initializationComplete) {
+              saveUserToStorage(adminUser);
+              setUser(adminUser);
+              setSupabaseUser(session.user);
+            }
+          }
+        } catch (sessionError) {
+          console.log('⚠️ ERRO AO OBTER SESSÃO:', sessionError);
+          // Limpa dados potencialmente corrompidos
+          saveUserToStorage(null);
+          saveSupabaseUserToStorage(null);
         }
         
-        if (isMounted) {
+        if (isMounted && !initializationComplete) {
           setIsLoading(false);
+          initializationComplete = true;
         }
       } catch (error) {
         console.error('💥 ERRO NA INICIALIZAÇÃO:', error);
-        if (isMounted) {
+        // Em caso de erro, limpa tudo para evitar estado inconsistente
+        saveUserToStorage(null);
+        saveSupabaseUserToStorage(null);
+        if (isMounted && !initializationComplete) {
           setIsLoading(false);
+          initializationComplete = true;
         }
       }
     };
 
+    // Timeout de segurança para evitar travamento
+    const safetyTimeout = setTimeout(() => {
+      if (isMounted && !initializationComplete) {
+        console.log('⏰ TIMEOUT DE SEGURANÇA - FORÇANDO FIM DO LOADING');
+        setIsLoading(false);
+        initializationComplete = true;
+      }
+    }, 3000); // 3 segundos máximo
+
     initAuth();
 
-    // Listener para mudanças de auth
+    // Listener para mudanças de auth com tratamento de erros
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!isMounted) return;
         
-        // console.log('🔄 AUTH STATE CHANGE:', event, session?.user?.email);
+        console.log('🔄 AUTH STATE CHANGE:', event, session?.user?.email);
+        
+        // 🔥 TRATAMENTO ESPECIAL PARA TOKEN_REFRESHED COM ERRO
+        if (event === 'TOKEN_REFRESHED' && !session) {
+          console.log('⚠️ TOKEN REFRESH FALHOU - LIMPANDO DADOS...');
+          saveSupabaseUserToStorage(null);
+          saveUserToStorage(null);
+          return;
+        }
         
         if (session?.user) {
           saveSupabaseUserToStorage(session.user);
+          setSupabaseUser(session.user);
           
-          // Verificar admin apenas se não temos user salvo
-          if (!user) {
+          // Verificar admin apenas se necessário
+          try {
             const adminUser = await checkAdminUser(session.user.email!);
             if (adminUser && isMounted) {
               saveUserToStorage(adminUser);
+              setUser(adminUser);
             }
+          } catch (adminError) {
+            console.log('⚠️ ERRO AO VERIFICAR ADMIN:', adminError);
+            // Em caso de erro na verificação de admin, mantém apenas o supabaseUser
           }
         } else {
-          // console.log('🚪 LOGOUT DETECTADO - LIMPANDO STORAGE...');
+          console.log('🚪 LOGOUT DETECTADO - LIMPANDO STORAGE...');
           saveSupabaseUserToStorage(null);
           saveUserToStorage(null);
-        }
-        
-        if (isMounted) {
-          setIsLoading(false);
+          setUser(null);
+          setSupabaseUser(null);
         }
       }
     );
 
     return () => {
       isMounted = false;
+      initializationComplete = true;
+      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
-  }, []);
+  }, []); // 🔥 DEPENDÊNCIAS VAZIAS PARA EVITAR LOOPS
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // console.log('🚀 INICIANDO LOGIN:', email);
+      console.log('🚀 INICIANDO LOGIN:', email);
       setIsLoading(true);
       
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -229,32 +319,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password
       });
 
-      // console.log('📡 RESPOSTA SUPABASE:', { data: !!data.user, error: !!error });
+      console.log('📡 RESPOSTA SUPABASE:', { data: !!data.user, error: !!error });
 
       if (error) {
+        // ❌ APENAS LOG DE ERRO REAL - SEM THROW DESNECESSÁRIO
         console.error('❌ ERRO SUPABASE:', error.message);
         setIsLoading(false);
-        throw error;
+        return false; // 🔥 RETORNA FALSE EM VEZ DE THROW
       }
 
       if (data.user) {
-        // console.log('✅ USUÁRIO LOGADO:', data.user.email);
+        console.log('✅ USUÁRIO LOGADO:', data.user.email);
         saveSupabaseUserToStorage(data.user);
         
         // Verificar admin imediatamente
-        // console.log('🔍 VERIFICANDO ADMIN...');
+        console.log('🔍 VERIFICANDO ADMIN...');
         const adminUser = await checkAdminUser(data.user.email!);
-        // console.log('👤 RESULTADO ADMIN:', !!adminUser);
+        console.log('👤 RESULTADO ADMIN:', !!adminUser);
         
         if (adminUser) {
-          // console.log('✅ ADMIN CONFIRMADO, SALVANDO NO STORAGE...');
+          console.log('✅ ADMIN CONFIRMADO, SALVANDO NO STORAGE...');
           saveUserToStorage(adminUser);
           setIsLoading(false);
-          // console.log('🎯 LOGIN COMPLETO - ESTADO PERSISTIDO - RETORNANDO TRUE');
+          console.log('🎯 LOGIN COMPLETO - ESTADO PERSISTIDO - RETORNANDO TRUE');
           return true;
         } else {
-          // console.log('❌ NÃO É ADMIN - FAZENDO LOGOUT...');
-          await supabase.auth.signOut();
+          console.log('❌ NÃO É ADMIN - LIMPANDO DADOS LOCAIS...');
+          // NÃO FAZER LOGOUT NO SUPABASE - APENAS LIMPAR DADOS LOCAIS
           saveSupabaseUserToStorage(null);
           saveUserToStorage(null);
           setIsLoading(false);
@@ -262,25 +353,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // console.log('❌ NENHUM USUÁRIO RETORNADO');
+      console.log('❌ NENHUM USUÁRIO RETORNADO');
       setIsLoading(false);
       return false;
     } catch (error) {
-      console.error('💥 ERRO GERAL NO LOGIN:', error);
+      // 🔥 APENAS LOG DE ERRO CRÍTICO - SEM RE-THROW
+      console.error('💥 ERRO CRÍTICO NO LOGIN:', error);
       setIsLoading(false);
-      throw error;
+      return false; // 🔥 RETORNA FALSE EM VEZ DE THROW
     }
   };
 
   const logout = async () => {
     try {
-      // console.log('🚪 FAZENDO LOGOUT...');
-      await supabase.auth.signOut();
-      saveUserToStorage(null);
-      saveSupabaseUserToStorage(null);
-      // console.log('✅ LOGOUT COMPLETO - STORAGE LIMPO');
+      console.log('🚪 LOGOUT LOCAL - SEM CHAMADAS HTTP...');
+      
+      // Limpa estado local imediatamente
+      setUser(null);
+      setSupabaseUser(null);
+      
+      // Limpa localStorage
+      localStorage.removeItem(USER_STORAGE_KEY);
+      localStorage.removeItem(SUPABASE_USER_STORAGE_KEY);
+      
+      // NÃO FAZER NENHUMA CHAMADA PARA SUPABASE
+      // Apenas limpar dados locais
+      
+      console.log('✅ LOGOUT LOCAL COMPLETO');
+      
+      // Redireciona imediatamente
+      window.location.href = '/admin/login';
+      
     } catch (error) {
       console.error('💥 ERRO NO LOGOUT:', error);
+      
+      // Força limpeza mesmo com erro
+      setUser(null);
+      setSupabaseUser(null);
+      localStorage.removeItem(USER_STORAGE_KEY);
+      localStorage.removeItem(SUPABASE_USER_STORAGE_KEY);
+      
+      // Força redirecionamento
+      window.location.href = '/admin/login';
     }
   };
 

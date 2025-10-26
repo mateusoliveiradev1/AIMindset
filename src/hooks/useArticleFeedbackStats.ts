@@ -16,6 +16,12 @@ interface UseFeedbackStatsReturn {
   refreshStats: () => Promise<void>;
 }
 
+// Função para verificar se é um ID mock (não é UUID válido)
+const isMockId = (id: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return !uuidRegex.test(id);
+};
+
 export const useArticleFeedbackStats = (articleId: string): UseFeedbackStatsReturn => {
   const [stats, setStats] = useState<FeedbackStats>({
     totalFeedbacks: 0,
@@ -23,15 +29,26 @@ export const useArticleFeedbackStats = (articleId: string): UseFeedbackStatsRetu
     negativeFeedbacks: 0,
     approvalRate: 0
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  const channelRef = useRef<RealtimeChannel | null>(null);
-  const mountedRef = useRef(true);
+  const subscriptionRef = useRef<RealtimeChannel | null>(null);
 
-  // Função para buscar estatísticas
   const fetchStats = useCallback(async () => {
-    if (!articleId || !mountedRef.current) return;
+    if (!articleId) return;
+
+    // Se for um ID mock, retornar dados mock
+    if (isMockId(articleId)) {
+      console.log('📊 [FEEDBACK-STATS] Usando dados mock para ID:', articleId);
+      setLoading(false);
+      setError(null);
+      setStats({
+        totalFeedbacks: 15,
+        positiveFeedbacks: 12,
+        negativeFeedbacks: 3,
+        approvalRate: 80
+      });
+      return;
+    }
 
     try {
       setLoading(true);
@@ -45,52 +62,55 @@ export const useArticleFeedbackStats = (articleId: string): UseFeedbackStatsRetu
         .eq('article_id', articleId);
 
       if (fetchError) {
+        console.error('❌ [FEEDBACK-STATS] Erro ao buscar estatísticas:', fetchError);
         throw fetchError;
       }
-
-      if (!mountedRef.current) return;
 
       const totalFeedbacks = feedbacks?.length || 0;
       const positiveFeedbacks = feedbacks?.filter(f => f.useful === true).length || 0;
       const negativeFeedbacks = feedbacks?.filter(f => f.useful === false).length || 0;
-      const approvalRate = totalFeedbacks > 0 ? (positiveFeedbacks / totalFeedbacks) * 100 : 0;
+      const approvalRate = totalFeedbacks > 0 ? Math.round((positiveFeedbacks / totalFeedbacks) * 100) : 0;
 
-      const newStats = {
+      setStats({
         totalFeedbacks,
         positiveFeedbacks,
         negativeFeedbacks,
-        approvalRate: Math.round(approvalRate * 100) / 100
-      };
+        approvalRate
+      });
 
-      setStats(newStats);
-      console.log('✅ [FEEDBACK-STATS] Estatísticas carregadas:', newStats);
+      console.log('✅ [FEEDBACK-STATS] Estatísticas carregadas:', {
+        totalFeedbacks,
+        positiveFeedbacks,
+        negativeFeedbacks,
+        approvalRate
+      });
 
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
       console.error('❌ [FEEDBACK-STATS] Erro ao buscar estatísticas:', err);
-      if (mountedRef.current) {
-        setError(err instanceof Error ? err.message : 'Erro ao carregar estatísticas');
-      }
+      setError(`Erro ao carregar estatísticas: ${errorMessage}`);
     } finally {
-      if (mountedRef.current) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   }, [articleId]);
 
-  // Configurar Real-Time Subscription
   const setupRealtimeSubscription = useCallback(() => {
-    if (!articleId) return;
+    if (!articleId || isMockId(articleId)) {
+      console.log('📡 [FEEDBACK-STATS] Pulando subscription para ID mock:', articleId);
+      return;
+    }
 
-    // Limpar canal existente
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
+    // Limpar subscription anterior
+    if (subscriptionRef.current) {
+      console.log('📡 [FEEDBACK-STATS] Removendo subscription anterior');
+      supabase.removeChannel(subscriptionRef.current);
+      subscriptionRef.current = null;
     }
 
     console.log('📡 [FEEDBACK-STATS] Configurando Real-Time subscription para artigo:', articleId);
 
-    // Criar novo canal
     const channel = supabase
-      .channel(`feedback_stats_${articleId}`)
+      .channel(`feedback-stats-${articleId}`)
       .on(
         'postgres_changes',
         {
@@ -100,7 +120,7 @@ export const useArticleFeedbackStats = (articleId: string): UseFeedbackStatsRetu
           filter: `article_id=eq.${articleId}`
         },
         (payload) => {
-          console.log('🔄 [FEEDBACK-STATS] Feedback atualizado em tempo real:', payload);
+          console.log('📡 [FEEDBACK-STATS] Mudança detectada:', payload);
           fetchStats();
         }
       )
@@ -108,48 +128,25 @@ export const useArticleFeedbackStats = (articleId: string): UseFeedbackStatsRetu
         console.log('📡 [FEEDBACK-STATS] Status da subscription:', status);
       });
 
-    channelRef.current = channel;
+    subscriptionRef.current = channel;
   }, [articleId, fetchStats]);
 
-  // Effect principal
   useEffect(() => {
-    mountedRef.current = true;
-    
-    if (!articleId) {
-      setStats({
-        totalFeedbacks: 0,
-        positiveFeedbacks: 0,
-        negativeFeedbacks: 0,
-        approvalRate: 0
-      });
-      setLoading(false);
-      return;
-    }
-
-    // Carregar estatísticas iniciais
     fetchStats();
+  }, [fetchStats]);
 
-    // Configurar Real-Time subscription
+  useEffect(() => {
     setupRealtimeSubscription();
 
-    // Cleanup
     return () => {
-      mountedRef.current = false;
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
+      if (subscriptionRef.current) {
+        console.log('📡 [FEEDBACK-STATS] Limpando subscription no cleanup');
+        supabase.removeChannel(subscriptionRef.current);
+        subscriptionRef.current = null;
       }
     };
-  }, [articleId, fetchStats, setupRealtimeSubscription]);
+  }, [setupRealtimeSubscription]);
 
-  // Cleanup no unmount
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  // Função para refresh manual
   const refreshStats = useCallback(async () => {
     await fetchStats();
   }, [fetchStats]);

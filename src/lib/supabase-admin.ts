@@ -43,3 +43,6 @@ export const supabaseAdmin = (() => {
   
   return instance;
 })();
+
+// Export alternativo para compatibilidade
+export const supabaseServiceClient = supabaseAdmin;

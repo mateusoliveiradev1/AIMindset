@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabase';
 import { SEOMetadata } from '../components/SEO/SEOManager';
+import { supabaseServiceClient } from '../lib/supabase';
 
 interface SEOData {
   id: string;
@@ -80,12 +80,16 @@ export const useSEO = (options: UseSEOOptions) => {
 
   useEffect(() => {
     const fetchSEOData = async () => {
+      console.log('🔍 [useSEO] Iniciando fetchSEOData para:', { pageType, pageSlug });
+      
       // Cancelar requisição anterior se existir e não estiver já abortada
       if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
+        console.log('🔄 [useSEO] Cancelando requisição anterior');
         abortControllerRef.current.abort();
       }
 
       const cacheKey = getCacheKey(pageType, pageSlug);
+      console.log('🗂️ [useSEO] Cache key:', cacheKey);
       
       // Verificar cache primeiro
       if (seoCache.has(cacheKey) && isCacheValid(cacheKey)) {
@@ -106,7 +110,9 @@ export const useSEO = (options: UseSEOOptions) => {
         }
         setError(null);
 
-        let query = supabase
+        console.log('📡 [useSEO] Fazendo requisição para seo_metadata...');
+        
+        let query = supabaseServiceClient
           .from('seo_metadata')
           .select('*')
           .eq('page_type', pageType)
@@ -115,10 +121,15 @@ export const useSEO = (options: UseSEOOptions) => {
         if (pageSlug) {
           query = query.eq('page_slug', pageSlug);
         } else {
+          // Corrigir sintaxe para buscar valores NULL no PostgREST
           query = query.is('page_slug', null);
         }
 
+        console.log('🔍 [useSEO] Query configurada:', { pageType, pageSlug });
+        
         const { data, error: fetchError } = await query.single();
+        
+        console.log('📊 [useSEO] Resultado da requisição:', { data, error: fetchError });
 
         // Verificar se a requisição foi cancelada antes de processar resultado
         if (abortController.signal.aborted) {
@@ -197,10 +208,26 @@ export const useSEO = (options: UseSEOOptions) => {
       };
     }
 
-    // Fallback metadata
+    // Fallback metadata - melhorado para artigos
     let canonicalUrl = baseUrl;
+    let title = fallbackTitle;
+    let description = fallbackDescription;
+    let keywords = fallbackKeywords;
+    
     if (pageType === 'article' && pageSlug) {
       canonicalUrl = `${baseUrl}/artigo/${pageSlug}`;
+      // Para artigos, tentar extrair informações do título fallback
+      if (fallbackTitle && fallbackTitle !== 'Artigo - AIMindset') {
+        title = fallbackTitle.includes('|') ? fallbackTitle : `${fallbackTitle} | AIMindset`;
+      }
+      // Melhorar descrição para artigos
+      if (fallbackDescription && fallbackDescription !== 'Descubra insights sobre IA e tecnologia no AIMindset.') {
+        description = fallbackDescription;
+      } else {
+        description = `Leia sobre ${fallbackTitle?.replace(' | AIMindset', '') || 'este artigo'} no AIMindset. Descubra insights sobre inteligência artificial e tecnologia.`;
+      }
+      // Adicionar keywords específicas para artigos
+      keywords = [...fallbackKeywords, 'artigo', 'blog', 'conteúdo'];
     } else if (pageType === 'category' && pageSlug) {
       canonicalUrl = `${baseUrl}/categoria/${pageSlug}`;
     } else if (pageType === 'about') {
@@ -214,9 +241,9 @@ export const useSEO = (options: UseSEOOptions) => {
     }
 
     return {
-      title: fallbackTitle,
-      description: fallbackDescription,
-      keywords: fallbackKeywords,
+      title,
+      description,
+      keywords,
       ogImage: fallbackImage,
       canonicalUrl,
       type: pageType === 'article' ? 'article' : 'website'
@@ -226,7 +253,7 @@ export const useSEO = (options: UseSEOOptions) => {
   // Função para criar/atualizar metadados SEO
   const updateSEOData = async (metadata: Partial<SEOData>) => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseServiceClient
         .from('seo_metadata')
         .upsert({
           page_type: pageType,
@@ -346,7 +373,7 @@ export const useSEO = (options: UseSEOOptions) => {
       // Só buscar se não estiver em cache ou cache expirado
       if (!seoCache.has(cacheKey) || !isCacheValid(cacheKey)) {
         try {
-          const { data } = await supabase
+          const { data } = await supabaseServiceClient
             .from('seo_metadata')
             .select('*')
             .eq('page_type', 'category')

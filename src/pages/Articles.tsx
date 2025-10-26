@@ -178,7 +178,7 @@ export const Articles: React.FC = () => {
 
                   {/* Excerpt */}
                   <p className="text-futuristic-gray font-roboto text-sm mb-4 line-clamp-3">
-                    {article.meta_description || article.content.substring(0, 150) + '...'}
+                    {article.excerpt || article.content.substring(0, 150) + '...'}
                   </p>
 
                   {/* Tags */}

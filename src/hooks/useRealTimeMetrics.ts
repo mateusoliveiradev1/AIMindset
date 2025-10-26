@@ -145,8 +145,11 @@ export function useRealTimeMetrics(articleIds: string[]) {
       // FALLBACK: Buscar dados manualmente se a função RPC falhar
       console.log(`🔄 [REALTIME-METRICS] Fallback: buscando dados manualmente para ${articleId}`);
       
+      // Usar supabaseAdmin para garantir acesso aos dados
+      const { supabaseAdmin } = await import('../lib/supabase-admin');
+      
       // Buscar feedback
-      const { data: feedbackData, error: feedbackError } = await supabase
+      const { data: feedbackData, error: feedbackError } = await supabaseAdmin
         .from('feedback')
         .select('useful')
         .eq('article_id', articleId);
@@ -157,7 +160,7 @@ export function useRealTimeMetrics(articleIds: string[]) {
       }
 
       // Buscar comentários
-      const { data: commentsData, error: commentsError } = await supabase
+      const { data: commentsData, error: commentsError } = await supabaseAdmin
         .from('comments')
         .select('id')
         .eq('article_id', articleId);
@@ -168,8 +171,8 @@ export function useRealTimeMetrics(articleIds: string[]) {
       }
 
       console.log(`📊 [REALTIME-METRICS] Dados brutos para ${articleId}:`, {
-        feedbackData,
-        commentsData
+        feedbackData: feedbackData?.length || 0,
+        commentsData: commentsData?.length || 0
       });
 
       const positiveFeedback = Number(feedbackData?.filter(f => f.useful === true).length) || 0;

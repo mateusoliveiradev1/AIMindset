@@ -20,17 +20,20 @@ import {
   FeedbackSectionLazy,
   CommentSectionLazy
 } from '../components/LazyComponents';
+// Importação direta para debug
+import { TableOfContents } from '../components/TableOfContents';
 
 const Article: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   const { articles, categories, loading, error, refreshArticles } = useArticles();
   
   // Debug logs para investigar o problema
-  // console.log('🔍 Article.tsx - Renderizando página do artigo');
-  // console.log('🔍 Article.tsx - Slug recebido:', slug);
-  // console.log('🔍 Article.tsx - Artigos carregados:', articles?.length || 0);
-  // console.log('🔍 Article.tsx - Loading:', loading);
-  // console.log('🔍 Article.tsx - Error:', error);
+  console.log('🔍 Article.tsx - Renderizando página do artigo');
+  console.log('🔍 Article.tsx - Slug recebido:', slug);
+  console.log('🔍 Article.tsx - Artigos carregados:', articles?.length || 0);
+  console.log('🔍 Article.tsx - Loading:', loading);
+  console.log('🔍 Article.tsx - Error:', error);
+  console.log('🔍 Article.tsx - Todos os artigos:', articles?.map(a => ({ slug: a.slug, title: a.title, published: a.published })));
   
   useEffect(() => {
     refreshArticles();
@@ -39,12 +42,21 @@ const Article: React.FC = () => {
   const article = (articles || []).find(art => art?.slug === slug && art.published);
   const articleCategory = categories.find(cat => cat.id === article?.category_id);
   
-  // SEO Hook
+  console.log('🔍 Article.tsx - Artigo encontrado:', article ? `ID: ${article.id}, Título: ${article.title}` : 'NENHUM ARTIGO ENCONTRADO');
+  
+
+  
+
+  
+  // SEO Hook - melhorado para usar dados do artigo
   const seoHook = useSEO({
     pageType: 'article',
     pageSlug: slug,
-    fallbackTitle: article?.title || 'Artigo - AIMindset',
-    fallbackDescription: article?.excerpt || 'Descubra insights sobre IA e tecnologia no AIMindset.'
+    fallbackTitle: article ? `${article.title} | AIMindset` : 'Artigo - AIMindset',
+    fallbackDescription: article?.excerpt || 'Descubra insights sobre IA e tecnologia no AIMindset.',
+    fallbackKeywords: article?.tags ? 
+      [...article.tags.split(',').map(tag => tag.trim()), 'inteligência artificial', 'IA', 'produtividade'] :
+      ['inteligência artificial', 'IA', 'produtividade', 'artigo', 'blog']
   });
 
   const metadata = seoHook.getMetadata();
@@ -164,7 +176,8 @@ const Article: React.FC = () => {
             {/* Sidebar - Table of Contents */}
             <aside className="lg:w-64 order-2 lg:order-1">
               <div className="lg:sticky lg:top-20 lg:h-screen lg:overflow-y-auto lg:pb-20">
-                <TableOfContentsLazy />
+                {console.log('🔍 [ARTICLE DEBUG] Renderizando TableOfContents com slug:', slug)}
+                <TableOfContents articleSlug={slug} />
               </div>
             </aside>
 
@@ -249,49 +262,96 @@ const Article: React.FC = () => {
     
                 <div className="relative w-full max-h-[400px] sm:max-h-[500px] lg:max-h-[600px] bg-darker-surface rounded-lg overflow-hidden flex items-center justify-center">
                   <img
-                    src={article.image_url || '/placeholder-image.jpg'}
+                    src={article.image_url || '/placeholder-image.svg'}
                     alt={article.title}
                     className="w-full h-auto max-h-full object-contain transition-transform duration-300 hover:scale-105"
                     width={1200}
                     height={600}
                     loading="eager"
+                    onLoad={(e) => {
+                      console.log('✅ [IMAGE DEBUG] Imagem carregada com sucesso:', e.currentTarget.src);
+                    }}
+                    onError={(e) => {
+                      console.log('❌ [IMAGE DEBUG] Erro ao carregar imagem:', e.currentTarget.src);
+                      console.log('❌ [IMAGE DEBUG] Tentando fallback para placeholder...');
+                      e.currentTarget.src = '/placeholder-image.svg';
+                    }}
                   />
                 </div>
               </header>
     
               {/* Article Content */}
               <article id="article-content" data-article-content className="prose prose-invert prose-lg max-w-none mb-12">
-                <div className="font-roboto text-futuristic-gray leading-relaxed whitespace-pre-wrap">
-                  <ReactMarkdown 
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      p: ({ children }) => <p className="mb-4 leading-relaxed">{children}</p>,
-                      h1: ({ children }) => <h1 className="text-2xl font-bold mb-4 text-white">{children}</h1>,
-                      h2: ({ children }) => <h2 className="text-xl font-bold mb-3 text-white">{children}</h2>,
-                      h3: ({ children }) => <h3 className="text-lg font-bold mb-2 text-white">{children}</h3>,
-                      ul: ({ children }) => <ul className="list-disc list-inside mb-4 space-y-2">{children}</ul>,
-                      ol: ({ children }) => <ol className="list-decimal list-inside mb-4 space-y-2">{children}</ol>,
-                      li: ({ children }) => <li className="mb-1">{children}</li>,
-                      blockquote: ({ children }) => (
-                        <blockquote className="border-l-4 border-lime-green pl-4 my-4 italic text-lime-green/80">
+                {/* DEBUG: Log do conteúdo do artigo */}
+                {console.log('🔍 [ARTICLE DEBUG] Conteúdo do artigo:', article.content.substring(0, 500))}
+                {console.log('🔍 [ARTICLE DEBUG] Artigo completo:', article)}
+
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]}
+                  className="font-roboto text-futuristic-gray leading-relaxed"
+                  components={{
+                    p: ({ children }) => <p className="mb-4 leading-relaxed">{children}</p>,
+                    h1: ({ children, ...props }) => {
+                      console.log('🎯 [MARKDOWN DEBUG] H1 renderizado:', children);
+                      return (
+                        <h1 {...props} className="text-2xl font-bold mb-4 text-white">
                           {children}
-                        </blockquote>
-                      ),
-                      code: ({ children }) => (
-                        <code className="bg-darker-surface px-2 py-1 rounded text-lime-green font-mono text-sm">
+                        </h1>
+                      );
+                    },
+                    h2: ({ children, ...props }) => {
+                      console.log('🎯 [MARKDOWN DEBUG] H2 renderizado:', children);
+                      return (
+                        <h2 {...props} className="text-xl font-bold mb-3 text-white">
                           {children}
-                        </code>
-                      ),
-                      pre: ({ children }) => (
-                        <pre className="bg-darker-surface p-4 rounded-lg overflow-x-auto mb-4">
+                        </h2>
+                      );
+                    },
+                    h3: ({ children, ...props }) => {
+                      console.log('🎯 [MARKDOWN DEBUG] H3 renderizado:', children);
+                      return (
+                        <h3 {...props} className="text-lg font-bold mb-2 text-white">
                           {children}
-                        </pre>
-                      )
-                    }}
-                  >
-                    {article.content}
-                  </ReactMarkdown>
-                </div>
+                        </h3>
+                      );
+                    },
+                    h4: ({ children, ...props }) => (
+                      <h4 {...props} className="text-base font-bold mb-2 text-white">
+                        {children}
+                      </h4>
+                    ),
+                    h5: ({ children, ...props }) => (
+                      <h5 {...props} className="text-sm font-bold mb-2 text-white">
+                        {children}
+                      </h5>
+                    ),
+                    h6: ({ children, ...props }) => (
+                      <h6 {...props} className="text-xs font-bold mb-2 text-white">
+                        {children}
+                      </h6>
+                    ),
+                    ul: ({ children }) => <ul className="list-disc list-inside mb-4 space-y-2">{children}</ul>,
+                    ol: ({ children }) => <ol className="list-decimal list-inside mb-4 space-y-2">{children}</ol>,
+                    li: ({ children }) => <li className="mb-1">{children}</li>,
+                    blockquote: ({ children }) => (
+                      <blockquote className="border-l-4 border-lime-green pl-4 my-4 italic text-lime-green/80">
+                        {children}
+                      </blockquote>
+                    ),
+                    code: ({ children }) => (
+                      <code className="bg-darker-surface px-2 py-1 rounded text-lime-green font-mono text-sm">
+                        {children}
+                      </code>
+                    ),
+                    pre: ({ children }) => (
+                      <pre className="bg-darker-surface p-4 rounded-lg overflow-x-auto mb-4">
+                        {children}
+                      </pre>
+                    )
+                  }}
+                >
+                  {article.content}
+                </ReactMarkdown>
               </article>
     
               {/* Tags */}

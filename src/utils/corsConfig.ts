@@ -21,7 +21,9 @@ export class CORSConfig {
     'X-Requested-With',
     'X-CSRF-Token',
     'Accept',
-    'Origin'
+    'Origin',
+    'apikey',
+    'x-client-info'
   ];
 
   // Check if origin is allowed
@@ -154,36 +156,13 @@ export class HTTPSEnforcement {
     this.enforceHTTPS();
     this.checkMixedContent();
     
-    // Add security headers to all outgoing requests
-    if (typeof window !== 'undefined' && window.fetch) {
-      const originalFetch = window.fetch;
-      
-      window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-        const headers = new Headers(init?.headers);
-        
-        // Add security headers
-        const securityHeaders = HTTPSEnforcement.getHTTPSHeaders();
-        Object.entries(securityHeaders).forEach(([key, value]) => {
-          if (!headers.has(key)) {
-            headers.set(key, value);
-          }
-        });
-
-        // Add CORS headers if needed
-        const origin = window.location.origin;
-        const corsHeaders = CORSConfig.getCORSHeaders(origin);
-        Object.entries(corsHeaders).forEach(([key, value]) => {
-          if (!headers.has(key)) {
-            headers.set(key, value);
-          }
-        });
-
-        return originalFetch(input, {
-          ...init,
-          headers
-        });
-      };
-    }
+    // FETCH INTERCEPTATION DISABLED - Was causing 406 errors with Supabase
+    // The fetch interceptation was interfering with Supabase API requests
+    // even with URL checking, so it's been completely disabled to resolve
+    // the 406 (Not Acceptable) errors.
+    
+    // Security headers are now handled by other means (CSP, HTTPS enforcement)
+    // without intercepting the global fetch function.
   }
 }
 

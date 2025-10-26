@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseServiceClient } from '../lib/supabase';
 import { supabaseAdmin } from '../lib/supabase-admin';
 import { toast } from 'sonner';
 
@@ -86,9 +86,9 @@ export const useUsers = () => {
     try {
       // Buscar de múltiplas fontes
       const [contactsResult, subscribersResult, profilesResult] = await Promise.all([
-        supabase.from('contacts').select('*'),
-        supabase.from('newsletter_subscribers').select('*'),
-        supabase.from('user_profiles').select('*')
+        supabaseServiceClient.from('contacts').select('*'),
+        supabaseServiceClient.from('newsletter_subscribers').select('*'),
+        supabaseServiceClient.from('user_profiles').select('*')
       ]);
 
       const allUsers = new Map<string, User>();

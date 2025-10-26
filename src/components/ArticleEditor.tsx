@@ -45,7 +45,7 @@ interface ArticleData {
   title: string;
   slug: string;
   excerpt: string;
-  metaDescription: string;
+  // metaDescription: string; // Removido - coluna não existe na tabela
   content: string;
   category: string;
   tags: string;
@@ -72,7 +72,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
   const [slug, setSlug] = useState(initialData?.slug || '');
 
   const [excerpt, setExcerpt] = useState(initialData?.excerpt || '');
-  const [metaDescription, setMetaDescription] = useState(initialData?.meta_description || '');
+  // const [metaDescription, setMetaDescription] = useState(initialData?.meta_description || ''); // Removido - coluna não existe
   const [content, setContent] = useState(initialData?.content || '');
   const [category, setCategory] = useState(() => {
     if (initialData?.category_id) {
@@ -333,18 +333,19 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
     //   return;
     // }
 
-    if (metaDescription.trim().length > 160) {
-      console.log('❌ META DESCRIPTION MUITO LONGA:', metaDescription.trim().length);
-      alert('A meta descrição deve ter no máximo 160 caracteres.');
-      return;
-    }
+    // Meta description removido - coluna não existe na tabela
+    // if (metaDescription.trim().length > 160) {
+    //   console.log('❌ META DESCRIPTION MUITO LONGA:', metaDescription.trim().length);
+    //   alert('A meta descrição deve ter no máximo 160 caracteres.');
+    //   return;
+    // }
 
     console.log('🧹 INICIANDO SANITIZAÇÃO DOS DADOS');
     
     // Sanitizar dados
     const sanitizedTitle = sanitizeName(title.trim());
     const sanitizedExcerpt = sanitizeMessage(excerpt.trim());
-    const sanitizedMetaDescription = sanitizeMessage(metaDescription.trim());
+    // const sanitizedMetaDescription = sanitizeMessage(metaDescription.trim()); // Removido
     const sanitizedContent = sanitizeMessage(content.trim());
     const sanitizedTags = sanitizeMessage(tags.trim());
     const sanitizedFeaturedImage = featuredImage.trim() ? SecurityHeaders.sanitizeUrl(featuredImage.trim()) : '';
@@ -370,7 +371,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
       title: sanitizedTitle,
       slug: slug.trim() || generateSlug(sanitizedTitle),
       excerpt: sanitizedExcerpt,
-      metaDescription: sanitizedMetaDescription,
+      // metaDescription: sanitizedMetaDescription, // Removido - coluna não existe
       content: sanitizedContent,
       category: category,
       tags: sanitizedTags,
@@ -637,6 +638,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
                      placeholder="Breve descrição do artigo..."
                    />
                  </div>
+                 {/* Meta Description removido - coluna não existe na tabela
                  <div>
                    <label className="block text-sm font-montserrat font-medium text-white mb-2">
                      Meta Description *
@@ -660,6 +662,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
                      </p>
                    </div>
                  </div>
+                 */}
               </div>
             </Card>
 

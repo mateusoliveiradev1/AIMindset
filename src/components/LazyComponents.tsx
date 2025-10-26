@@ -24,11 +24,15 @@ export const LazyReadingProgressBar = lazy(() => import('./ReadingProgressBar').
 export const LazyArticleNavigation = lazy(() => import('./ArticleNavigation').then(module => ({ default: module.ArticleNavigation })));
 
 // Wrapper components com Suspense
-export const TableOfContentsLazy: React.FC<any> = (props) => (
-  <Suspense fallback={<ComponentLoader size="small" />}>
-    <LazyTableOfContents {...props} />
-  </Suspense>
-);
+export const TableOfContentsLazy: React.FC<any> = (props) => {
+  console.log('🚀 [TOC DEBUG] TableOfContentsLazy sendo renderizado com props:', props);
+  
+  return (
+    <Suspense fallback={<ComponentLoader size="small" />}>
+      <LazyTableOfContents {...props} />
+    </Suspense>
+  );
+};
 
 export const FeedbackSectionLazy: React.FC<any> = (props) => (
   <Suspense fallback={<ComponentLoader />}>

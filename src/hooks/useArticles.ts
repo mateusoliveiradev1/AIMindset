@@ -95,7 +95,7 @@ export const useArticles = (): UseArticlesReturn => {
   const fetchArticles = useCallback(async () => {
     try {
       setError(null);
-      console.log('🔄 Tentando buscar artigos do Supabase...');
+      console.log('🔄 [useArticles] Buscando artigos do Supabase...');
 
       // Verificar se o Supabase está configurado
       if (!supabase) {
@@ -106,7 +106,7 @@ export const useArticles = (): UseArticlesReturn => {
       let data, fetchError;
       
       try {
-        console.log('📡 Fazendo query para artigos...');
+        console.log('📡 [useArticles] Fazendo query para artigos...');
         const result = await supabase
           .from('articles')
           .select(`
@@ -120,63 +120,50 @@ export const useArticles = (): UseArticlesReturn => {
           `)
           .order('created_at', { ascending: false });
 
-        console.log('📊 Resultado da query:', result);
+        console.log('📊 [useArticles] Resultado da query:', result);
         data = result.data;
         fetchError = result.error;
       } catch (queryError) {
-        console.error('❌ Erro na query:', queryError);
+        console.error('❌ [useArticles] Erro na query:', queryError);
         fetchError = queryError;
       }
 
-      try {
-        const result = await supabase
-          .from('articles')
-          .select(`
-            *,
-            category:categories (
-              id,
-              name,
-              slug,
-              description
-            )
-          `)
-          .order('created_at', { ascending: false });
+      // Se falhou com cliente normal, tentar com admin
+      if (fetchError || !data) {
+        console.warn('⚠️ [useArticles] Tentando com supabaseAdmin...');
         
-        data = result.data;
-        fetchError = result.error;
-      } catch (networkError) {
-        // console.warn('⚠️ Erro de rede com cliente normal, tentando com admin...', networkError);
-        
-        // Fallback para cliente admin
-        const adminResult = await supabaseAdmin
-          .from('articles')
-          .select(`
-            *,
-            category:categories (
-              id,
-              name,
-              slug,
-              description
-            )
-          `)
-          .order('created_at', { ascending: false });
-        
-        data = adminResult.data;
-        fetchError = adminResult.error;
+        try {
+          const adminResult = await supabaseAdmin
+            .from('articles')
+            .select(`
+              *,
+              category:categories (
+                id,
+                name,
+                slug,
+                description
+              )
+            `)
+            .order('created_at', { ascending: false });
+          
+          data = adminResult.data;
+          fetchError = adminResult.error;
+          console.log('📊 [useArticles] Resultado com admin:', { data: data?.length, error: fetchError });
+        } catch (adminError) {
+          console.error('❌ [useArticles] Erro com admin:', adminError);
+          fetchError = adminError;
+        }
       }
 
-      if (fetchError) {
-        console.error('❌ Error fetching articles:', fetchError);
-        setError('Failed to fetch articles from database');
-        
-        // Fallback para dados mock
-        console.log('🔄 Usando dados mock como fallback...');
+      // Se ainda não há dados, usar dados mock como fallback
+      if (fetchError || !data || data.length === 0) {
+        console.warn('⚠️ [useArticles] Usando dados mock como fallback');
         const { mockArticles } = await import('../data/mockData');
         setArticles(mockArticles || []);
         return;
       }
 
-      console.log('✅ Artigos carregados com sucesso:', data?.length || 0);
+      console.log('✅ [useArticles] Artigos carregados com sucesso:', data.length);
       setArticles(data || []);
     } catch (err) {
       console.error('❌ Error fetching articles:', err);
@@ -196,15 +183,19 @@ export const useArticles = (): UseArticlesReturn => {
 
   const fetchCategories = useCallback(async () => {
     try {
+      console.log('🔄 [useArticles] Buscando categorias do Supabase...');
+      
       // Tentar primeiro com cliente normal, depois com admin se necessário
       let data, fetchError;
       
       try {
+        console.log('📡 [useArticles] Fazendo query para categorias...');
         const result = await supabase
           .from('categories')
           .select('*')
           .order('name', { ascending: true });
         
+        console.log('📊 [useArticles] Resultado da query categorias:', result);
         data = result.data;
         fetchError = result.error;
       } catch (networkError) {
@@ -216,18 +207,29 @@ export const useArticles = (): UseArticlesReturn => {
           .select('*')
           .order('name', { ascending: true });
         
+        console.log('📊 [useArticles] Resultado com admin categorias:', { data: adminResult.data?.length, error: adminResult.error });
         data = adminResult.data;
         fetchError = adminResult.error;
       }
 
       if (fetchError) {
-        console.error('Error fetching categories:', fetchError);
+        console.error('❌ Error fetching categories:', fetchError);
+        // Se falhou, usar dados mock como fallback
+        console.warn('⚠️ [useArticles] Usando categorias mock como fallback');
+        const { mockCategories } = await import('../data/mockData');
+        setCategories(mockCategories || []);
         return;
       }
 
+      console.log('✅ [useArticles] Categorias carregadas com sucesso:', data?.length || 0);
+      console.log('📋 [useArticles] Categorias:', data?.map(cat => ({ id: cat.id, name: cat.name, slug: cat.slug })));
       setCategories(data || []);
     } catch (err) {
-      console.error('Error fetching categories:', err);
+      console.error('❌ Error fetching categories:', err);
+      // Fallback para dados mock em caso de erro
+      console.warn('⚠️ [useArticles] Usando categorias mock como fallback devido ao erro');
+      const { mockCategories } = await import('../data/mockData');
+      setCategories(mockCategories || []);
     }
   }, []);
 

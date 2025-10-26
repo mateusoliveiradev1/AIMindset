@@ -73,7 +73,7 @@ export const generateSitemap = async (req: Request, res: Response) => {
         slug, 
         title,
         excerpt,
-        featured_image,
+        image_url,
         updated_at, 
         created_at,
         category_id,
@@ -101,9 +101,9 @@ export const generateSitemap = async (req: Request, res: Response) => {
         };
 
         // Adicionar imagens se disponíveis
-        if (article.featured_image) {
+        if (article.image_url) {
           articleUrl.images = [{
-            loc: article.featured_image,
+            loc: article.image_url,
             title: article.title,
             caption: article.excerpt || article.title
           }];

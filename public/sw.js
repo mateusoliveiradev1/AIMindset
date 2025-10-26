@@ -202,11 +202,14 @@ async function cacheFirst(request) {
     const networkResponse = await fetch(request);
     
     if (networkResponse.ok) {
-      // Implementar limpeza de cache para imagens
-      if (isImage) {
-        await cleanImageCache();
+      // 🔥 VERIFICAR SE É MÉTODO CACHEÁVEL (NÃO POST, PUT, DELETE)
+      if (request.method === 'GET' || request.method === 'HEAD') {
+        // Implementar limpeza de cache para imagens
+        if (isImage) {
+          await cleanImageCache();
+        }
+        cache.put(request, networkResponse.clone());
       }
-      cache.put(request, networkResponse.clone());
     }
     
     return networkResponse;
@@ -222,8 +225,11 @@ async function networkFirst(request) {
     
     // Verificar se a resposta é válida e não é uma resposta parcial (status 206)
     if (networkResponse.ok && networkResponse.status !== 206) {
-      const cache = await caches.open(DYNAMIC_CACHE);
-      cache.put(request, networkResponse.clone());
+      // 🔥 VERIFICAR SE É MÉTODO CACHEÁVEL (NÃO POST, PUT, DELETE)
+      if (request.method === 'GET' || request.method === 'HEAD') {
+        const cache = await caches.open(DYNAMIC_CACHE);
+        cache.put(request, networkResponse.clone());
+      }
     }
     
     return networkResponse;
@@ -247,10 +253,13 @@ async function staleWhileRevalidate(request) {
   // Buscar nova versão em background
   const fetchPromise = fetch(request).then((networkResponse) => {
     if (networkResponse.ok) {
-      cache.put(request, networkResponse.clone());
+      // 🔥 VERIFICAR SE É MÉTODO CACHEÁVEL (NÃO POST, PUT, DELETE)
+      if (request.method === 'GET' || request.method === 'HEAD') {
+        cache.put(request, networkResponse.clone());
+      }
     }
     return networkResponse;
-  }).catch(() => {
+  }).catch(() => {});
     // Ignorar erros de rede em background
   });
   

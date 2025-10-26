@@ -4,30 +4,39 @@ import { List, X } from 'lucide-react';
 
 interface TableOfContentsProps {
   className?: string;
+  articleSlug?: string;
 }
 
 export const TableOfContents: React.FC<TableOfContentsProps> = ({ 
-  className = '' 
+  className = '',
+  articleSlug
 }) => {
-  const { toc, activeId, scrollToHeading } = useTableOfContents('[data-article-content]');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
-  const [screenSize, setScreenSize] = useState<'large' | 'medium' | 'small'>('large');
-  
-  // Refs para controle de performance
-  const scrollTimeoutRef = useRef<number | null>(null);
-  const lastScrollTimeRef = useRef<number>(0);
-  const isScrollingRef = useRef<boolean>(false);
+  const [screenSize, setScreenSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Detectar tamanho da tela
+  // DEBUG: Log quando o componente é renderizado
+  console.log('🎯 [TOC DEBUG] TableOfContents renderizado com props:', { articleSlug, className });
+
+  // Hook deve ser chamado no topo do componente
+  const { toc, activeId } = useTableOfContents('#article-content', [articleSlug]);
+
+  // DEBUG: Log do estado do TOC
+  console.log('📋 [TOC DEBUG] Estado do TOC:', { 
+    tocLength: toc.length, 
+    activeId, 
+    toc: toc.map(item => ({ id: item.id, text: item.text, level: item.level }))
+  });
+
+  // Detectar se é desktop e tamanho da tela
   useEffect(() => {
     const checkScreenSize = () => {
       const width = window.innerWidth;
       setIsDesktop(width >= 1024);
       
-      // Definir tamanho da tela para responsividade progressiva
-      if (width >= 1400) {
+      if (width >= 1440) {
         setScreenSize('large');
       } else if (width >= 1200) {
         setScreenSize('medium');
@@ -41,161 +50,85 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
-  // Lógica otimizada de detecção de scroll
+  // Controlar visibilidade baseada no scroll
   useEffect(() => {
     const handleScroll = () => {
-      const now = Date.now();
-      
-      // Throttle manual mais eficiente
-      if (now - lastScrollTimeRef.current < 150) {
-        return;
-      }
-      
-      lastScrollTimeRef.current = now;
-      
-      // Usar requestAnimationFrame para melhor performance
-      if (scrollTimeoutRef.current) {
-        cancelAnimationFrame(scrollTimeoutRef.current);
-      }
-      
-      scrollTimeoutRef.current = requestAnimationFrame(() => {
-        try {
-          const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-          const windowHeight = window.innerHeight;
-          const documentHeight = document.documentElement.scrollHeight;
-          
-          // Verificar se os valores são válidos
-          if (documentHeight <= windowHeight) {
-            setIsVisible(true);
-            return;
-          }
-          
-          // Calcular porcentagem de scroll
-          const scrollPercentage = (scrollTop + windowHeight) / documentHeight;
-          
-          // Esconder índice quando próximo ao final (90% da página foi rolada)
-          const shouldHide = scrollPercentage >= 0.9;
-          
-          setIsVisible(!shouldHide);
-        } catch (error) {
-          console.warn('Erro no handleScroll:', error);
-          setIsVisible(true); // Fallback seguro
-        }
-      });
-    };
-
-    // Adicionar listener com passive para melhor performance
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    
-    // Verificar posição inicial
-    handleScroll();
-    
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (scrollTimeoutRef.current) {
-        cancelAnimationFrame(scrollTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // Impedir scroll do body quando modal estiver aberto
-  useEffect(() => {
-    if (isModalOpen && !isDesktop) {
-      // Salvar o valor atual do scroll antes de bloquear
       const scrollY = window.scrollY;
-      document.body.style.overflow = 'hidden';
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = '100%';
-    } else {
-      // Restaurar o scroll quando fechar o modal
-      const scrollY = document.body.style.top;
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.width = '';
-      if (scrollY) {
-        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      const shouldShow = scrollY > 200;
+      
+      if (shouldShow !== isVisible) {
+        setIsVisible(shouldShow);
       }
+    };
+
+    // Mostrar imediatamente se há conteúdo
+    if (toc && toc.length > 0) {
+      setIsVisible(true);
     }
 
-    return () => {
-      // Cleanup para garantir que o body volte ao normal
-      document.body.style.overflow = '';
-      document.body.style.position = '';
-      document.body.style.top = '';
-      document.body.style.width = '';
-    };
-  }, [isModalOpen, isDesktop]);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isVisible, toc]);
 
-  // Handler otimizado para cliques e touch
-  const handleScrollToHeading = useCallback((headingId: string, closeModal: boolean = false) => {
-    try {
-      // Prevenir múltiplos cliques
-      if (isScrollingRef.current) {
-        return;
-      }
+  const handleScrollToHeading = useCallback((headingId: string, closeModal = false) => {
+    const element = document.getElementById(headingId);
+    if (element) {
+      const yOffset = -80;
+      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
       
-      isScrollingRef.current = true;
+      window.scrollTo({ top: y, behavior: 'smooth' });
       
-      // Fechar modal primeiro se necessário
       if (closeModal) {
         setIsModalOpen(false);
       }
-      
-      // Aguardar um pouco mais em dispositivos móveis para garantir que o modal feche
-      const delay = closeModal ? 100 : 0;
-      
-      setTimeout(() => {
-        requestAnimationFrame(() => {
-          scrollToHeading(headingId);
-          
-          // Reset flag após scroll - tempo maior para dispositivos móveis
-          setTimeout(() => {
-            isScrollingRef.current = false;
-          }, 800);
-        });
-      }, delay);
-    } catch (error) {
-      console.warn('Erro ao navegar para heading:', error);
-      isScrollingRef.current = false;
     }
-  }, [scrollToHeading]);
+  }, []);
 
-  // Gerenciar eventos touch para dispositivos móveis (non-passive)
+  // Fechar modal ao pressionar ESC
   useEffect(() => {
-    if (!isDesktop && isModalOpen) {
-      let touchStartTarget = null;
-      
-      const handleTouchStart = (e) => {
-        // Verificar se o toque foi em um botão do índice
-        const button = e.target.closest('button[data-heading-id]');
-        if (button) {
-          touchStartTarget = button;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isModalOpen) {
+        setIsModalOpen(false);
+      }
+    };
+
+    if (isModalOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isModalOpen]);
+
+  // Prevenir scroll do body quando modal está aberto
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isModalOpen]);
+
+  // Adicionar listeners de touch para mobile
+  useEffect(() => {
+    if (!isDesktop) {
+      const handleTouchStart = (e: TouchEvent) => {
+        if (isModalOpen) {
           e.preventDefault();
-          e.stopPropagation();
         }
       };
-      
-      const handleTouchEnd = (e) => {
-        // Verificar se o toque terminou no mesmo botão que começou
-        const button = e.target.closest('button[data-heading-id]');
-        if (button && button === touchStartTarget) {
+
+      const handleTouchEnd = (e: TouchEvent) => {
+        if (isModalOpen) {
           e.preventDefault();
-          e.stopPropagation();
-          
-          const headingId = button.getAttribute('data-heading-id');
-          if (headingId) {
-            handleScrollToHeading(headingId, true);
-          }
         }
-        touchStartTarget = null;
       };
-      
-      // Registrar eventos como non-passive
+
       document.addEventListener('touchstart', handleTouchStart, { passive: false });
       document.addEventListener('touchend', handleTouchEnd, { passive: false });
-      
+
       return () => {
         document.removeEventListener('touchstart', handleTouchStart);
         document.removeEventListener('touchend', handleTouchEnd);
@@ -204,9 +137,12 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
   }, [isDesktop, isModalOpen, handleScrollToHeading]);
 
   // Early return se não há itens
-  if (!toc || !Array.isArray(toc) || toc.length === 0) {
+  if (!toc || toc.length === 0) {
+    console.log('🚫 [TOC DEBUG] Não há itens no TOC, retornando null');
     return null;
   }
+
+  console.log('✅ [TOC DEBUG] Renderizando TableOfContents com', toc.length, 'itens');
 
   return (
     <>

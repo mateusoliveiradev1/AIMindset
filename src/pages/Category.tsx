@@ -112,9 +112,9 @@ const Category: React.FC = () => {
             {categoryArticles.map((article) => (
               <Card key={article.id} variant="glass" className="overflow-hidden group">
                 <Link to={`/artigo/${article.slug}`} className="block relative w-full aspect-[4/3] sm:aspect-[16/9] overflow-hidden cursor-pointer">
-                  {(article.image_url || article.featured_image) ? (
+                  {article.image_url ? (
                     <img
-                      src={article.image_url || article.featured_image}
+                      src={article.image_url}
                       alt={article.title}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       width={400}
