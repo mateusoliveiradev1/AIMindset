@@ -14,7 +14,7 @@ const Header: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout } = useAuth();
 
   const navigation = [
     { name: 'Home', href: '/' },
@@ -26,11 +26,11 @@ const Header: React.FC = () => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  // Páginas onde o botão de busca não deve aparecer
-  const hiddenSearchPages = ['/admin', '/admin/login', '/about', '/contact', '/privacy'];
+  // P├íginas onde o bot├úo de busca n├úo deve aparecer
+  const hiddenSearchPages = ['/admin', '/admin-login', '/about', '/contact', '/privacy'];
   const shouldShowSearch = !hiddenSearchPages.some(page => location.pathname.startsWith(page));
 
-  // Focar no input quando a busca é aberta
+  // Focar no input quando a busca ├® aberta
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) {
       searchInputRef.current.focus();
@@ -42,7 +42,7 @@ const Header: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsSearchOpen(false);
-        setSearchQuery('');
+        setSearchTerm('');
       }
     };
 
@@ -55,7 +55,7 @@ const Header: React.FC = () => {
   const handleSearchToggle = () => {
     setIsSearchOpen(!isSearchOpen);
     if (isSearchOpen) {
-      setSearchQuery('');
+      setSearchTerm('');
     }
   };
 
@@ -72,21 +72,12 @@ const Header: React.FC = () => {
     setIsSearchOpen(false);
   };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/');
-    } catch (error) {
-      console.error('Erro ao fazer logout:', error);
-    }
-  };
-
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-primary-dark/95 backdrop-blur-md border-b border-neon-purple/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2 group header-logo">
+          <Link to="/" className="flex items-center space-x-2 group">
             <div className="relative">
               <Brain className="h-8 w-8 text-lime-green group-hover:animate-pulse-neon transition-all duration-300" />
               <div className="absolute inset-0 bg-lime-green/20 rounded-full blur-md group-hover:blur-lg transition-all duration-300"></div>
@@ -102,7 +93,7 @@ const Header: React.FC = () => {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`font-montserrat font-medium transition-all duration-300 relative group header-nav-link ${
+                className={`font-montserrat font-medium transition-all duration-300 relative group ${
                   isActive(item.href)
                     ? 'text-lime-green'
                     : 'text-futuristic-gray hover:text-lime-green'
@@ -116,58 +107,56 @@ const Header: React.FC = () => {
             ))}
           </nav>
 
-          {/* Search and User Actions */}
+          {/* Search & Mobile Menu */}
           <div className="flex items-center space-x-4">
-            {/* Search Button */}
+            {/* Search - Only show on allowed pages */}
             {shouldShowSearch && (
-              <button
-                onClick={handleSearchToggle}
-                className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 header-search-btn"
-                aria-label="Buscar"
-              >
-                <Search className="w-5 h-5" />
-              </button>
-            )}
-
-            {/* User Menu */}
-            {user ? (
-              <div className="flex items-center space-x-2">
-                {/* Admin Button - Only for authenticated super_admin */}
-                {user && user.role === 'super_admin' && isAuthenticated && (
-                  <Link
-                    to="/admin"
-                    className="p-2 text-futuristic-gray hover:text-neon-purple transition-colors duration-300"
-                    aria-label="Admin Panel"
-                    title="Painel Administrativo"
+              <div className="relative">
+                {!isSearchOpen ? (
+                  <button 
+                    onClick={handleSearchToggle}
+                    className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 hover-lift"
                   >
-                    <Settings className="w-5 h-5" />
-                  </Link>
+                    <Search className="h-5 w-5" />
+                  </button>
+                ) : (
+                  <form onSubmit={handleSearchSubmit} className="flex items-center">
+                    <div className="relative">
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Buscar artigos..."
+                        className="w-32 sm:w-40 md:w-48 lg:w-64 px-4 py-2 pl-10 bg-dark-surface/95 backdrop-blur-md border border-neon-purple/30 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green transition-all duration-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAdvancedSearchOpen}
+                        className="ml-2 px-3 py-2 text-xs bg-neon-purple/20 text-neon-purple hover:bg-neon-purple/30 rounded-lg transition-colors duration-300"
+                      >
+                        Avan├ºada
+                      </button>
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-futuristic-gray" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSearchToggle}
+                      className="ml-2 p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </form>
                 )}
-                <button
-                  onClick={handleLogout}
-                  className="p-2 text-futuristic-gray hover:text-red-400 transition-colors duration-300"
-                  aria-label="Logout"
-                >
-                  <LogOut className="w-5 h-5" />
-                </button>
               </div>
-            ) : (
-              <Link
-                to="/admin/login"
-                className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300"
-                aria-label="Login"
-              >
-                <User className="w-5 h-5" />
-              </Link>
             )}
-
-            {/* Mobile Menu Button */}
+            
+            {/* Mobile menu button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 header-menu-btn"
-              aria-label="Menu"
+              className="md:hidden p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300"
             >
-              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
           </div>
         </div>
@@ -181,7 +170,7 @@ const Header: React.FC = () => {
                   key={item.name}
                   to={item.href}
                   onClick={() => setIsMenuOpen(false)}
-                  className={`block px-3 py-2 rounded-md font-montserrat font-medium transition-all duration-300 header-nav-link ${
+                  className={`block px-3 py-2 rounded-md font-montserrat font-medium transition-all duration-300 ${
                     isActive(item.href)
                       ? 'text-lime-green bg-lime-green/10'
                       : 'text-futuristic-gray hover:text-lime-green hover:bg-lime-green/5'
@@ -193,35 +182,16 @@ const Header: React.FC = () => {
             </div>
           </div>
         )}
-
-        {/* Search Overlay */}
-        {isSearchOpen && (
-          <div className="absolute top-full left-0 right-0 bg-dark-bg/95 backdrop-blur-sm border-b border-neon-purple/20 p-4">
-            <form onSubmit={handleSearchSubmit} className="max-w-2xl mx-auto">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-futuristic-gray w-5 h-5" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Buscar artigos..."
-                  className="w-full pl-10 pr-4 py-3 bg-dark-surface/50 border border-neon-purple/30 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green focus:ring-1 focus:ring-lime-green transition-colors"
-                />
-              </div>
-            </form>
-          </div>
-        )}
       </div>
 
-      {/* Advanced Search Modal */}
-      <AdvancedSearch
-        isOpen={isAdvancedSearchOpen}
-        onClose={() => setIsAdvancedSearchOpen(false)}
-        initialQuery={searchQuery}
-      />
-    </header>
-  );
-};
-
-export default Header;
+        {/* Advanced Search Modal */}
+        <AdvancedSearch
+          isOpen={isAdvancedSearchOpen}
+          onClose={() => setIsAdvancedSearchOpen(false)}
+          initialQuery={searchQuery}
+        />
+      </header>
+    );
+  };
+  
+  export default Header;

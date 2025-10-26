@@ -23,13 +23,13 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
     disabled
   });
 
-  const baseClasses = 'inline-flex items-center justify-center font-montserrat font-semibold rounded-lg transition-all duration-300 hover-lift focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neon-purple disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseClasses = 'inline-flex items-center justify-center font-montserrat font-semibold rounded-lg transition-all duration-300 hover-lift disabled:opacity-50 disabled:cursor-not-allowed';
   
   const variants = {
-    primary: 'bg-neon-gradient text-white hover:shadow-lg hover:shadow-neon-purple/25 neon-border',
-    secondary: 'bg-lime-green text-primary-dark hover:bg-lime-green/90 hover:shadow-lg hover:shadow-lime-green/25',
-    outline: 'border-2 border-neon-purple text-neon-purple hover:bg-neon-purple hover:text-white neon-border',
-    ghost: 'text-futuristic-gray hover:text-lime-green hover:bg-lime-green/10',
+    primary: 'bg-neon-gradient text-white hover:shadow-lg hover:shadow-neon-purple/25 neon-border btn-primary',
+    secondary: 'bg-lime-green text-primary-dark hover:bg-lime-green/90 hover:shadow-lg hover:shadow-lime-green/25 btn-secondary',
+    outline: 'border-2 border-neon-purple text-neon-purple hover:bg-neon-purple hover:text-white neon-border btn-outline',
+    ghost: 'text-futuristic-gray hover:text-lime-green hover:bg-lime-green/10 btn-secondary',
   };
   
   const sizes = {

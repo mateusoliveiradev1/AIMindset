@@ -13,6 +13,9 @@
 /* Import do arquivo de acessibilidade */
 @import './styles/accessibility.css';
 
+/* Import dos focus states elegantes */
+@import './styles/focus-states.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

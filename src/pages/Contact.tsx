@@ -396,9 +396,9 @@ export const Contact: React.FC = () => {
                           value={formData.name}
                           onChange={handleChange}
                           autoComplete="name"
-                          className={`w-full px-4 py-3 bg-darker-surface border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green transition-all duration-300 prevent-zoom touch-target ${
-                            errors.name ? 'border-red-500' : 'border-neon-purple/30'
-                          }`}
+                          className={`w-full px-4 py-3 bg-darker-surface border rounded-lg text-white placeholder-futuristic-gray transition-all duration-300 prevent-zoom touch-target ${
+                          errors.name ? 'border-red-500' : 'border-neon-purple/30'
+                        }`}
                           placeholder="Seu nome completo"
                           required
                         />
@@ -418,9 +418,9 @@ export const Contact: React.FC = () => {
                           value={formData.email}
                           onChange={handleChange}
                           autoComplete="email"
-                          className={`w-full px-4 py-3 bg-darker-surface border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green transition-all duration-300 prevent-zoom touch-target ${
-                            errors.email ? 'border-red-500' : 'border-neon-purple/30'
-                          }`}
+                          className={`w-full px-4 py-3 bg-darker-surface border rounded-lg text-white placeholder-futuristic-gray transition-all duration-300 prevent-zoom touch-target ${
+                          errors.email ? 'border-red-500' : 'border-neon-purple/30'
+                        }`}
                           placeholder="seu@email.com"
                           required
                         />
@@ -439,7 +439,7 @@ export const Contact: React.FC = () => {
                         name="subject"
                         value={formData.subject}
                         onChange={handleChange}
-                        className={`w-full px-4 py-3 bg-darker-surface border rounded-lg text-white focus:outline-none focus:border-lime-green transition-all duration-300 touch-target ${
+                        className={`w-full px-4 py-3 bg-darker-surface border rounded-lg text-white transition-all duration-300 touch-target ${
                           errors.subject ? 'border-red-500' : 'border-neon-purple/30'
                         }`}
                         required
@@ -466,7 +466,7 @@ export const Contact: React.FC = () => {
                         value={formData.message}
                         onChange={handleChange}
                         rows={6}
-                        className={`w-full px-4 py-3 bg-darker-surface border rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green transition-all duration-300 resize-none prevent-zoom touch-target ${
+                        className={`w-full px-4 py-3 bg-darker-surface border rounded-lg text-white placeholder-futuristic-gray transition-all duration-300 resize-none prevent-zoom touch-target ${
                           errors.message ? 'border-red-500' : 'border-neon-purple/30'
                         }`}
                         placeholder="Descreva sua mensagem detalhadamente..."
