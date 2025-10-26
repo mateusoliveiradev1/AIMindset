@@ -86,6 +86,7 @@ export async function withRetry<T>(
       console.log(`🔄 [Retry] Tentativa ${attempts}/${config.maxRetries + 1}`);
       
       const result = await operation();
+      console.log(`🔍 [Retry] Resultado da operação:`, result);
       
       if (result.error) {
         lastError = result.error;

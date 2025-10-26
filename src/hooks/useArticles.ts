@@ -134,7 +134,15 @@ export const useArticles = (): UseArticlesReturn => {
           'Fetch Articles (Normal Client)'
         );
 
-        console.log('🔍 [DEBUG] normalResult:', normalResult);
+        console.log('🔍 [DEBUG] normalResult completo:', normalResult);
+        console.log('🔍 [DEBUG] normalResult.success:', normalResult.success);
+        console.log('🔍 [DEBUG] normalResult.data:', normalResult.data);
+
+        // Se deu certo com cliente normal, usar os dados
+        if (normalResult.success && normalResult.data) {
+          console.log('✅ [DEBUG] Usando dados do cliente normal');
+          return normalResult;
+        }
 
         // Se falhou com cliente normal, tentar com admin
         if (!normalResult.success) {
@@ -157,31 +165,30 @@ export const useArticles = (): UseArticlesReturn => {
           'Fetch Articles (Admin Client)'
         );
 
-        console.log('🔍 [DEBUG] adminResult:', adminResult);
+        console.log('🔍 [DEBUG] adminResult completo:', adminResult);
+        console.log('🔍 [DEBUG] adminResult.success:', adminResult.success);
+        console.log('🔍 [DEBUG] adminResult.data:', adminResult.data);
 
-        return {
-          data: adminResult.success ? adminResult.data as Article[] : null,
-          error: adminResult.error || normalResult.error 
-        };
+        return adminResult;
       };
 
-      const { data, error: fetchError } = await fetchWithRetry();
-      console.log('🔍 [DEBUG] fetchWithRetry final result:', { data, fetchError });
+      const result = await fetchWithRetry();
+      console.log('🔍 [DEBUG] Resultado final de fetchWithRetry:', result);
 
-      if (fetchError) {
-        console.error('❌ [useArticles] Erro ao buscar artigos:', fetchError);
-        setError(fetchError.message || 'Erro ao carregar artigos');
+      if (!result.success || result.error) {
+        console.error('❌ [useArticles] Erro ao buscar artigos:', result.error);
+        setError(result.error?.message || 'Erro ao carregar artigos');
         return;
       }
 
-      if (!data || (data as Article[]).length === 0) {
+      if (!result.data || (result.data as Article[]).length === 0) {
         console.warn('⚠️ [useArticles] Nenhum artigo encontrado no banco');
         setArticles([]);
         return;
       }
 
-      console.log('✅ [useArticles] Artigos carregados com sucesso:', (data as Article[]).length);
-      setArticles(data as Article[] || []);
+      console.log('✅ [useArticles] Artigos carregados com sucesso:', (result.data as Article[]).length);
+      setArticles(result.data as Article[] || []);
     } catch (err) {
       console.error('❌ Error fetching articles:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch articles');

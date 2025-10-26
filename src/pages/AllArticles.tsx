@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Search, Filter, Calendar, Clock, Tag, Grid, List, TrendingUp } from 'lucide-react';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
-import { useArticles } from '../hooks/useArticles';
+import { useArticlesSimple } from '../hooks/useArticlesSimple';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '../components/UI/PullToRefreshIndicator';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
@@ -38,18 +38,21 @@ const AllArticles: React.FC = () => {
     enablePerformanceMonitoring: true
   });
 
+  // Usar hook simples para debug
   const { 
     articles, 
     categories, 
     loading, 
     error, 
-    hasMore, 
-    loadMore,
     refresh 
-  } = useArticles();
+  } = useArticlesSimple();
+  
+  // Valores padrão para compatibilidade
+  const hasMore = false;
+  const loadMore = () => {};
 
-  // DEBUG: Log para verificar os dados do useArticles
-  console.log('🔍 AllArticles useArticles data:', {
+  // DEBUG: Log para verificar os dados do useArticlesSimple
+  console.log('🔍 AllArticles useArticlesSimple data:', {
     articlesCount: articles.length,
     categoriesCount: categories.length,
     loading,
