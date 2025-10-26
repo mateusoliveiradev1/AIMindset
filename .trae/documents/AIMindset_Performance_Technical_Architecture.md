@@ -52,44 +52,61 @@ graph TD
 ## 2. Descrição das Tecnologias
 
 **Frontend:**
-- React@18 + TypeScript
-- Vite@5 (build tool otimizado)
-- TailwindCSS@3 (utility-first CSS)
-- React Router@6 (client-side routing)
-- Lucide React (ícones otimizados)
+
+* React\@18 + TypeScript
+
+* Vite\@5 (build tool otimizado)
+
+* TailwindCSS\@3 (utility-first CSS)
+
+* React Router\@6 (client-side routing)
+
+* Lucide React (ícones otimizados)
 
 **Performance Stack:**
-- Service Worker (cache inteligente)
-- Intersection Observer API (lazy loading)
-- Web Workers (tarefas pesadas)
-- Performance Observer API (monitoring)
+
+* Service Worker (cache inteligente)
+
+* Intersection Observer API (lazy loading)
+
+* Web Workers (tarefas pesadas)
+
+* Performance Observer API (monitoring)
 
 **Build Optimizations:**
-- Terser (minificação JavaScript)
-- PostCSS (otimização CSS)
-- Rollup (bundling avançado)
-- ESBuild (transpilação rápida)
+
+* Terser (minificação JavaScript)
+
+* PostCSS (otimização CSS)
+
+* Rollup (bundling avançado)
+
+* ESBuild (transpilação rápida)
 
 **Monitoring:**
-- Lighthouse CI
-- Web Vitals Library
-- Performance Observer
-- Error Boundary Tracking
+
+* Lighthouse CI
+
+* Web Vitals Library
+
+* Performance Observer
+
+* Error Boundary Tracking
 
 ## 3. Definições de Rotas
 
-| Rota | Propósito | Otimizações Específicas |
-|------|-----------|------------------------|
-| `/` | Página inicial com hero e artigos em destaque | Critical CSS inline, lazy loading de imagens, prefetch de artigos |
-| `/articles` | Lista completa de artigos com paginação | Virtual scrolling, infinite scroll otimizado, image lazy loading |
-| `/article/:slug` | Página individual do artigo | Code splitting, prefetch de artigos relacionados, otimização de SEO |
-| `/admin` | Dashboard administrativo | Chunk separado, lazy loading de componentes, cache de dados |
-| `/admin/articles` | Gerenciamento de artigos | Virtual table, bulk operations otimizadas |
-| `/admin/comments` | Moderação de comentários | Real-time updates otimizadas, batch processing |
-| `/admin/newsletter` | Gestão de newsletter | Async operations, progress indicators |
-| `/admin/seo` | Configurações de SEO | Form optimization, auto-save functionality |
-| `/privacy` | Política de privacidade | Static content, minimal JavaScript |
-| `/terms` | Termos de uso | Static content, minimal JavaScript |
+| Rota                | Propósito                                     | Otimizações Específicas                                             |
+| ------------------- | --------------------------------------------- | ------------------------------------------------------------------- |
+| `/`                 | Página inicial com hero e artigos em destaque | Critical CSS inline, lazy loading de imagens, prefetch de artigos   |
+| `/articles`         | Lista completa de artigos com paginação       | Virtual scrolling, infinite scroll otimizado, image lazy loading    |
+| `/article/:slug`    | Página individual do artigo                   | Code splitting, prefetch de artigos relacionados, otimização de SEO |
+| `/admin`            | Dashboard administrativo                      | Chunk separado, lazy loading de componentes, cache de dados         |
+| `/admin/articles`   | Gerenciamento de artigos                      | Virtual table, bulk operations otimizadas                           |
+| `/admin/comments`   | Moderação de comentários                      | Real-time updates otimizadas, batch processing                      |
+| `/admin/newsletter` | Gestão de newsletter                          | Async operations, progress indicators                               |
+| `/admin/seo`        | Configurações de SEO                          | Form optimization, auto-save functionality                          |
+| `/privacy`          | Política de privacidade                       | Static content, minimal JavaScript                                  |
+| `/terms`            | Termos de uso                                 | Static content, minimal JavaScript                                  |
 
 ## 4. Arquitetura de Performance
 
@@ -249,13 +266,13 @@ graph TD
 
 ### 6.2 Storage Optimization
 
-| Tipo de Dados | Storage Method | TTL | Estratégia |
-|---------------|---------------|-----|------------|
-| **User Preferences** | localStorage | Permanent | Sync across tabs |
-| **API Cache** | IndexedDB | 5-30 min | LRU eviction |
-| **Image Cache** | Service Worker | 1 month | Size-based eviction |
-| **Static Assets** | Browser Cache | 1 year | Immutable resources |
-| **Session Data** | sessionStorage | Session | Auto-cleanup |
+| Tipo de Dados        | Storage Method | TTL       | Estratégia          |
+| -------------------- | -------------- | --------- | ------------------- |
+| **User Preferences** | localStorage   | Permanent | Sync across tabs    |
+| **API Cache**        | IndexedDB      | 5-30 min  | LRU eviction        |
+| **Image Cache**      | Service Worker | 1 month   | Size-based eviction |
+| **Static Assets**    | Browser Cache  | 1 year    | Immutable resources |
+| **Session Data**     | sessionStorage | Session   | Auto-cleanup        |
 
 ## 7. Build Performance Pipeline
 
@@ -408,14 +425,14 @@ graph TD
 
 ### 8.2 Performance Budgets
 
-| Métrica | Desktop Budget | Tablet Budget | Monitoring |
-|---------|---------------|---------------|------------|
-| **Bundle Size** | 150KB initial | 200KB initial | Build-time check |
-| **Total Bundle** | 800KB total | 1MB total | Bundle analyzer |
-| **LCP** | < 2.0s | < 2.5s | RUM monitoring |
-| **FID** | < 50ms | < 100ms | Event tracking |
-| **CLS** | < 0.05 | < 0.1 | Layout monitoring |
-| **Memory Usage** | < 50MB peak | < 75MB peak | Performance API |
+| Métrica          | Desktop Budget | Tablet Budget | Monitoring        |
+| ---------------- | -------------- | ------------- | ----------------- |
+| **Bundle Size**  | 150KB initial  | 200KB initial | Build-time check  |
+| **Total Bundle** | 800KB total    | 1MB total     | Bundle analyzer   |
+| **LCP**          | < 2.0s         | < 2.5s        | RUM monitoring    |
+| **FID**          | < 50ms         | < 100ms       | Event tracking    |
+| **CLS**          | < 0.05         | < 0.1         | Layout monitoring |
+| **Memory Usage** | < 50MB peak    | < 75MB peak   | Performance API   |
 
 ## 9. Error Handling e Fallbacks
 
@@ -499,12 +516,12 @@ graph TD
 
 ### 10.2 Performance Deployment Strategy
 
-| Environment | Performance Checks | Deployment Strategy |
-|-------------|-------------------|-------------------|
-| **Development** | Bundle size warnings | Hot reload optimized |
-| **Staging** | Full Lighthouse audit | Blue-green deployment |
-| **Production** | RUM monitoring | Canary deployment |
-| **Rollback** | Performance regression | Automatic rollback |
+| Environment     | Performance Checks     | Deployment Strategy   |
+| --------------- | ---------------------- | --------------------- |
+| **Development** | Bundle size warnings   | Hot reload optimized  |
+| **Staging**     | Full Lighthouse audit  | Blue-green deployment |
+| **Production**  | RUM monitoring         | Canary deployment     |
+| **Rollback**    | Performance regression | Automatic rollback    |
 
 ## 11. Security e Performance
 
@@ -535,21 +552,27 @@ graph TD
 
 ### 11.2 Performance Security Headers
 
-| Header | Purpose | Performance Impact |
-|--------|---------|-------------------|
-| **Content-Security-Policy** | XSS protection | Minimal with proper nonces |
-| **Strict-Transport-Security** | HTTPS enforcement | No impact |
-| **X-Content-Type-Options** | MIME sniffing prevention | No impact |
-| **Referrer-Policy** | Privacy protection | Minimal impact |
-| **Permissions-Policy** | Feature control | Positive (disables unused features) |
+| Header                        | Purpose                  | Performance Impact                  |
+| ----------------------------- | ------------------------ | ----------------------------------- |
+| **Content-Security-Policy**   | XSS protection           | Minimal with proper nonces          |
+| **Strict-Transport-Security** | HTTPS enforcement        | No impact                           |
+| **X-Content-Type-Options**    | MIME sniffing prevention | No impact                           |
+| **Referrer-Policy**           | Privacy protection       | Minimal impact                      |
+| **Permissions-Policy**        | Feature control          | Positive (disables unused features) |
 
 ## 12. Conclusão Técnica
 
 Esta arquitetura técnica fornece uma base sólida para implementar melhorias de performance significativas no AIMindset, mantendo a segurança, estabilidade e funcionalidade existente. A abordagem em camadas permite implementação progressiva e monitoramento contínuo da performance.
 
 **Principais Benefícios Técnicos:**
-- 🏗️ Arquitetura escalável e maintível
-- ⚡ Performance otimizada em todas as camadas
-- 🔒 Segurança integrada às otimizações
-- 📊 Monitoramento abrangente e proativo
-- 🔄 Deployment seguro com rollback automático
+
+* 🏗️ Arquitetura escalável e maintível
+
+* ⚡ Performance otimizada em todas as camadas
+
+* 🔒 Segurança integrada às otimizações
+
+* 📊 Monitoramento abrangente e proativo
+
+* 🔄 Deployment seguro com rollback automático
+

@@ -3,12 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Debug das variáveis de ambiente
-console.log('🔍 Supabase Environment Variables:', {
+// Debug das variáveis de ambiente - LOGS EXTREMOS PARA PREVIEW
+console.log('🔍 [SUPABASE-INIT] Environment Variables Check:', {
   url: supabaseUrl ? 'SET' : 'NOT SET',
   key: supabaseAnonKey ? 'SET' : 'NOT SET',
   fullUrl: supabaseUrl,
-  keyPrefix: supabaseAnonKey?.substring(0, 20) + '...'
+  keyPrefix: supabaseAnonKey?.substring(0, 20) + '...',
+  isPreview: window.location.href.includes('trae') || window.location.href.includes('preview'),
+  currentUrl: window.location.href
 });
 
 // Fallback para valores hardcoded em caso de emergência
@@ -18,9 +20,12 @@ const EMERGENCY_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3
 const finalUrl = supabaseUrl || EMERGENCY_SUPABASE_URL;
 const finalKey = supabaseAnonKey || EMERGENCY_SUPABASE_ANON_KEY;
 
-console.log('🚨 EMERGENCY MODE: Using', supabaseUrl ? 'ENV vars' : 'hardcoded values');
+console.log('🚨 [SUPABASE-INIT] EMERGENCY MODE:', supabaseUrl ? 'Using ENV vars' : 'Using hardcoded values');
+console.log('🔑 [SUPABASE-INIT] Final URL:', finalUrl);
+console.log('🔑 [SUPABASE-INIT] Final Key prefix:', finalKey?.substring(0, 30) + '...');
 
 if (!finalUrl || !finalKey) {
+  console.error('❌ [SUPABASE-INIT] CRITICAL ERROR: Missing Supabase environment variables');
   throw new Error('Missing Supabase environment variables');
 }
 

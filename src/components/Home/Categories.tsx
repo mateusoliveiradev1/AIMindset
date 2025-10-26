@@ -9,6 +9,7 @@ const Categories: React.FC = () => {
 
   // Carregar categorias quando o componente montar
   React.useEffect(() => {
+    console.log('🔍 [Categories] Componente montado, carregando categorias...');
     refreshArticles();
   }, [refreshArticles]);
   
@@ -19,6 +20,17 @@ const Categories: React.FC = () => {
   const mainCategories = categories.filter(category => 
     mainCategorySlugs.includes(category.slug)
   );
+
+  // Adicionar logs para debug
+  React.useEffect(() => {
+    console.log('🔍 [Categories] Estado atual:', {
+      loading,
+      totalCategories: categories?.length || 0,
+      categories: categories?.map(cat => ({ id: cat.id, name: cat.name, slug: cat.slug })),
+      mainCategorySlugs,
+      mainCategories: mainCategories?.map(cat => ({ id: cat.id, name: cat.name, slug: cat.slug }))
+    });
+  }, [categories, loading, mainCategories]);
   
   const categoryIcons = {
     'ia-tecnologia': Brain,

@@ -48,8 +48,8 @@ function AppContent() {
   // Hook para scroll automático ao topo em mudanças de rota
   useScrollToTop();
   
-  // Hook para Service Worker
-  const { register, isSupported, isRegistered, hasUpdate, skipWaiting } = useServiceWorker();
+  // Hook para Service Worker - TEMPORARIAMENTE DESABILITADO PARA PREVIEW
+  // const { register, isSupported, isRegistered, hasUpdate, skipWaiting } = useServiceWorker();
 
   // Initialize security headers and protections
   useEffect(() => {
@@ -57,24 +57,24 @@ function AppContent() {
     initializeSecurityConfig();
   }, []);
 
-  // Registrar Service Worker
-  useEffect(() => {
-    if (isSupported && !isRegistered) {
-      register().catch(console.error);
-    }
-  }, [isSupported, isRegistered, register]);
+  // Registrar Service Worker - TEMPORARIAMENTE DESABILITADO PARA PREVIEW
+  // useEffect(() => {
+  //   if (isSupported && !isRegistered) {
+  //     register().catch(console.error);
+  //   }
+  // }, [isSupported, isRegistered, register]);
 
-  // Mostrar notificação de atualização disponível
-  useEffect(() => {
-    if (hasUpdate) {
-      const shouldUpdate = window.confirm(
-        'Uma nova versão está disponível. Deseja atualizar agora?'
-      );
-      if (shouldUpdate) {
-        skipWaiting();
-      }
-    }
-  }, [hasUpdate, skipWaiting]);
+  // Mostrar notificação de atualização disponível - TEMPORARIAMENTE DESABILITADO PARA PREVIEW
+  // useEffect(() => {
+  //   if (hasUpdate) {
+  //     const shouldUpdate = window.confirm(
+  //       'Uma nova versão está disponível. Deseja atualizar agora?'
+  //     );
+  //     if (shouldUpdate) {
+  //       skipWaiting();
+  //     }
+  //   }
+  // }, [hasUpdate, skipWaiting]);
 
   return (
     <>

@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { useArticles } from '../hooks/useArticles';
 import { useReadingTime } from '../hooks/useReadingTime';
 import { useSEO } from '../hooks/useSEO';
-import { mockCategories } from '../data/mockData';
+
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import SEOManager from '../components/SEO/SEOManager';
@@ -22,6 +22,8 @@ import {
 } from '../components/LazyComponents';
 // Importação direta para debug
 import { TableOfContents } from '../components/TableOfContents';
+import { ReadingProgressBar } from '../components/ReadingProgressBar';
+import { ArticleNavigation } from '../components/ArticleNavigation';
 
 const Article: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -171,7 +173,7 @@ const Article: React.FC = () => {
       <SEOManager metadata={metadata} />
       
       {/* Reading Progress Bar */}
-      <ReadingProgressBarLazy target="article-content" />
+      <ReadingProgressBar target="article-content" />
       
       <div className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -449,12 +451,12 @@ const Article: React.FC = () => {
                   </div>
                 </section>
               )}
-    
+     
                {/* Article Navigation */}
-               <ArticleNavigationLazy 
-                 currentSlug={article.slug} 
-                 categoryId={article.category_id}
-                 className="mb-12"
+               <ArticleNavigation 
+                 currentSlug={slug}
+                 categoryId={article?.category_id}
+                 className="mt-12"
                />
      
                {/* Feedback Section */}

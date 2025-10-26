@@ -12,6 +12,9 @@ import { VirtualizedArticleList } from '../components/Performance/VirtualizedArt
 import { usePerformanceOptimization } from '../hooks/usePerformanceOptimization';
 
 const AllArticles: React.FC = () => {
+  // DEBUG: Log para verificar se o componente está sendo renderizado
+  console.log('🔍 AllArticles component rendered');
+
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
@@ -44,6 +47,15 @@ const AllArticles: React.FC = () => {
     loadMore,
     refresh 
   } = useArticles();
+
+  // DEBUG: Log para verificar os dados do useArticles
+  console.log('🔍 AllArticles useArticles data:', {
+    articlesCount: articles.length,
+    categoriesCount: categories.length,
+    loading,
+    error,
+    hasMore
+  });
 
   // Pull to refresh
   const pullToRefreshProps = usePullToRefresh({

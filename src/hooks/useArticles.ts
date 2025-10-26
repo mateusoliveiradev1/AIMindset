@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import type { Article, Category } from '../lib/supabase';
 import { supabase, supabaseServiceClient } from '../lib/supabase';
 import { supabaseAdmin } from '../lib/supabase-admin';
-import type { Article, Category } from '../lib/supabase';
 import { supabaseWithRetry } from '../utils/supabaseRetry';
 
 export type { Article, Category };
@@ -93,28 +93,39 @@ export interface UseArticlesReturn {
 export const useArticles = (): UseArticlesReturn => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true); // Changed back to true for initial load
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
 
+  // Inicializar carregamento de dados do Supabase
+  useEffect(() => {
+    console.log('🔄 [useArticles] Inicializando carregamento do Supabase...');
+    console.log('🌍 [useArticles] Current URL:', window.location.href);
+    console.log('🔍 [useArticles] Is Preview?', window.location.href.includes('trae') || window.location.href.includes('preview'));
+    fetchArticles();
+    fetchCategories();
+  }, []);
+
   const fetchArticles = useCallback(async () => {
     try {
+      console.log('🔄 [useArticles] Buscando artigos do Supabase...');
+      console.log('🌍 [useArticles] Environment check:', {
+        url: import.meta.env.VITE_SUPABASE_URL ? 'SET' : 'NOT SET',
+        key: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'SET' : 'NOT SET'
+      });
       setLoading(true);
       setError(null);
-      console.log('🚀 [useArticles] Iniciando busca de artigos...');
-
-      // Verificar se o Supabase está configurado
-      if (!supabase) {
-        throw new Error('Supabase não está configurado');
-      }
-
+      
       // Função para buscar artigos com retry
-      const fetchWithRetry = async (): Promise<{ data: Article[] | null; error: any }> => {
+      const fetchWithRetry = async () => {
+        console.log('🔍 [DEBUG] Iniciando fetchWithRetry...');
+        
         // Tentar primeiro com cliente normal
         const normalResult = await supabaseWithRetry(
           async () => {
-            const response = await supabase
+            console.log('🔍 [DEBUG] Executando query com cliente normal...');
+            const result = await supabase
               .from('articles')
               .select(`
                 *,
@@ -126,17 +137,19 @@ export const useArticles = (): UseArticlesReturn => {
                 )
               `)
               .order('created_at', { ascending: false });
-            return response;
+            console.log('🔍 [DEBUG] Resultado cliente normal:', result);
+            return result;
           },
           'Fetch Articles (Normal Client)'
         );
 
-        if (normalResult.success && normalResult.data) {
-          return { data: normalResult.data as Article[], error: null };
-        }
+        console.log('🔍 [DEBUG] normalResult:', normalResult);
 
         // Se falhou com cliente normal, tentar com admin
-        console.warn('⚠️ [useArticles] Cliente normal falhou, tentando com admin...');
+        if (!normalResult.success) {
+          console.log('🔄 [useArticles] Tentando com cliente admin...');
+        }
+
         const adminResult = await supabaseWithRetry(
           () => supabaseAdmin
             .from('articles')
@@ -153,6 +166,8 @@ export const useArticles = (): UseArticlesReturn => {
           'Fetch Articles (Admin Client)'
         );
 
+        console.log('🔍 [DEBUG] adminResult:', adminResult);
+
         return {
           data: adminResult.success ? adminResult.data as Article[] : null,
           error: adminResult.error || normalResult.error 
@@ -160,12 +175,17 @@ export const useArticles = (): UseArticlesReturn => {
       };
 
       const { data, error: fetchError } = await fetchWithRetry();
+      console.log('🔍 [DEBUG] fetchWithRetry final result:', { data, fetchError });
 
-      // Se ainda não há dados, usar dados mock como fallback
-      if (fetchError || !data || (data as Article[]).length === 0) {
-        console.warn('⚠️ [useArticles] Usando dados mock como fallback');
-        const { mockArticles } = await import('../data/mockData');
-        setArticles(mockArticles || []);
+      if (fetchError) {
+        console.error('❌ [useArticles] Erro ao buscar artigos:', fetchError);
+        setError(fetchError.message || 'Erro ao carregar artigos');
+        return;
+      }
+
+      if (!data || (data as Article[]).length === 0) {
+        console.warn('⚠️ [useArticles] Nenhum artigo encontrado no banco');
+        setArticles([]);
         return;
       }
 
@@ -174,16 +194,6 @@ export const useArticles = (): UseArticlesReturn => {
     } catch (err) {
       console.error('❌ Error fetching articles:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch articles');
-      
-      // Fallback para dados mock em caso de erro
-      try {
-        // console.log('🔄 Carregando dados mock como fallback...');
-        const { mockArticles } = await import('../data/mockData');
-        setArticles(mockArticles || []);
-        // console.log('✅ Dados mock carregados:', mockArticles?.length || 0);
-      } catch (mockError) {
-        console.error('❌ Erro ao carregar dados mock:', mockError);
-      }
     } finally {
       setLoading(false);
     }
@@ -231,10 +241,13 @@ export const useArticles = (): UseArticlesReturn => {
 
       if (fetchError) {
         console.error('❌ Error fetching categories:', fetchError);
-        // Se falhou, usar dados mock como fallback
-        console.warn('⚠️ [useArticles] Usando categorias mock como fallback');
-        const { mockCategories } = await import('../data/mockData');
-        setCategories(mockCategories || []);
+        setError(fetchError.message || 'Erro ao carregar categorias');
+        return;
+      }
+
+      if (!data || (data as Category[]).length === 0) {
+        console.warn('⚠️ [useArticles] Nenhuma categoria encontrada no banco');
+        setCategories([]);
         return;
       }
 
@@ -243,10 +256,7 @@ export const useArticles = (): UseArticlesReturn => {
       setCategories((data as Category[]) || []);
     } catch (err) {
       console.error('❌ Error fetching categories:', err);
-      // Fallback para dados mock em caso de erro
-      console.warn('⚠️ [useArticles] Usando categorias mock como fallback devido ao erro');
-      const { mockCategories } = await import('../data/mockData');
-      setCategories(mockCategories || []);
+      setError(err instanceof Error ? err.message : 'Failed to fetch categories');
     }
   }, []);
 

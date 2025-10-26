@@ -238,22 +238,22 @@ export const SEOManager: React.FC<SEOManagerProps> = ({ metadata }) => {
       <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       <meta name="apple-mobile-web-app-title" content="AIMindset" />
       
-      {/* Preconnect para performance */}
-      <link rel="preconnect" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      {/* Preconnect para performance - TEMPORARIAMENTE DESABILITADO PARA PREVIEW */}
+      {/* <link rel="preconnect" href="https://fonts.googleapis.com" /> */}
+      {/* <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" /> */}
       <link rel="preconnect" href="https://www.google-analytics.com" />
       
-      {/* Carregamento das fontes Google Fonts */}
-      <link 
+      {/* Carregamento das fontes Google Fonts - TEMPORARIAMENTE DESABILITADO PARA PREVIEW */}
+      {/* <link 
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Montserrat:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" 
         rel="stylesheet" 
         crossOrigin="anonymous"
-      />
+      /> */}
       
-      {/* DNS Prefetch */}
+      {/* DNS Prefetch - TEMPORARIAMENTE DESABILITADO PARA PREVIEW */}
       <link rel="dns-prefetch" href="//www.google-analytics.com" />
-      <link rel="dns-prefetch" href="//fonts.googleapis.com" />
-      <link rel="dns-prefetch" href="//fonts.gstatic.com" />
+      {/* <link rel="dns-prefetch" href="//fonts.googleapis.com" /> */}
+      {/* <link rel="dns-prefetch" href="//fonts.gstatic.com" /> */}
       
       {/* Schema.org JSON-LD */}
       <script type="application/ld+json">
