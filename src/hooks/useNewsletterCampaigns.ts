@@ -65,7 +65,17 @@ export const useNewsletterCampaigns = () => {
     filters: CampaignFilters = {},
     page: number = 1
   ) => {
-    const requestId = `fetchCampaigns-${JSON.stringify(filters)}-${page}`;
+    // Criar uma versão limpa dos filtros para evitar referências circulares
+    const cleanFilters = {
+      search: filters.search,
+      status: filters.status,
+      dateRange: filters.dateRange,
+      customDateStart: filters.customDateStart,
+      customDateEnd: filters.customDateEnd,
+      tags: filters.tags
+    };
+    
+    const requestId = `fetchCampaigns-${JSON.stringify(cleanFilters)}-${page}`;
     
     if (!createUniqueRequest(requestId)) {
       return;
