@@ -4,6 +4,8 @@ import { Search, Filter, Calendar, Clock, Tag, ChevronLeft, ChevronRight } from 
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import { useArticles } from '../hooks/useArticles';
+import { useSEO } from '../hooks/useSEO';
+import SEOManager from '../components/SEO/SEOManager';
 // import LazyImage from '../components/Performance/LazyImage';
 
 const AllArticles: React.FC = () => {
@@ -11,6 +13,15 @@ const AllArticles: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Hook para SEO
+  const { getMetadata } = useSEO({
+    pageType: 'all_articles',
+    breadcrumbs: [
+      { name: 'Home', url: '/' },
+      { name: 'Artigos', url: '/artigos' }
+    ]
+  });
 
   // Load articles when component mounts
   useEffect(() => {
@@ -80,23 +91,25 @@ const AllArticles: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-dark-surface">
-      {/* Header */}
-      <div className="bg-darker-surface border-b border-neon-purple/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-5xl font-orbitron font-bold text-white mb-4">
-              Todos os <span className="gradient-text">Artigos</span>
-            </h1>
-            <p className="text-xl text-futuristic-gray font-roboto max-w-3xl mx-auto">
-              Explore nossa coleção completa de artigos sobre inteligência artificial, 
-              tecnologia e o futuro digital.
-            </p>
+    <>
+      <SEOManager metadata={getMetadata()} />
+      <div className="min-h-screen bg-dark-surface">
+        {/* Header */}
+        <div className="bg-darker-surface border-b border-neon-purple/20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div className="text-center">
+              <h1 className="text-4xl md:text-5xl font-orbitron font-bold text-white mb-4">
+                Todos os <span className="gradient-text">Artigos</span>
+              </h1>
+              <p className="text-xl text-futuristic-gray font-roboto max-w-3xl mx-auto">
+                Explore nossa coleção completa de artigos sobre inteligência artificial, 
+                tecnologia e o futuro digital.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Filtros */}
         <div className="mb-8">
           <Card className="glass-effect">
@@ -301,8 +314,9 @@ const AllArticles: React.FC = () => {
             </Button>
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

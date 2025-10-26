@@ -11,6 +11,8 @@ import { useEmailAutomations } from '../hooks/useEmailAutomations';
 import { useContacts } from '../hooks/useContacts';
 import { useUsers } from '../hooks/useUsers';
 import { useDashboardStats } from '../hooks/useDashboardStats';
+import { useSEO } from '../hooks/useSEO';
+import SEOManager from '../components/SEO/SEOManager';
 import { toast } from 'sonner';
 import { 
   PlusCircle, 
@@ -50,11 +52,21 @@ import { EmailAutomations } from '../components/Admin/EmailAutomations';
 import { EmailTemplates } from '../components/Admin/EmailTemplates';
 import { NotificationCenter } from '../components/Admin/NotificationCenter';
 import NewsletterLogs from '../components/Admin/NewsletterLogs';
+import { SEODashboard } from '../components/Admin/SEODashboard';
 
 
 export const Admin: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'articles' | 'categories' | 'editor' | 'newsletter' | 'users' | 'feedback'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'articles' | 'categories' | 'editor' | 'newsletter' | 'users' | 'feedback' | 'seo'>('dashboard');
   const { logout, user } = useAuth();
+  
+  // Hook para SEO
+  const { getMetadata } = useSEO({
+    pageType: 'admin',
+    breadcrumbs: [
+      { name: 'Home', url: '/' },
+      { name: 'Admin', url: '/admin' }
+    ]
+  });
   const { articles, categories, loading: loadingArticles, refreshArticles, createArticle, createCategory, updateCategory, deleteCategory, updateArticle, deleteArticle, updateArticlePublished } = useArticles();
   const { refreshData: refreshNewsletter, ...newsletterHook } = useNewsletter();
   const { contacts, loading: loadingContacts, refreshContacts } = useContacts();
@@ -438,7 +450,9 @@ export const Admin: React.FC = () => {
   // const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-dark via-dark-surface to-darker-surface">
+    <>
+      <SEOManager metadata={getMetadata()} />
+      <div className="min-h-screen bg-gradient-to-br from-primary-dark via-dark-surface to-darker-surface">
       {/* Admin Header */}
       <div className="bg-darker-surface/80 backdrop-blur-sm border-b border-neon-purple/20">
         <div className="container mx-auto px-4 py-4">
@@ -491,7 +505,8 @@ export const Admin: React.FC = () => {
             { id: 'newsletter', label: 'Newsletter', icon: Mail },
             { id: 'users', label: 'Usuários', icon: Users },
             { id: 'categories', label: 'Categorias', icon: TrendingUp },
-            { id: 'feedback', label: 'Feedback', icon: MessageSquare }
+            { id: 'feedback', label: 'Feedback', icon: MessageSquare },
+            { id: 'seo', label: 'SEO', icon: Search }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -2366,6 +2381,13 @@ export const Admin: React.FC = () => {
           </div>
         )}
 
+        {/* SEO Tab */}
+        {activeTab === 'seo' && (
+          <div>
+            <SEODashboard />
+          </div>
+        )}
+
         {/* Editor Tab */}
         {activeTab === 'editor' && (
           <div>
@@ -2636,6 +2658,7 @@ export const Admin: React.FC = () => {
         </div>
       )}
     </div>
+    </>
   );
 };
 

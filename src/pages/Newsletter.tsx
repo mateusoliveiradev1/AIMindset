@@ -5,6 +5,8 @@ import Card from '../components/UI/Card';
 import { toast } from 'sonner';
 import { sanitizeName, sanitizeEmail, validators, RateLimiter } from '../utils/security';
 import { useNewsletter } from '../hooks/useNewsletter';
+import { useSEO } from '../hooks/useSEO';
+import SEOManager from '../components/SEO/SEOManager';
 
 const Newsletter: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -17,6 +19,15 @@ const Newsletter: React.FC = () => {
 
   // Hook para dados reais da newsletter
   const { stats, loading: statsLoading, error: statsError, subscribe } = useNewsletter();
+
+  // Hook para SEO
+  const { getMetadata } = useSEO({
+    pageType: 'newsletter',
+    breadcrumbs: [
+      { name: 'Home', url: '/' },
+      { name: 'Newsletter', url: '/newsletter' }
+    ]
+  });
 
   const validateForm = () => {
     const errors: {[key: string]: string} = {};
@@ -104,9 +115,11 @@ const Newsletter: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-dark via-dark-surface to-darker-surface">
-      {/* Hero Section */}
-      <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+    <>
+      <SEOManager metadata={getMetadata()} />
+      <div className="min-h-screen bg-gradient-to-br from-primary-dark via-dark-surface to-darker-surface">
+        {/* Hero Section */}
+        <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Background Effects */}
         <div className="absolute inset-0 bg-gradient-to-br from-lime-green/5 to-neon-purple/5"></div>
         <div className="absolute top-20 left-10 w-72 h-72 bg-neon-purple/10 rounded-full blur-3xl animate-pulse-slow"></div>
@@ -428,6 +441,7 @@ const Newsletter: React.FC = () => {
         </div>
       </section>
     </div>
+    </>
   );
 };
 

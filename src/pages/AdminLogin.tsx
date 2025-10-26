@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/UI/Button';
 import Card from '../components/UI/Card';
 import { useToast } from '../hooks/useToast';
+import { useSEO } from '../hooks/useSEO';
+import SEOManager from '../components/SEO/SEOManager';
 import { sanitizeEmail, validators, RateLimiter, CSRFProtection, secureCleanup } from '../utils/security';
 
 const AdminLogin: React.FC = () => {
@@ -14,6 +16,15 @@ const AdminLogin: React.FC = () => {
   const { login, isLoading } = useAuth();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  
+  // Hook para SEO
+  const { getMetadata } = useSEO({
+    pageType: 'admin',
+    breadcrumbs: [
+      { name: 'Home', url: '/' },
+      { name: 'Admin Login', url: '/admin/login' }
+    ]
+  });
 
   // REMOVIDO COMPLETAMENTE O useEffect PROBLEMÁTICO QUE CAUSAVA LOOP INFINITO
 
@@ -82,7 +93,9 @@ const AdminLogin: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-dark via-dark-surface to-darker-surface flex items-center justify-center p-4">
+    <>
+      <SEOManager metadata={getMetadata()} />
+      <div className="min-h-screen bg-gradient-to-br from-primary-dark via-dark-surface to-darker-surface flex items-center justify-center p-4">
       <Card className="w-full max-w-md bg-darker-surface/90 backdrop-blur-sm border border-neon-purple/20">
         <div className="p-8 space-y-6">
           {/* Header */}
@@ -195,6 +208,7 @@ const AdminLogin: React.FC = () => {
         </div>
       </Card>
     </div>
+    </>
   );
 };
 

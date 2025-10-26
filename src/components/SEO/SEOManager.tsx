@@ -1,6 +1,12 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 
+export interface BreadcrumbItem {
+  name: string;
+  url: string;
+  position: number;
+}
+
 export interface SEOMetadata {
   title: string;
   description: string;
@@ -8,12 +14,20 @@ export interface SEOMetadata {
   ogImage?: string;
   canonicalUrl: string;
   schemaData?: Record<string, any>;
-  type?: 'website' | 'article' | 'profile';
+  type?: 'website' | 'article' | 'profile' | 'webpage';
   publishedTime?: string;
   modifiedTime?: string;
   author?: string;
   section?: string;
   tags?: string[];
+  breadcrumbs?: BreadcrumbItem[];
+  readingTime?: number;
+  wordCount?: number;
+  language?: string;
+  alternateLanguages?: { lang: string; url: string }[];
+  robots?: string;
+  priority?: number;
+  changeFreq?: 'always' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'never';
 }
 
 interface SEOManagerProps {
@@ -33,37 +47,107 @@ export const SEOManager: React.FC<SEOManagerProps> = ({ metadata }) => {
     modifiedTime,
     author,
     section,
-    tags = []
+    tags = [],
+    breadcrumbs = [],
+    readingTime,
+    wordCount,
+    language = 'pt-BR',
+    alternateLanguages = [],
+    robots = 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1',
+    priority,
+    changeFreq
   } = metadata;
 
   // Gerar keywords como string
   const keywordsString = keywords.length > 0 ? keywords.join(', ') : '';
 
-  // Schema.org JSON-LD
+  // Gerar URL da imagem OG padrão se não fornecida
+  const defaultOgImage = ogImage || `https://aimindset.com.br/api/og?title=${encodeURIComponent(title)}&type=${type}`;
+
+  // Schema.org JSON-LD avançado
   const generateSchemaData = () => {
     if (schemaData) {
       return JSON.stringify(schemaData);
     }
 
-    // Schema padrão baseado no tipo
-    const baseSchema = {
+    const schemas = [];
+
+    // Website Schema
+    schemas.push({
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'AIMindset',
+      url: 'https://aimindset.com.br',
+      description: 'Plataforma especializada em Inteligência Artificial, Machine Learning e tecnologia',
+      publisher: {
+        '@type': 'Organization',
+        name: 'AIMindset',
+        url: 'https://aimindset.com.br',
+        logo: {
+          '@type': 'ImageObject',
+          url: 'https://aimindset.com.br/logo.png',
+          width: 512,
+          height: 512
+        },
+        sameAs: [
+          'https://twitter.com/aimindset',
+          'https://linkedin.com/company/aimindset'
+        ]
+      },
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: 'https://aimindset.com.br/artigos?q={search_term_string}',
+        'query-input': 'required name=search_term_string'
+      }
+    });
+
+    // Breadcrumbs Schema
+    if (breadcrumbs.length > 0) {
+      schemas.push({
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: breadcrumbs.map((item) => ({
+          '@type': 'ListItem',
+          position: item.position,
+          name: item.name,
+          item: item.url
+        }))
+      });
+    }
+
+    // Page/Article Schema
+    const pageSchema = {
       '@context': 'https://schema.org',
       '@type': type === 'article' ? 'BlogPosting' : 'WebPage',
       name: title,
+      headline: title,
       description,
       url: canonicalUrl,
+      image: {
+        '@type': 'ImageObject',
+        url: defaultOgImage,
+        width: 1200,
+        height: 630
+      },
+      mainEntityOfPage: {
+        '@type': 'WebPage',
+        '@id': canonicalUrl
+      },
+      inLanguage: language,
+      isPartOf: {
+        '@type': 'WebSite',
+        '@id': 'https://aimindset.com.br'
+      }
     };
 
     if (type === 'article' && publishedTime) {
-      return JSON.stringify({
-        ...baseSchema,
+      Object.assign(pageSchema, {
         '@type': 'BlogPosting',
-        headline: title,
         datePublished: publishedTime,
         dateModified: modifiedTime || publishedTime,
         author: {
           '@type': 'Organization',
-          name: author || 'AIMindset',
+          name: author || 'AIMindset Team',
           url: 'https://aimindset.com.br'
         },
         publisher: {
@@ -72,21 +156,22 @@ export const SEOManager: React.FC<SEOManagerProps> = ({ metadata }) => {
           url: 'https://aimindset.com.br',
           logo: {
             '@type': 'ImageObject',
-            url: 'https://aimindset.com.br/logo.png'
+            url: 'https://aimindset.com.br/logo.png',
+            width: 512,
+            height: 512
           }
         },
-        image: ogImage,
-        mainEntityOfPage: {
-          '@type': 'WebPage',
-          '@id': canonicalUrl
-        },
-        keywords: keywords.join(', '),
+        keywords: keywordsString,
         articleSection: section,
-        articleTag: tags
+        articleTag: tags,
+        ...(readingTime && { timeRequired: `PT${readingTime}M` }),
+        ...(wordCount && { wordCount })
       });
     }
 
-    return JSON.stringify(baseSchema);
+    schemas.push(pageSchema);
+
+    return JSON.stringify(schemas.length === 1 ? schemas[0] : schemas);
   };
 
   return (
@@ -97,29 +182,39 @@ export const SEOManager: React.FC<SEOManagerProps> = ({ metadata }) => {
       {/* Meta tags básicas */}
       <meta name="description" content={description} />
       {keywordsString && <meta name="keywords" content={keywordsString} />}
-      <meta name="robots" content="index, follow" />
+      <meta name="robots" content={robots} />
+      <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <meta httpEquiv="Content-Language" content={language} />
       
       {/* Canonical URL */}
       <link rel="canonical" href={canonicalUrl} />
       
-      {/* Open Graph */}
+      {/* Hreflang para internacionalização */}
+      {alternateLanguages.map((alt, index) => (
+        <link key={index} rel="alternate" hrefLang={alt.lang} href={alt.url} />
+      ))}
+      <link rel="alternate" hrefLang="x-default" href={canonicalUrl} />
+      
+      {/* Open Graph avançado */}
       <meta property="og:type" content={type} />
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:url" content={canonicalUrl} />
       <meta property="og:site_name" content="AIMindset" />
-      <meta property="og:locale" content="pt_BR" />
-      {ogImage && <meta property="og:image" content={ogImage} />}
-      {ogImage && <meta property="og:image:alt" content={title} />}
-      {ogImage && <meta property="og:image:width" content="1200" />}
-      {ogImage && <meta property="og:image:height" content="630" />}
+      <meta property="og:locale" content={language.replace('-', '_')} />
+      <meta property="og:image" content={defaultOgImage} />
+      <meta property="og:image:alt" content={`${title} - AIMindset`} />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
+      <meta property="og:image:type" content="image/png" />
       
-      {/* Twitter Card */}
+      {/* Twitter Card avançado */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
-      {ogImage && <meta name="twitter:image" content={ogImage} />}
+      <meta name="twitter:image" content={defaultOgImage} />
+      <meta name="twitter:image:alt" content={`${title} - AIMindset`} />
       <meta name="twitter:site" content="@aimindset" />
       <meta name="twitter:creator" content="@aimindset" />
       
@@ -136,9 +231,17 @@ export const SEOManager: React.FC<SEOManagerProps> = ({ metadata }) => {
         </>
       )}
       
+      {/* Meta tags técnicas */}
+      <meta name="format-detection" content="telephone=no" />
+      <meta name="mobile-web-app-capable" content="yes" />
+      <meta name="apple-mobile-web-app-capable" content="yes" />
+      <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+      <meta name="apple-mobile-web-app-title" content="AIMindset" />
+      
       {/* Preconnect para performance */}
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link rel="preconnect" href="https://www.google-analytics.com" />
       
       {/* Carregamento das fontes Google Fonts */}
       <link 
@@ -150,6 +253,7 @@ export const SEOManager: React.FC<SEOManagerProps> = ({ metadata }) => {
       {/* DNS Prefetch */}
       <link rel="dns-prefetch" href="//www.google-analytics.com" />
       <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+      <link rel="dns-prefetch" href="//fonts.gstatic.com" />
       
       {/* Schema.org JSON-LD */}
       <script type="application/ld+json">
@@ -166,6 +270,10 @@ export const SEOManager: React.FC<SEOManagerProps> = ({ metadata }) => {
       {/* Theme color */}
       <meta name="theme-color" content="#3B82F6" />
       <meta name="msapplication-TileColor" content="#3B82F6" />
+      <meta name="msapplication-config" content="/browserconfig.xml" />
+      
+      {/* Sitemap hint */}
+      <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
     </Helmet>
   );
 };

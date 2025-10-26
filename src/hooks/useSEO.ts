@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { SEOMetadata } from '../components/SEO/SEOManager';
+import { SEOMetadata, BreadcrumbItem } from '../components/SEO/SEOManager';
 import { supabaseServiceClient } from '../lib/supabase';
 
 interface SEOData {
   id: string;
-  page_type: 'home' | 'article' | 'category' | 'about' | 'contact' | 'newsletter' | 'privacy';
+  page_type: 'home' | 'article' | 'category' | 'about' | 'contact' | 'newsletter' | 'privacy' | 'all_articles' | 'admin';
   page_slug?: string;
   title: string;
   description: string;
@@ -17,12 +17,23 @@ interface SEOData {
 }
 
 interface UseSEOOptions {
-  pageType: 'home' | 'article' | 'category' | 'about' | 'contact' | 'newsletter' | 'privacy';
+  pageType: 'home' | 'article' | 'category' | 'about' | 'contact' | 'newsletter' | 'privacy' | 'all_articles' | 'admin';
   pageSlug?: string;
   fallbackTitle?: string;
   fallbackDescription?: string;
   fallbackKeywords?: string[];
   fallbackImage?: string;
+  articleData?: {
+    title: string;
+    content?: string;
+    excerpt?: string;
+    tags?: string;
+    category?: string;
+    image_url?: string;
+    created_at?: string;
+    updated_at?: string;
+  };
+  breadcrumbs?: BreadcrumbItem[];
 }
 
 // Cache global para metadados SEO
@@ -48,9 +59,100 @@ const setDocumentTitle = (title: string) => {
   }
 };
 
+// Função para extrair keywords automaticamente do conteúdo
+const extractKeywords = (content: string, title: string, category?: string): string[] => {
+  const keywords: string[] = [];
+  
+  // Keywords do título
+  const titleWords = title.toLowerCase()
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(word => word.length > 3);
+  
+  keywords.push(...titleWords);
+  
+  // Keywords da categoria
+  if (category) {
+    keywords.push(category.toLowerCase());
+  }
+  
+  // Keywords técnicas comuns em IA
+  const aiKeywords = [
+    'inteligência artificial', 'machine learning', 'deep learning', 'ia', 'ml',
+    'automação', 'tecnologia', 'produtividade', 'inovação', 'algoritmo',
+    'dados', 'análise', 'otimização', 'eficiência'
+  ];
+  
+  // Verificar se o conteúdo contém keywords técnicas
+  const contentLower = content.toLowerCase();
+  aiKeywords.forEach(keyword => {
+    if (contentLower.includes(keyword)) {
+      keywords.push(keyword);
+    }
+  });
+  
+  // Remover duplicatas e limitar a 10 keywords
+  return [...new Set(keywords)].slice(0, 10);
+};
+
+// Função para gerar meta description automaticamente
+const generateMetaDescription = (content: string, title: string, maxLength: number = 155): string => {
+  if (!content) {
+    return `Leia sobre ${title} no AIMindset. Descubra insights sobre inteligência artificial, produtividade e tecnologia.`;
+  }
+  
+  // Remover HTML tags e caracteres especiais
+  const cleanContent = content
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  // Tentar encontrar o primeiro parágrafo significativo
+  const sentences = cleanContent.split(/[.!?]+/);
+  let description = '';
+  
+  for (const sentence of sentences) {
+    const trimmedSentence = sentence.trim();
+    if (trimmedSentence.length > 50) {
+      description = trimmedSentence;
+      break;
+    }
+  }
+  
+  // Se não encontrou uma boa descrição, usar o início do conteúdo
+  if (!description) {
+    description = cleanContent.substring(0, maxLength - 20);
+  }
+  
+  // Truncar se necessário e adicionar call-to-action
+  if (description.length > maxLength - 20) {
+    description = description.substring(0, maxLength - 20).trim();
+    // Encontrar o último espaço para não cortar palavras
+    const lastSpace = description.lastIndexOf(' ');
+    if (lastSpace > maxLength - 50) {
+      description = description.substring(0, lastSpace);
+    }
+  }
+  
+  // Adicionar call-to-action se houver espaço
+  const cta = ' Leia mais no AIMindset.';
+  if (description.length + cta.length <= maxLength) {
+    description += cta;
+  }
+  
+  return description;
+};
+
+// Função para calcular tempo de leitura
+const calculateReadingTime = (content: string): number => {
+  const wordsPerMinute = 200;
+  const wordCount = content.replace(/<[^>]*>/g, '').split(/\s+/).length;
+  return Math.ceil(wordCount / wordsPerMinute);
+};
+
 export const useSEO = (options: UseSEOOptions) => {
   const [seoData, setSeoData] = useState<SEOData | null>(null);
-  const [loading, setLoading] = useState(false); // Mudança: iniciar como false
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -60,7 +162,9 @@ export const useSEO = (options: UseSEOOptions) => {
     fallbackTitle = 'AIMindset - Inteligência Artificial e Produtividade',
     fallbackDescription = 'Descubra como a inteligência artificial pode transformar sua produtividade. Artigos, dicas e insights sobre IA, automação e tecnologia.',
     fallbackKeywords = ['inteligência artificial', 'IA', 'produtividade', 'automação', 'tecnologia'],
-    fallbackImage = 'https://aimindset.com.br/og-image.jpg'
+    fallbackImage = 'https://aimindset.com.br/og-image.jpg',
+    articleData,
+    breadcrumbs = []
   } = options;
 
   // Definir título imediatamente com fallback
@@ -69,11 +173,9 @@ export const useSEO = (options: UseSEOOptions) => {
     const cachedData = seoCache.get(cacheKey);
     
     if (cachedData && isCacheValid(cacheKey)) {
-      // Se temos dados em cache, usar imediatamente
       setSeoData(cachedData);
       setDocumentTitle(cachedData.title);
     } else {
-      // Definir título fallback imediatamente para evitar delay
       setDocumentTitle(fallbackTitle);
     }
   }, [pageType, pageSlug, fallbackTitle]);
@@ -82,7 +184,6 @@ export const useSEO = (options: UseSEOOptions) => {
     const fetchSEOData = async () => {
       console.log('🔍 [useSEO] Iniciando fetchSEOData para:', { pageType, pageSlug });
       
-      // Cancelar requisição anterior se existir e não estiver já abortada
       if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
         console.log('🔄 [useSEO] Cancelando requisição anterior');
         abortControllerRef.current.abort();
@@ -91,7 +192,6 @@ export const useSEO = (options: UseSEOOptions) => {
       const cacheKey = getCacheKey(pageType, pageSlug);
       console.log('🗂️ [useSEO] Cache key:', cacheKey);
       
-      // Verificar cache primeiro
       if (seoCache.has(cacheKey) && isCacheValid(cacheKey)) {
         const cachedData = seoCache.get(cacheKey)!;
         setSeoData(cachedData);
@@ -99,12 +199,10 @@ export const useSEO = (options: UseSEOOptions) => {
         return;
       }
 
-      // Criar novo AbortController para esta requisição
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
 
       try {
-        // Só mostrar loading se não temos dados em cache
         if (!seoCache.has(cacheKey)) {
           setLoading(true);
         }
@@ -121,7 +219,6 @@ export const useSEO = (options: UseSEOOptions) => {
         if (pageSlug) {
           query = query.eq('page_slug', pageSlug);
         } else {
-          // Corrigir sintaxe para buscar valores NULL no PostgREST
           query = query.is('page_slug', null);
         }
 
@@ -131,18 +228,15 @@ export const useSEO = (options: UseSEOOptions) => {
         
         console.log('📊 [useSEO] Resultado da requisição:', { data, error: fetchError });
 
-        // Verificar se a requisição foi cancelada antes de processar resultado
         if (abortController.signal.aborted) {
           return;
         }
 
         if (fetchError) {
           if (fetchError.code === 'PGRST116') {
-            // Nenhum registro encontrado, usar fallbacks
             console.log(`Nenhum metadado SEO encontrado para ${pageType}${pageSlug ? `/${pageSlug}` : ''}, usando fallbacks`);
             setSeoData(null);
           } else {
-            // Para outros erros (incluindo 406), usar fallbacks silenciosamente
             console.log(`Erro ao buscar metadados SEO (${fetchError.code}): ${fetchError.message}. Usando fallbacks.`);
             setSeoData(null);
           }
@@ -150,31 +244,26 @@ export const useSEO = (options: UseSEOOptions) => {
           setSeoData(data);
           setDocumentTitle(data.title);
           
-          // Armazenar no cache
           seoCache.set(cacheKey, data);
           cacheExpiry.set(cacheKey, Date.now() + CACHE_DURATION);
         }
       } catch (err) {
-        // Verificar se a requisição foi cancelada
         if (abortController.signal.aborted) {
-          return; // Requisição cancelada, não fazer nada
+          return;
         }
         
         if (err instanceof Error && err.name === 'AbortError') {
-          return; // Requisição cancelada, não fazer nada
+          return;
         }
         
-        // Para qualquer erro, usar fallbacks silenciosamente
         console.log(`Erro ao buscar dados SEO: ${err instanceof Error ? err.message : 'Erro desconhecido'}. Usando fallbacks.`);
         setSeoData(null);
-        setError(null); // Não definir erro para evitar mostrar mensagens de erro ao usuário
+        setError(null);
       } finally {
-        // Só atualizar estado se a requisição não foi cancelada
         if (!abortController.signal.aborted) {
           setLoading(false);
         }
         
-        // Limpar referência se esta ainda é a requisição atual
         if (abortControllerRef.current === abortController) {
           abortControllerRef.current = null;
         }
@@ -183,7 +272,6 @@ export const useSEO = (options: UseSEOOptions) => {
 
     fetchSEOData();
 
-    // Cleanup
     return () => {
       if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
         abortControllerRef.current.abort();
@@ -204,38 +292,73 @@ export const useSEO = (options: UseSEOOptions) => {
         ogImage: seoData.og_image || fallbackImage,
         canonicalUrl: seoData.canonical_url,
         schemaData: seoData.schema_data,
-        type: pageType === 'article' ? 'article' : 'website'
+        type: pageType === 'article' ? 'article' : 'webpage',
+        breadcrumbs,
+        language: 'pt-BR',
+        robots: pageType === 'admin' ? 'noindex, nofollow' : 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1'
       };
     }
 
-    // Fallback metadata - melhorado para artigos
+    // Fallback metadata melhorado com geração automática
     let canonicalUrl = baseUrl;
     let title = fallbackTitle;
     let description = fallbackDescription;
-    let keywords = fallbackKeywords;
+    let keywords = [...fallbackKeywords];
+    let ogImage = fallbackImage;
+    let type: 'website' | 'article' | 'webpage' = 'website';
+    let robots = 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1';
     
+    // Geração automática para artigos
     if (pageType === 'article' && pageSlug) {
+      type = 'article';
       canonicalUrl = `${baseUrl}/artigo/${pageSlug}`;
-      // Para artigos, tentar extrair informações do título fallback
-      if (fallbackTitle && fallbackTitle !== 'Artigo - AIMindset') {
-        title = fallbackTitle.includes('|') ? fallbackTitle : `${fallbackTitle} | AIMindset`;
+      
+      if (articleData) {
+        title = articleData.title.includes('|') ? articleData.title : `${articleData.title} | AIMindset`;
+        
+        // Gerar descrição automaticamente
+        if (articleData.content) {
+          description = generateMetaDescription(articleData.content, articleData.title);
+        } else if (articleData.excerpt) {
+          description = articleData.excerpt.length > 155 
+            ? articleData.excerpt.substring(0, 152) + '...'
+            : articleData.excerpt;
+        }
+        
+        // Gerar keywords automaticamente
+        if (articleData.content) {
+          keywords = extractKeywords(articleData.content, articleData.title, articleData.category);
+        } else if (articleData.tags) {
+          keywords = [...articleData.tags.split(',').map(tag => tag.trim()), ...fallbackKeywords];
+        }
+        
+        ogImage = articleData.image_url || `${baseUrl}/api/og?title=${encodeURIComponent(articleData.title)}&type=article`;
       }
-      // Melhorar descrição para artigos
-      if (fallbackDescription && fallbackDescription !== 'Descubra insights sobre IA e tecnologia no AIMindset.') {
-        description = fallbackDescription;
-      } else {
-        description = `Leia sobre ${fallbackTitle?.replace(' | AIMindset', '') || 'este artigo'} no AIMindset. Descubra insights sobre inteligência artificial e tecnologia.`;
-      }
-      // Adicionar keywords específicas para artigos
-      keywords = [...fallbackKeywords, 'artigo', 'blog', 'conteúdo'];
     } else if (pageType === 'category' && pageSlug) {
       canonicalUrl = `${baseUrl}/categoria/${pageSlug}`;
+      title = `Categoria ${pageSlug.charAt(0).toUpperCase() + pageSlug.slice(1)} | AIMindset`;
+      description = `Explore artigos sobre ${pageSlug} no AIMindset. Conteúdo especializado em inteligência artificial e tecnologia.`;
+      keywords = [pageSlug, 'categoria', 'artigos', ...fallbackKeywords];
+    } else if (pageType === 'newsletter') {
+      canonicalUrl = `${baseUrl}/newsletter`;
+      title = 'Newsletter AIMindset - Receba Conteúdo Exclusivo sobre IA';
+      description = 'Inscreva-se na newsletter da AIMindset e receba semanalmente conteúdo exclusivo sobre Inteligência Artificial, Machine Learning e tecnologia.';
+      keywords = ['newsletter', 'inscrição', 'conteúdo exclusivo', ...fallbackKeywords];
+    } else if (pageType === 'all_articles') {
+      canonicalUrl = `${baseUrl}/artigos`;
+      title = 'Todos os Artigos sobre IA e Machine Learning | AIMindset';
+      description = 'Explore nossa biblioteca completa de artigos sobre Inteligência Artificial, Machine Learning, Deep Learning e tecnologia. Conteúdo atualizado regularmente.';
+      keywords = ['artigos IA', 'machine learning', 'deep learning', 'biblioteca', ...fallbackKeywords];
+    } else if (pageType === 'admin') {
+      canonicalUrl = `${baseUrl}/admin`;
+      title = 'Painel Administrativo - AIMindset';
+      description = 'Área administrativa do AIMindset';
+      keywords = ['admin', 'painel'];
+      robots = 'noindex, nofollow';
     } else if (pageType === 'about') {
       canonicalUrl = `${baseUrl}/sobre`;
     } else if (pageType === 'contact') {
       canonicalUrl = `${baseUrl}/contato`;
-    } else if (pageType === 'newsletter') {
-      canonicalUrl = `${baseUrl}/newsletter`;
     } else if (pageType === 'privacy') {
       canonicalUrl = `${baseUrl}/privacidade`;
     }
@@ -244,9 +367,15 @@ export const useSEO = (options: UseSEOOptions) => {
       title,
       description,
       keywords,
-      ogImage: fallbackImage,
+      ogImage,
       canonicalUrl,
-      type: pageType === 'article' ? 'article' : 'website'
+      type,
+      breadcrumbs,
+      language: 'pt-BR',
+      robots,
+      ...(articleData?.created_at && { publishedTime: articleData.created_at }),
+      ...(articleData?.updated_at && { modifiedTime: articleData.updated_at }),
+      ...(articleData?.content && { readingTime: calculateReadingTime(articleData.content) })
     };
   };
 
