@@ -82,64 +82,88 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClose }) => {
     try {
       setLoading(true);
       
-      // Simulate notifications from recent activity
-      const mockNotifications: Notification[] = [
-        {
-          id: '1',
-          type: 'campaign_sent',
-          title: 'Campanha Enviada com Sucesso',
-          message: 'A campanha "Newsletter Semanal" foi enviada para 155 inscritos',
-          data: { campaign_id: 'camp_1', recipient_count: 155 },
-          read: false,
-          created_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-          priority: 'medium'
-        },
-        {
-          id: '2',
-          type: 'new_subscriber',
-          title: 'Novos Inscritos',
-          message: '3 novos inscritos se juntaram à newsletter hoje',
-          data: { count: 3 },
-          read: false,
-          created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          priority: 'low'
-        },
-        {
-          id: '3',
-          type: 'automation_triggered',
-          title: 'Automação Executada',
-          message: 'Email de boas-vindas enviado para 2 novos inscritos',
-          data: { automation_id: 'auto_1', count: 2 },
-          read: true,
-          created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-          priority: 'low'
-        },
-        {
-          id: '4',
-          type: 'performance_alert',
-          title: 'Taxa de Abertura Baixa',
-          message: 'A última campanha teve taxa de abertura de apenas 15%',
-          data: { campaign_id: 'camp_2', open_rate: 15 },
-          read: false,
-          created_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-          priority: 'high'
-        },
-        {
-          id: '5',
-          type: 'system_alert',
-          title: 'Sistema Atualizado',
-          message: 'O sistema de newsletter foi atualizado com novas funcionalidades',
-          data: { version: '2.1.0' },
-          read: true,
-          created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          priority: 'medium'
-        }
-      ];
+      // Buscar notificações reais do banco de dados
+      const realNotifications: Notification[] = [];
 
-      setNotifications(mockNotifications);
+      // 1. Buscar campanhas de boas-vindas enviadas recentemente
+      const { data: welcomeCampaigns, error: campaignsError } = await supabase
+        .from('newsletter_campaigns')
+        .select('*')
+        .ilike('subject', '%boas-vindas%')
+        .eq('status', 'sent')
+        .order('sent_at', { ascending: false })
+        .limit(5);
+
+      if (!campaignsError && welcomeCampaigns) {
+        welcomeCampaigns.forEach(campaign => {
+          realNotifications.push({
+            id: `campaign_${campaign.id}`,
+            type: 'campaign_sent',
+            title: 'Campanha de Boas-vindas Enviada',
+            message: `A campanha "${campaign.subject}" foi enviada para ${campaign.recipient_count || 0} inscritos`,
+            data: { 
+              campaign_id: campaign.id, 
+              recipient_count: campaign.recipient_count || 0,
+              open_rate: campaign.open_rate || 0
+            },
+            read: false,
+            created_at: campaign.sent_at || campaign.created_at,
+            priority: 'medium'
+          });
+        });
+      }
+
+      // 2. Buscar logs de eventos reais da newsletter
+      const { data: logs, error: logsError } = await supabase
+        .from('newsletter_logs')
+        .select('*')
+        .in('event_type', ['automation_sent', 'subscriber_added'])
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (!logsError && logs) {
+        logs.forEach(log => {
+          if (log.event_type === 'automation_sent') {
+            realNotifications.push({
+              id: `log_${log.id}`,
+              type: 'automation_triggered',
+              title: 'Automação de Boas-vindas Executada',
+              message: `Email de boas-vindas enviado automaticamente`,
+              data: { 
+                automation_id: log.automation_id,
+                subscriber_id: log.subscriber_id
+              },
+              read: false,
+              created_at: log.created_at,
+              priority: 'low'
+            });
+          } else if (log.event_type === 'subscriber_added') {
+            realNotifications.push({
+              id: `log_${log.id}`,
+              type: 'new_subscriber',
+              title: 'Novo Inscrito',
+              message: 'Um novo usuário se inscreveu na newsletter',
+              data: { 
+                subscriber_id: log.subscriber_id
+              },
+              read: false,
+              created_at: log.created_at,
+              priority: 'low'
+            });
+          }
+        });
+      }
+
+      // Ordenar por data de criação (mais recentes primeiro)
+      realNotifications.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setNotifications(realNotifications);
     } catch (error) {
       console.error('Erro ao buscar notificações:', error);
       toast.error('Erro ao carregar notificações');
+      setNotifications([]); // Definir array vazio em caso de erro
     } finally {
       setLoading(false);
     }

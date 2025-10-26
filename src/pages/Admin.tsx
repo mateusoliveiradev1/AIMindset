@@ -1510,8 +1510,6 @@ export const Admin: React.FC = () => {
               >
                 <Bell className="w-4 h-4" />
                 <span>Notificações</span>
-                {/* Notification badge */}
-                <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">3</span>
               </Button>
             </div>
 
@@ -1684,23 +1682,21 @@ export const Admin: React.FC = () => {
                           </div>
                         ) : (
                           <div style={{ width: '100%', height: '320px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                            <BarChart 
-                              width={400}
-                              height={300}
-                              data={
-                                campaignsHook.campaigns && campaignsHook.campaigns.length > 0 
-                                  ? campaignsHook.campaigns.slice(-7).map(campaign => ({
-                                      name: campaign.name?.substring(0, 10) + '...' || 'Sem nome',
+                            {campaignsHook.campaigns && campaignsHook.campaigns.filter(campaign => campaign.status === 'sent' && campaign.recipient_count > 0).length > 0 ? (
+                              <BarChart 
+                                width={400}
+                                height={300}
+                                data={
+                                  campaignsHook.campaigns
+                                    .filter(campaign => campaign.status === 'sent' && campaign.recipient_count > 0)
+                                    .slice(-7)
+                                    .map(campaign => ({
+                                      name: campaign.subject?.substring(0, 15) + '...' || 'Sem título',
                                       enviados: campaign.recipient_count || 0,
                                       abertos: campaign.opened_count || 0,
                                       cliques: campaign.clicked_count || 0
                                     }))
-                                  : [
-                                      { name: 'Nenhuma', enviados: 0, abertos: 0, cliques: 0 },
-                                      { name: 'campanha', enviados: 0, abertos: 0, cliques: 0 },
-                                      { name: 'encontrada', enviados: 0, abertos: 0, cliques: 0 }
-                                    ]
-                              }
+                                }
                               margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
                             >
                               <defs>
@@ -1775,6 +1771,17 @@ export const Admin: React.FC = () => {
                                 animationEasing="ease-in-out"
                               />
                             </BarChart>
+                            ) : (
+                              <div className="text-center text-gray-400">
+                                <div className="mb-4">
+                                  <svg className="w-16 h-16 mx-auto text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                  </svg>
+                                </div>
+                                <p className="text-lg font-medium">Nenhuma campanha enviada</p>
+                                <p className="text-sm">Campanhas aparecerão aqui após serem enviadas</p>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1791,30 +1798,30 @@ export const Admin: React.FC = () => {
                         <Eye className="w-6 h-6 text-lime-green" />
                       </div>
                       <div className="text-3xl font-orbitron font-bold text-lime-green mb-2">
-                        {campaignsHook.campaigns.length > 0 
-                          ? Math.round(
-                              campaignsHook.campaigns
-                                .filter(c => c.status === 'sent')
-                                .reduce((acc, c) => acc + (c.open_rate || 0), 0) / 
-                              campaignsHook.campaigns.filter(c => c.status === 'sent').length
-                            ) || 0
-                          : 0
-                        }%
+                        {(() => {
+                          const sentCampaigns = campaignsHook.campaigns.filter(c => c.status === 'sent' && c.recipient_count > 0);
+                          if (sentCampaigns.length === 0) return 0;
+                          
+                          const totalOpened = sentCampaigns.reduce((acc, c) => acc + (c.opened_count || 0), 0);
+                          const totalSent = sentCampaigns.reduce((acc, c) => acc + (c.recipient_count || 0), 0);
+                          
+                          return totalSent > 0 ? Math.round((totalOpened / totalSent) * 100) : 0;
+                        })()}%
                       </div>
                       <p className="text-futuristic-gray text-sm">Média das últimas campanhas</p>
                       <div className="mt-4 bg-darker-surface/50 rounded-full h-2">
                         <div 
                           className="bg-lime-green h-2 rounded-full transition-all duration-500"
                           style={{ 
-                            width: `${Math.min(100, campaignsHook.campaigns.length > 0 
-                              ? Math.round(
-                                  campaignsHook.campaigns
-                                    .filter(c => c.status === 'sent')
-                                    .reduce((acc, c) => acc + (c.open_rate || 0), 0) / 
-                                  campaignsHook.campaigns.filter(c => c.status === 'sent').length
-                                ) || 0
-                              : 0
-                            )}%` 
+                            width: `${(() => {
+                              const sentCampaigns = campaignsHook.campaigns.filter(c => c.status === 'sent' && c.recipient_count > 0);
+                              if (sentCampaigns.length === 0) return 0;
+                              
+                              const totalOpened = sentCampaigns.reduce((acc, c) => acc + (c.opened_count || 0), 0);
+                              const totalSent = sentCampaigns.reduce((acc, c) => acc + (c.recipient_count || 0), 0);
+                              
+                              return Math.min(100, totalSent > 0 ? Math.round((totalOpened / totalSent) * 100) : 0);
+                            })()}%` 
                           }}
                         />
                       </div>
@@ -1828,30 +1835,30 @@ export const Admin: React.FC = () => {
                         <MousePointer className="w-6 h-6 text-neon-purple" />
                       </div>
                       <div className="text-3xl font-orbitron font-bold text-neon-purple mb-2">
-                        {campaignsHook.campaigns.length > 0 
-                          ? Math.round(
-                              campaignsHook.campaigns
-                                .filter(c => c.status === 'sent')
-                                .reduce((acc, c) => acc + (c.click_rate || 0), 0) / 
-                              campaignsHook.campaigns.filter(c => c.status === 'sent').length
-                            ) || 0
-                          : 0
-                        }%
+                        {(() => {
+                          const sentCampaigns = campaignsHook.campaigns.filter(c => c.status === 'sent' && c.recipient_count > 0);
+                          if (sentCampaigns.length === 0) return 0;
+                          
+                          const totalClicked = sentCampaigns.reduce((acc, c) => acc + (c.clicked_count || 0), 0);
+                          const totalSent = sentCampaigns.reduce((acc, c) => acc + (c.recipient_count || 0), 0);
+                          
+                          return totalSent > 0 ? Math.round((totalClicked / totalSent) * 100) : 0;
+                        })()}%
                       </div>
                       <p className="text-futuristic-gray text-sm">Média das últimas campanhas</p>
                       <div className="mt-4 bg-darker-surface/50 rounded-full h-2">
                         <div 
                           className="bg-neon-purple h-2 rounded-full transition-all duration-500"
                           style={{ 
-                            width: `${Math.min(100, campaignsHook.campaigns.length > 0 
-                              ? Math.round(
-                                  campaignsHook.campaigns
-                                    .filter(c => c.status === 'sent')
-                                    .reduce((acc, c) => acc + (c.click_rate || 0), 0) / 
-                                  campaignsHook.campaigns.filter(c => c.status === 'sent').length
-                                ) || 0
-                              : 0
-                            )}%` 
+                            width: `${(() => {
+                              const sentCampaigns = campaignsHook.campaigns.filter(c => c.status === 'sent' && c.recipient_count > 0);
+                              if (sentCampaigns.length === 0) return 0;
+                              
+                              const totalClicked = sentCampaigns.reduce((acc, c) => acc + (c.clicked_count || 0), 0);
+                              const totalSent = sentCampaigns.reduce((acc, c) => acc + (c.recipient_count || 0), 0);
+                              
+                              return Math.min(100, totalSent > 0 ? Math.round((totalClicked / totalSent) * 100) : 0);
+                            })()}%` 
                           }}
                         />
                       </div>
@@ -1865,30 +1872,32 @@ export const Admin: React.FC = () => {
                         <AlertTriangle className="w-6 h-6 text-yellow-400" />
                       </div>
                       <div className="text-3xl font-orbitron font-bold text-yellow-400 mb-2">
-                        {campaignsHook.campaigns.length > 0 
-                          ? Math.round(
-                              campaignsHook.campaigns
-                                .filter(c => c.status === 'sent')
-                                .reduce((acc, c) => acc + (c.bounce_rate || 0), 0) / 
-                              campaignsHook.campaigns.filter(c => c.status === 'sent').length
-                            ) || 0
-                          : 0
-                        }%
+                        {(() => {
+                          const sentCampaigns = campaignsHook.campaigns.filter(c => c.status === 'sent' && c.recipient_count > 0);
+                          if (sentCampaigns.length === 0) return 0;
+                          
+                          // Taxa de rejeição calculada como: (enviados - entregues) / enviados * 100
+                          // Assumindo que bounced_count existe ou calculando como recipient_count - delivered_count
+                          const totalSent = sentCampaigns.reduce((acc, c) => acc + (c.recipient_count || 0), 0);
+                          const totalBounced = sentCampaigns.reduce((acc, c) => acc + (c.bounced_count || 0), 0);
+                          
+                          return totalSent > 0 ? Math.round((totalBounced / totalSent) * 100) : 0;
+                        })()}%
                       </div>
                       <p className="text-futuristic-gray text-sm">Média das últimas campanhas</p>
                       <div className="mt-4 bg-darker-surface/50 rounded-full h-2">
                         <div 
                           className="bg-yellow-400 h-2 rounded-full transition-all duration-500"
                           style={{ 
-                            width: `${Math.min(100, campaignsHook.campaigns.length > 0 
-                              ? Math.round(
-                                  campaignsHook.campaigns
-                                    .filter(c => c.status === 'sent')
-                                    .reduce((acc, c) => acc + (c.bounce_rate || 0), 0) / 
-                                  campaignsHook.campaigns.filter(c => c.status === 'sent').length
-                                ) || 0
-                              : 0
-                            )}%` 
+                            width: `${(() => {
+                              const sentCampaigns = campaignsHook.campaigns.filter(c => c.status === 'sent' && c.recipient_count > 0);
+                              if (sentCampaigns.length === 0) return 0;
+                              
+                              const totalSent = sentCampaigns.reduce((acc, c) => acc + (c.recipient_count || 0), 0);
+                              const totalBounced = sentCampaigns.reduce((acc, c) => acc + (c.bounced_count || 0), 0);
+                              
+                              return Math.min(100, totalSent > 0 ? Math.round((totalBounced / totalSent) * 100) : 0);
+                            })()}%` 
                           }}
                         />
                       </div>
