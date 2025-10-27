@@ -28,7 +28,11 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
   });
 
   return (
-    <div className="mt-8 space-y-6">
+    <div 
+      className="mt-8 space-y-6" 
+      data-comments-section="true"
+      id="comments"
+    >
       {/* Mostrar erro de conectividade se houver */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">

@@ -56,6 +56,8 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
 
   // Detectar scroll para mostrar/esconder o botão e detectar seção de comentários
   useEffect(() => {
+    let commentsObserver: IntersectionObserver | null = null;
+    
     const handleScroll = () => {
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
@@ -63,43 +65,89 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
 
       scrollTimeoutRef.current = setTimeout(() => {
         const scrollY = window.scrollY;
-        const windowHeight = window.innerHeight;
         
         // DEBUG: Log do scroll
         console.log('📏 [TOC DEBUG] Scroll:', { scrollY, tocLength: toc.length });
         
-        // Procurar pela seção de artigos relacionados
-        let relatedArticlesElement = null;
-        
-        // Primeiro, procurar por texto "Artigos Relacionados"
-        const allElements = document.querySelectorAll('*');
-        for (const element of allElements) {
-          const text = element.textContent?.toLowerCase() || '';
-          if (text.includes('artigos relacionados') && (element.tagName === 'H3' || element.tagName === 'H2')) {
-            relatedArticlesElement = element.closest('section, div') || element;
-            console.log('📚 [TOC DEBUG] Encontrou seção de artigos relacionados por texto');
-            break;
-          }
-        }
-        
-        let isAtRelatedArticles = false;
-        if (relatedArticlesElement) {
-          const rect = relatedArticlesElement.getBoundingClientRect();
-          // Considera que chegou na seção de artigos relacionados quando ela está visível na viewport
-          isAtRelatedArticles = rect.top <= windowHeight * 0.8; // 80% da altura da tela
-          console.log('📚 [TOC DEBUG] Posição dos artigos relacionados:', { rectTop: rect.top, threshold: windowHeight * 0.8, isAtRelatedArticles });
-        } else {
-          console.log('📚 [TOC DEBUG] Seção de artigos relacionados não encontrada');
-        }
-        
-        setIsAtComments(isAtRelatedArticles);
-        
-        // Esconder o índice quando chegar nos artigos relacionados
-        const shouldShow = scrollY > 200 && toc.length > 0 && !isAtRelatedArticles;
-        console.log('👁️ [TOC DEBUG] Visibilidade:', { shouldShow, scrollY, tocLength: toc.length, isAtRelatedArticles });
+        // Mostrar/esconder baseado no scroll e se não está na seção de comentários
+        const shouldShow = scrollY > 200 && toc.length > 0 && !isAtComments;
+        console.log('👁️ [TOC DEBUG] Visibilidade:', { shouldShow, scrollY, tocLength: toc.length, isAtComments });
         setIsVisible(shouldShow);
       }, 10);
     };
+
+    // Configurar Intersection Observer para detectar seção de comentários
+    const setupCommentsObserver = () => {
+      // Aguardar um pouco mais para garantir que o DOM esteja carregado
+      setTimeout(() => {
+        // Procurar pela seção de comentários com múltiplos seletores
+        const commentsSection = 
+          document.querySelector('[data-comments-section="true"]') ||
+          document.querySelector('#comments') ||
+          document.querySelector('.comments-section') ||
+          document.querySelector('[data-comments-section]') ||
+          // Procurar por elementos que contenham texto relacionado a comentários
+          Array.from(document.querySelectorAll('h2, h3, h4')).find(el => {
+            const text = el.textContent?.toLowerCase() || '';
+            return text.includes('comentário') || text.includes('comment');
+          })?.closest('section, div') ||
+          // Procurar por qualquer elemento que contenha "comentário" no texto
+          Array.from(document.querySelectorAll('*')).find(el => {
+            const text = el.textContent?.toLowerCase() || '';
+            return text.includes('comentário') && el.children.length > 0;
+          });
+
+        console.log('💬 [TOC DEBUG] Procurando seção de comentários...');
+        console.log('💬 [TOC DEBUG] Seletores testados:', {
+          'data-comments-section="true"': !!document.querySelector('[data-comments-section="true"]'),
+          '#comments': !!document.querySelector('#comments'),
+          '.comments-section': !!document.querySelector('.comments-section'),
+          'data-comments-section': !!document.querySelector('[data-comments-section]')
+        });
+
+        if (commentsSection) {
+          console.log('💬 [TOC DEBUG] Seção de comentários encontrada:', commentsSection);
+          console.log('💬 [TOC DEBUG] Elemento encontrado:', {
+            tagName: commentsSection.tagName,
+            id: commentsSection.id,
+            className: commentsSection.className,
+            dataset: commentsSection.dataset
+          });
+          
+          commentsObserver = new IntersectionObserver(
+            (entries) => {
+              entries.forEach((entry) => {
+                const isIntersecting = entry.isIntersecting;
+                const intersectionRatio = entry.intersectionRatio;
+                console.log('💬 [TOC DEBUG] Comentários intersecting:', { 
+                  isIntersecting, 
+                  intersectionRatio,
+                  boundingClientRect: entry.boundingClientRect,
+                  rootBounds: entry.rootBounds
+                });
+                setIsAtComments(isIntersecting);
+              });
+            },
+            {
+              root: null,
+              rootMargin: '-10% 0px -10% 0px', // Trigger quando 10% da seção estiver visível
+              threshold: [0, 0.1, 0.25, 0.5] // Múltiplos thresholds para melhor detecção
+            }
+          );
+
+          commentsObserver.observe(commentsSection);
+        } else {
+          console.log('💬 [TOC DEBUG] Seção de comentários não encontrada');
+          console.log('💬 [TOC DEBUG] Elementos disponíveis no DOM:', {
+            allElements: document.querySelectorAll('*').length,
+            divsWithId: Array.from(document.querySelectorAll('div[id]')).map(el => el.id),
+            sectionsWithClass: Array.from(document.querySelectorAll('section[class]')).map(el => el.className)
+          });
+        }
+      }, 2000); // Aguardar 2 segundos para garantir que o lazy loading carregou
+    };
+
+    setupCommentsObserver();
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll(); // Check initial state
@@ -109,8 +157,11 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
+      if (commentsObserver) {
+        commentsObserver.disconnect();
+      }
     };
-  }, [toc.length]);
+  }, [toc.length, isAtComments]);
 
   // Função para scroll suave para o heading - usando a função do hook
   const handleScrollToHeading = useCallback((headingId: string, closeModal: boolean = false) => {
