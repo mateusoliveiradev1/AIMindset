@@ -29,12 +29,62 @@ interface PerformanceDataPoint {
   error?: string;
 }
 
+// Logs coloridos e organizados
+class SmartLogger {
+  private static readonly COLORS = {
+    success: '\x1b[32m', // Verde
+    warning: '\x1b[33m', // Amarelo
+    error: '\x1b[31m',   // Vermelho
+    info: '\x1b[36m',    // Ciano
+    reset: '\x1b[0m'     // Reset
+  };
+
+  static logCacheHit(layer: 'L1' | 'L2', key: string, duration?: number): void {
+    const emoji = layer === 'L1' ? '🟢' : '🟡';
+    const durationText = duration ? ` (${duration}ms)` : '';
+    console.log(`${this.COLORS.success}${emoji} [${layer} Cache] HIT: ${key}${durationText}${this.COLORS.reset}`);
+  }
+
+  static logCacheMiss(layer: 'L1' | 'L2', key: string): void {
+    const emoji = layer === 'L1' ? '🔴' : '🟠';
+    console.log(`${this.COLORS.warning}${emoji} [${layer} Cache] MISS: ${key}${this.COLORS.reset}`);
+  }
+
+  static logCacheSet(layer: 'L1' | 'L2', key: string, ttl?: number): void {
+    const emoji = layer === 'L1' ? '🟢' : '🟡';
+    const ttlText = ttl ? ` (TTL: ${Math.round(ttl/1000/60)}min)` : '';
+    console.log(`${this.COLORS.success}${emoji} [${layer} Cache] SET: ${key}${ttlText}${this.COLORS.reset}`);
+  }
+
+  static logCacheInvalidation(pattern: string, count: number): void {
+    console.log(`${this.COLORS.info}🗑️ [Cache] INVALIDATED: ${pattern} (${count} entries)${this.COLORS.reset}`);
+  }
+
+  static logPerformanceMetrics(metrics: PerformanceMetrics): void {
+    console.group(`${this.COLORS.info}📊 [Performance Metrics]${this.COLORS.reset}`);
+    console.log(`Hit Rate: ${this.COLORS.success}${metrics.cacheHitRate.toFixed(1)}%${this.COLORS.reset}`);
+    console.log(`Avg Response: ${this.COLORS.info}${metrics.averageResponseTime.toFixed(1)}ms${this.COLORS.reset}`);
+    console.log(`Total Requests: ${metrics.totalRequests}`);
+    console.log(`Cache Hits: ${this.COLORS.success}${metrics.cacheHits}${this.COLORS.reset}`);
+    console.log(`Cache Misses: ${this.COLORS.warning}${metrics.cacheMisses}${this.COLORS.reset}`);
+    console.log(`Error Rate: ${metrics.errorRate.toFixed(1)}%`);
+    console.groupEnd();
+  }
+
+  static logError(context: string, error: any): void {
+    console.error(`${this.COLORS.error}❌ [${context}] ERROR:${this.COLORS.reset}`, error);
+  }
+}
+
 class PerformanceMonitor {
   private dataPoints: PerformanceDataPoint[] = [];
   private maxDataPoints = 1000; // Keep last 1000 events
   private listeners: ((metrics: PerformanceMetrics) => void)[] = [];
+  private metricsCache: PerformanceMetrics | null = null;
+  private lastMetricsUpdate = 0;
+  private readonly METRICS_CACHE_TTL = 5000; // 5 segundos
 
-  // Record a performance event
+  // Record a performance event with smart logging
   recordEvent(event: PerformanceEvent, options?: {
     duration?: number;
     cacheLayer?: 'L1' | 'L2';
@@ -49,236 +99,233 @@ class PerformanceMonitor {
 
     this.dataPoints.push(dataPoint);
 
-    // Keep only recent data points
+    // Manter apenas os últimos eventos para evitar vazamento de memória
     if (this.dataPoints.length > this.maxDataPoints) {
       this.dataPoints = this.dataPoints.slice(-this.maxDataPoints);
     }
 
-    // Notify listeners
-    this.notifyListeners();
+    // Invalidar cache de métricas
+    this.metricsCache = null;
+
+    // Log inteligente baseado no evento
+    this.smartLog(event, options);
+
+    // Notificar listeners apenas se necessário
+    if (this.listeners.length > 0) {
+      const metrics = this.getMetrics();
+      this.listeners.forEach(listener => listener(metrics));
+    }
   }
 
-  // Get current performance metrics
+  private smartLog(event: PerformanceEvent, options?: {
+    duration?: number;
+    cacheLayer?: 'L1' | 'L2';
+    key?: string;
+    error?: string;
+  }): void {
+    // Reduzir poluição visual - apenas logs importantes
+    switch (event) {
+      case 'cache_hit':
+        if (options?.cacheLayer && options?.key) {
+          SmartLogger.logCacheHit(options.cacheLayer, options.key, options.duration);
+        }
+        break;
+      
+      case 'cache_miss':
+        // Log apenas misses críticos para reduzir ruído
+        if (options?.key && !options.key.includes('temp_')) {
+          SmartLogger.logCacheMiss(options?.cacheLayer || 'L1', options.key);
+        }
+        break;
+      
+      case 'api_error':
+        if (options?.error) {
+          SmartLogger.logError('API', options.error);
+        }
+        break;
+      
+      case 'cache_invalidation':
+        if (options?.key) {
+          SmartLogger.logCacheInvalidation(options.key, 1);
+        }
+        break;
+    }
+  }
+
+  // Get performance metrics with caching
   getMetrics(): PerformanceMetrics {
-    const now = new Date();
-    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const now = Date.now();
     
-    // Filter recent events (last hour)
-    const recentEvents = this.dataPoints.filter(
-      point => point.timestamp >= oneHourAgo
-    );
+    // Usar cache de métricas se ainda válido
+    if (this.metricsCache && (now - this.lastMetricsUpdate) < this.METRICS_CACHE_TTL) {
+      return this.metricsCache;
+    }
 
-    const totalRequests = recentEvents.filter(
-      point => point.event === 'api_request'
-    ).length;
+    const now24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentEvents = this.dataPoints.filter(dp => dp.timestamp > now24h);
 
-    const cacheHits = recentEvents.filter(
-      point => point.event === 'cache_hit'
-    ).length;
-
-    const cacheMisses = recentEvents.filter(
-      point => point.event === 'cache_miss'
-    ).length;
-
-    const errors = recentEvents.filter(
-      point => point.event === 'api_error'
-    ).length;
-
-    const requestEvents = recentEvents.filter(
-      point => point.event === 'api_request' && point.duration
-    );
-
-    const averageResponseTime = requestEvents.length > 0
-      ? requestEvents.reduce((sum, event) => sum + (event.duration || 0), 0) / requestEvents.length
-      : 0;
+    const cacheHits = recentEvents.filter(dp => dp.event === 'cache_hit').length;
+    const cacheMisses = recentEvents.filter(dp => dp.event === 'cache_miss').length;
+    const apiRequests = recentEvents.filter(dp => dp.event === 'api_request').length;
+    const apiErrors = recentEvents.filter(dp => dp.event === 'api_error').length;
 
     const totalCacheRequests = cacheHits + cacheMisses;
     const cacheHitRate = totalCacheRequests > 0 ? (cacheHits / totalCacheRequests) * 100 : 0;
-    const errorRate = totalRequests > 0 ? (errors / totalRequests) * 100 : 0;
+    const errorRate = apiRequests > 0 ? (apiErrors / apiRequests) * 100 : 0;
 
-    return {
+    // Calcular tempo médio de resposta
+    const requestsWithDuration = recentEvents.filter(dp => dp.duration !== undefined);
+    const averageResponseTime = requestsWithDuration.length > 0
+      ? requestsWithDuration.reduce((sum, dp) => sum + (dp.duration || 0), 0) / requestsWithDuration.length
+      : 0;
+
+    this.metricsCache = {
       cacheHitRate,
       averageResponseTime,
-      totalRequests,
+      totalRequests: apiRequests,
       cacheHits,
       cacheMisses,
       errorRate,
-      lastUpdated: now
+      lastUpdated: new Date()
     };
-  }
 
-  // Get detailed cache statistics
-  getCacheStats() {
-    const metrics = this.getMetrics();
-    const cacheMetrics = hybridCache.getMetrics();
-    
-    return {
-      ...metrics,
-      l1CacheSize: cacheMetrics.l1Size,
-      l2CacheSize: cacheMetrics.l2Size,
-      l1HitRate: cacheMetrics.l1HitRate,
-      l2HitRate: cacheMetrics.l2HitRate,
-      totalCacheSize: cacheMetrics.l1Size + cacheMetrics.l2Size
-    };
+    this.lastMetricsUpdate = now;
+    return this.metricsCache;
   }
 
   // Subscribe to metrics updates
-  subscribe(callback: (metrics: PerformanceMetrics) => void) {
-    this.listeners.push(callback);
-    
-    // Return unsubscribe function
+  subscribe(listener: (metrics: PerformanceMetrics) => void): () => void {
+    this.listeners.push(listener);
     return () => {
-      const index = this.listeners.indexOf(callback);
+      const index = this.listeners.indexOf(listener);
       if (index > -1) {
         this.listeners.splice(index, 1);
       }
     };
   }
 
-  // Notify all listeners
-  private notifyListeners() {
-    const metrics = this.getMetrics();
-    this.listeners.forEach(callback => {
-      try {
-        callback(metrics);
-      } catch (error) {
-        console.error('Error in performance metrics listener:', error);
-      }
-    });
-  }
+  // Get detailed cache performance
+  getCachePerformance(): {
+    l1HitRate: number;
+    l2HitRate: number;
+    l1AvgResponseTime: number;
+    l2AvgResponseTime: number;
+    totalL1Hits: number;
+    totalL2Hits: number;
+  } {
+    const now24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentEvents = this.dataPoints.filter(dp => dp.timestamp > now24h);
 
-  // Clear all data (for testing)
-  clear() {
-    this.dataPoints = [];
-    this.notifyListeners();
-  }
+    const l1Hits = recentEvents.filter(dp => dp.event === 'cache_hit' && dp.cacheLayer === 'L1');
+    const l2Hits = recentEvents.filter(dp => dp.event === 'cache_hit' && dp.cacheLayer === 'L2');
+    const l1Misses = recentEvents.filter(dp => dp.event === 'cache_miss' && dp.cacheLayer === 'L1');
+    const l2Misses = recentEvents.filter(dp => dp.event === 'cache_miss' && dp.cacheLayer === 'L2');
 
-  // Export data for analysis
-  exportData() {
+    const l1Total = l1Hits.length + l1Misses.length;
+    const l2Total = l2Hits.length + l2Misses.length;
+
+    const l1HitRate = l1Total > 0 ? (l1Hits.length / l1Total) * 100 : 0;
+    const l2HitRate = l2Total > 0 ? (l2Hits.length / l2Total) * 100 : 0;
+
+    const l1AvgResponseTime = l1Hits.length > 0
+      ? l1Hits.reduce((sum, hit) => sum + (hit.duration || 0), 0) / l1Hits.length
+      : 0;
+
+    const l2AvgResponseTime = l2Hits.length > 0
+      ? l2Hits.reduce((sum, hit) => sum + (hit.duration || 0), 0) / l2Hits.length
+      : 0;
+
     return {
-      dataPoints: [...this.dataPoints],
-      metrics: this.getMetrics(),
-      cacheStats: this.getCacheStats()
+      l1HitRate,
+      l2HitRate,
+      l1AvgResponseTime,
+      l2AvgResponseTime,
+      totalL1Hits: l1Hits.length,
+      totalL2Hits: l2Hits.length
     };
   }
 
-  // Get performance summary for admin dashboard
-  getSummary() {
+  // Log performance summary (menos verboso)
+  logPerformanceSummary(): void {
     const metrics = this.getMetrics();
-    const cacheStats = this.getCacheStats();
+    const cachePerf = this.getCachePerformance();
     
-    return {
-      status: this.getHealthStatus(metrics),
-      cacheEfficiency: Math.round(metrics.cacheHitRate),
-      responseTime: Math.round(metrics.averageResponseTime),
-      totalRequests: metrics.totalRequests,
-      errorRate: Math.round(metrics.errorRate * 100) / 100,
-      recommendations: this.getRecommendations(metrics)
-    };
+    SmartLogger.logPerformanceMetrics(metrics);
+    
+    console.group('🎯 [Cache Layer Performance]');
+    console.log(`L1 Hit Rate: ${cachePerf.l1HitRate.toFixed(1)}% (${cachePerf.totalL1Hits} hits)`);
+    console.log(`L2 Hit Rate: ${cachePerf.l2HitRate.toFixed(1)}% (${cachePerf.totalL2Hits} hits)`);
+    console.log(`L1 Avg Response: ${cachePerf.l1AvgResponseTime.toFixed(1)}ms`);
+    console.log(`L2 Avg Response: ${cachePerf.l2AvgResponseTime.toFixed(1)}ms`);
+    console.groupEnd();
   }
 
-  // Determine system health status
-  private getHealthStatus(metrics: PerformanceMetrics): 'excellent' | 'good' | 'warning' | 'critical' {
-    if (metrics.errorRate > 10) return 'critical';
-    if (metrics.errorRate > 5 || metrics.cacheHitRate < 50) return 'warning';
-    if (metrics.cacheHitRate > 80 && metrics.averageResponseTime < 500) return 'excellent';
-    return 'good';
+  // Clear old data points to prevent memory leaks
+  cleanup(): void {
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000); // Keep 24h
+    this.dataPoints = this.dataPoints.filter(dp => dp.timestamp > cutoff);
+    this.metricsCache = null;
   }
 
-  // Generate performance recommendations
-  private getRecommendations(metrics: PerformanceMetrics): string[] {
-    const recommendations: string[] = [];
-
-    if (metrics.cacheHitRate < 60) {
-      recommendations.push('Consider increasing cache TTL or optimizing cache keys');
-    }
-
-    if (metrics.averageResponseTime > 1000) {
-      recommendations.push('API response times are high - consider optimizing queries');
-    }
-
-    if (metrics.errorRate > 5) {
-      recommendations.push('High error rate detected - check API connectivity');
-    }
-
-    if (metrics.totalRequests < 10) {
-      recommendations.push('Low request volume - metrics may not be representative');
-    }
-
-    return recommendations;
+  // Reset all metrics
+  reset(): void {
+    this.dataPoints = [];
+    this.metricsCache = null;
+    this.lastMetricsUpdate = 0;
+    console.log('🔄 [Performance Monitor] Metrics reset');
   }
 }
 
-// Global performance monitor instance
+// Singleton instance
 export const performanceMonitor = new PerformanceMonitor();
 
-// React hook for performance monitoring
-import { useState, useEffect } from 'react';
+// Convenience function for tracking cache operations
+export function trackCacheOperation(
+  event: PerformanceEvent,
+  cacheLayer: 'L1' | 'L2',
+  key: string,
+  duration?: number
+): void {
+  performanceMonitor.recordEvent(event, {
+    cacheLayer,
+    key,
+    duration
+  });
+}
 
-export const usePerformanceMetrics = () => {
-  const [metrics, setMetrics] = useState<PerformanceMetrics>(
-    performanceMonitor.getMetrics()
-  );
-  const [cacheStats, setCacheStats] = useState(
-    performanceMonitor.getCacheStats()
-  );
+// Convenience function for tracking API operations
+export function trackApiOperation(
+  duration: number,
+  error?: string
+): void {
+  if (error) {
+    performanceMonitor.recordEvent('api_error', { duration, error });
+  } else {
+    performanceMonitor.recordEvent('api_request', { duration });
+  }
+}
 
-  useEffect(() => {
+// Auto-cleanup timer (runs every hour)
+setInterval(() => {
+  performanceMonitor.cleanup();
+}, 60 * 60 * 1000);
+
+// Performance monitoring hook for React components
+export function usePerformanceMetrics() {
+  const [metrics, setMetrics] = React.useState<PerformanceMetrics | null>(null);
+
+  React.useEffect(() => {
     const unsubscribe = performanceMonitor.subscribe(setMetrics);
-    
-    // Update cache stats periodically
-    const interval = setInterval(() => {
-      setCacheStats(performanceMonitor.getCacheStats());
-    }, 5000);
-
-    return () => {
-      unsubscribe();
-      clearInterval(interval);
-    };
+    setMetrics(performanceMonitor.getMetrics());
+    return unsubscribe;
   }, []);
 
   return {
     metrics,
-    cacheStats,
-    summary: performanceMonitor.getSummary(),
-    exportData: () => performanceMonitor.exportData(),
-    clearData: () => performanceMonitor.clear()
+    logSummary: () => performanceMonitor.logPerformanceSummary(),
+    reset: () => performanceMonitor.reset()
   };
-};
+}
 
-// Utility functions for performance tracking
-export const trackApiRequest = async <T>(
-  operation: () => Promise<T>,
-  key?: string
-): Promise<T> => {
-  const startTime = Date.now();
-  
-  try {
-    performanceMonitor.recordEvent('api_request', { key });
-    const result = await operation();
-    const duration = Date.now() - startTime;
-    
-    performanceMonitor.recordEvent('api_request', { 
-      duration, 
-      key 
-    });
-    
-    return result;
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    performanceMonitor.recordEvent('api_error', { 
-      duration, 
-      key,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-    throw error;
-  }
-};
-
-export const trackCacheOperation = (
-  event: 'cache_hit' | 'cache_miss' | 'cache_invalidation',
-  cacheLayer: 'L1' | 'L2',
-  key: string
-) => {
-  performanceMonitor.recordEvent(event, { cacheLayer, key });
-};
+// React import (will be available in React components)
+declare const React: any;

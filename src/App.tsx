@@ -133,9 +133,9 @@ function App() {
         </div>
       }
     >
-      <ProgressiveEnhancementProvider>
-        <CriticalCSS>
-          <HelmetProvider>
+      <CriticalCSS>
+        <HelmetProvider>
+          <ProgressiveEnhancementProvider>
             <AuthProvider>
               <ToastProvider>
                 <PerformanceManager
@@ -175,9 +175,9 @@ function App() {
                 }}
               />
             </AuthProvider>
-          </HelmetProvider>
-        </CriticalCSS>
-      </ProgressiveEnhancementProvider>
+          </ProgressiveEnhancementProvider>
+        </HelmetProvider>
+      </CriticalCSS>
     </ErrorBoundary>
   );
 }

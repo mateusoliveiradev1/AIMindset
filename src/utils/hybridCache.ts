@@ -1,13 +1,17 @@
 /**
- * Sistema de Cache Híbrido Multi-Layer - Fase 1
+ * Sistema de Cache Híbrido Multi-Layer - Fase 1 OTIMIZADO PARA ADMIN
  * 
- * L1 (Memória): Cache rápido para dados frequentes (TTL 5min)
- * L2 (IndexedDB): Cache persistente para listas (TTL 10min)
+ * L1 (Memória): Cache rápido para dados frequentes (TTL adaptativo)
+ * L2 (IndexedDB): Cache persistente para listas (TTL adaptativo)
  * 
  * GARANTIAS:
  * - Fallback automático para Supabase se cache falhar
  * - Zero impacto nas operações CRUD do admin
  * - Invalidação automática após operações admin
+ * - TTL inteligente baseado no padrão de uso
+ * - Limpeza automática de dados expirados
+ * - Retry automático com backoff exponencial
+ * - MODO ADMIN: Bypass de cache para operações críticas
  */
 
 import IndexedDBCache from './indexedDBCache';
@@ -19,6 +23,8 @@ export interface CacheEntry<T> {
   timestamp: number;
   ttl: number;
   source: 'memory' | 'indexeddb' | 'supabase';
+  accessCount?: number;
+  lastAccess?: number;
 }
 
 export interface CacheMetrics {
@@ -28,45 +34,151 @@ export interface CacheMetrics {
   lastUpdate: number;
 }
 
-// Cache L1 (Memória) - TTL 5 minutos para dados críticos
+// Modo administrativo - bypass de cache para operações críticas
+class AdminModeManager {
+  private static isAdminMode = false;
+  private static adminOperations = new Set(['publish', 'unpublish', 'create', 'update', 'delete']);
+  
+  static enableAdminMode(): void {
+    this.isAdminMode = true;
+    console.log('🔧 [Admin Mode] ENABLED - Cache bypass ativo');
+  }
+  
+  static disableAdminMode(): void {
+    this.isAdminMode = false;
+    console.log('🔧 [Admin Mode] DISABLED - Cache normal');
+  }
+  
+  static isInAdminMode(): boolean {
+    return this.isAdminMode;
+  }
+  
+  static shouldBypassCache(operation?: string): boolean {
+    return this.isAdminMode || (operation && this.adminOperations.has(operation));
+  }
+}
+
+// TTL inteligente baseado no padrão de uso
+class SmartTTLManager {
+  private static readonly BASE_TTL = 5 * 60 * 1000; // 5 minutos base
+  private static readonly POPULAR_TTL = 15 * 60 * 1000; // 15 minutos para populares
+  private static readonly NEW_TTL = 3 * 60 * 1000; // 3 minutos para novos
+  private static readonly ADMIN_TTL = 30 * 1000; // 30 segundos para admin
+  
+  static calculateTTL(key: string, accessCount: number = 0, isAdminOperation = false): number {
+    // Operações admin = TTL muito baixo para refresh rápido
+    if (isAdminOperation) {
+      return this.ADMIN_TTL;
+    }
+    
+    // Artigos populares (mais de 5 acessos) = TTL maior
+    if (accessCount > 5) {
+      return this.POPULAR_TTL;
+    }
+    
+    // Artigos novos ou pouco acessados = TTL menor
+    if (accessCount <= 2) {
+      return this.NEW_TTL;
+    }
+    
+    return this.BASE_TTL;
+  }
+}
+
+// Sistema de retry otimizado (sem retry para admin)
+class RetryManager {
+  private static readonly MAX_RETRIES = 2; // Reduzido de 3 para 2
+  private static readonly BASE_DELAY = 100; // Reduzido de 200 para 100ms
+  
+  static async withRetry<T>(
+    operation: () => Promise<T>,
+    isAdminOperation = false
+  ): Promise<T> {
+    // Admin operations = sem retry para velocidade máxima
+    if (isAdminOperation || AdminModeManager.isInAdminMode()) {
+      try {
+        return await operation();
+      } catch (error) {
+        console.warn('⚡ [Admin Fast] Operation failed, no retry:', error);
+        throw error;
+      }
+    }
+    
+    let lastError: Error;
+    
+    for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error as Error;
+        
+        if (attempt === this.MAX_RETRIES) {
+          console.error(`❌ [Retry] Failed after ${this.MAX_RETRIES} attempts:`, lastError);
+          throw lastError;
+        }
+        
+        const delay = this.BASE_DELAY * Math.pow(2, attempt - 1);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    throw lastError!;
+  }
+}
+
+// Cache L1 (Memória) - TTL adaptativo
 class MemoryCache {
   private cache = new Map<string, CacheEntry<any>>();
-  private readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutos
+  private cleanupInterval: NodeJS.Timeout | null = null;
   
-  set<T>(key: string, data: T, ttl?: number): void {
+  constructor() {
+    this.startCleanupTimer();
+  }
+  
+  set<T>(key: string, data: T, accessCount = 0, isAdminOperation = false): void {
+    const ttl = SmartTTLManager.calculateTTL(key, accessCount, isAdminOperation);
+    
     const entry: CacheEntry<T> = {
       data,
       timestamp: Date.now(),
-      ttl: ttl || this.DEFAULT_TTL,
-      source: 'memory'
+      ttl,
+      source: 'memory',
+      accessCount,
+      lastAccess: Date.now()
     };
     
     this.cache.set(key, entry);
-    console.log(`🟢 [L1 Cache] SET: ${key} (TTL: ${entry.ttl}ms)`);
+    
+    // Log reduzido para admin
+    if (!AdminModeManager.isInAdminMode()) {
+      console.log(`💾 [L1 Cache] SET: ${key} (TTL: ${Math.round(ttl/1000)}s)`);
+    }
   }
   
   get<T>(key: string): T | null {
     const entry = this.cache.get(key);
     
     if (!entry) {
-      console.log(`🔴 [L1 Cache] MISS: ${key}`);
       return null;
     }
     
-    // Verificar se expirou
-    if (Date.now() - entry.timestamp > entry.ttl) {
+    // Verificar expiração
+    const now = Date.now();
+    if (now - entry.timestamp > entry.ttl) {
       this.cache.delete(key);
-      console.log(`⏰ [L1 Cache] EXPIRED: ${key}`);
       return null;
     }
     
-    console.log(`🟢 [L1 Cache] HIT: ${key}`);
+    // Atualizar estatísticas de acesso
+    entry.accessCount = (entry.accessCount || 0) + 1;
+    entry.lastAccess = Date.now();
+    
     return entry.data;
   }
   
   invalidate(key: string): void {
     const deleted = this.cache.delete(key);
-    if (deleted) {
+    if (deleted && !AdminModeManager.isInAdminMode()) {
       console.log(`🗑️ [L1 Cache] INVALIDATED: ${key}`);
     }
   }
@@ -77,109 +189,241 @@ class MemoryCache {
     
     matchingKeys.forEach(key => {
       this.cache.delete(key);
-      console.log(`🗑️ [L1 Cache] PATTERN INVALIDATED: ${key}`);
     });
+    
+    if (matchingKeys.length > 0 && !AdminModeManager.isInAdminMode()) {
+      console.log(`🗑️ [L1 Cache] Pattern invalidated: ${matchingKeys.length} entries`);
+    }
   }
   
   clear(): void {
     this.cache.clear();
-    console.log(`🧹 [L1 Cache] CLEARED ALL`);
+    if (!AdminModeManager.isInAdminMode()) {
+      console.log(`🧹 [L1 Cache] CLEARED ALL`);
+    }
   }
   
   size(): number {
     return this.cache.size;
   }
-}
-
-// Cache L2 (IndexedDB) - TTL 10 minutos para listas
-class IndexedDBCacheLayer {
-  private readonly DEFAULT_TTL = 10 * 60 * 1000; // 10 minutos
-  private cache = new IndexedDBCache('AIMindsetCache', 'articles', 1);
   
-  constructor() {
-    this.cache.init().catch(error => {
-      console.error('❌ [L2 Cache] Initialization failed:', error);
-    });
+  private startCleanupTimer(): void {
+    // Limpeza automática a cada 5 minutos (reduzido de 10)
+    this.cleanupInterval = setInterval(() => {
+      this.cleanupExpired();
+    }, 5 * 60 * 1000);
   }
   
-  async set<T>(key: string, data: T, ttl?: number): Promise<void> {
-    const entry: CacheEntry<T> = {
-      data,
-      timestamp: Date.now(),
-      ttl: ttl || this.DEFAULT_TTL,
-      source: 'indexeddb'
-    };
+  private cleanupExpired(): void {
+    const now = Date.now();
+    let cleanedCount = 0;
     
-    try {
-      await this.cache.set(key, entry);
-      console.log(`🟡 [L2 Cache] SET: ${key} (TTL: ${entry.ttl}ms)`);
-    } catch (error) {
-      console.error(`❌ [L2 Cache] SET ERROR: ${key}`, error);
+    for (const [key, entry] of this.cache.entries()) {
+      if (now - entry.timestamp > entry.ttl) {
+        this.cache.delete(key);
+        cleanedCount++;
+      }
+    }
+    
+    if (cleanedCount > 0 && !AdminModeManager.isInAdminMode()) {
+      console.log(`🧹 [L1 Cache] Cleaned ${cleanedCount} expired entries`);
     }
   }
   
-  async get<T>(key: string): Promise<T | null> {
+  destroy(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+  }
+}
+
+// Cache L2 (IndexedDB) - TTL adaptativo com proteção contra erros
+class IndexedDBCacheLayer {
+  private cache = new IndexedDBCache('AIMindsetCache', 'articles', 1);
+  private cleanupInterval: NodeJS.Timeout | null = null;
+  private isInitialized = false;
+  
+  constructor() {
+    this.init();
+    this.startCleanupTimer();
+  }
+  
+  private async init(): Promise<void> {
     try {
-      const entry = await this.cache.get<CacheEntry<T>>(key);
+      await this.cache.init();
+      this.isInitialized = true;
+    } catch (error) {
+      console.error('❌ [L2 Cache] Initialization failed:', error);
+      this.isInitialized = false;
+    }
+  }
+  
+  private startCleanupTimer(): void {
+    // Limpeza automática a cada 10 minutos
+    this.cleanupInterval = setInterval(() => {
+      this.cleanupExpired();
+    }, 10 * 60 * 1000);
+  }
+  
+  private async cleanupExpired(): Promise<void> {
+    if (!this.isInitialized) return;
+    
+    try {
+      // Verificar se o método existe antes de chamar
+      if (typeof this.cache.getAllKeys !== 'function') {
+        console.warn('⚠️ [L2 Cache] getAllKeys method not available, skipping cleanup');
+        return;
+      }
+      
+      const keys = await this.cache.getAllKeys();
+      const now = Date.now();
+      let cleanedCount = 0;
+      
+      for (const key of keys) {
+        try {
+          const entry = await this.cache.get(key);
+          if (entry && now - entry.timestamp > entry.ttl) {
+            await this.cache.delete(key);
+            cleanedCount++;
+          }
+        } catch (error) {
+          // Ignorar erros individuais de limpeza
+          console.warn(`⚠️ [L2 Cache] Cleanup error for key ${key}:`, error);
+        }
+      }
+      
+      if (cleanedCount > 0 && !AdminModeManager.isInAdminMode()) {
+        console.log(`🧹 [L2 Cache] Cleaned ${cleanedCount} expired entries`);
+      }
+    } catch (error) {
+      console.error('❌ [L2 Cache] Cleanup failed:', error);
+    }
+  }
+  
+  async set<T>(key: string, data: T, accessCount = 0, isAdminOperation = false): Promise<void> {
+    if (!this.isInitialized) {
+      console.warn('⚠️ [L2 Cache] Not initialized, skipping set');
+      return;
+    }
+    
+    const ttl = SmartTTLManager.calculateTTL(key, accessCount, isAdminOperation);
+    
+    const entry: CacheEntry<T> = {
+      data,
+      timestamp: Date.now(),
+      ttl,
+      source: 'indexeddb',
+      accessCount,
+      lastAccess: Date.now()
+    };
+    
+    return RetryManager.withRetry(async () => {
+      await this.cache.set(key, entry);
+      if (!AdminModeManager.isInAdminMode()) {
+        console.log(`💾 [L2 Cache] SET: ${key} (TTL: ${Math.round(ttl/1000)}s)`);
+      }
+    }, isAdminOperation);
+  }
+  
+  async get<T>(key: string): Promise<T | null> {
+    if (!this.isInitialized) {
+      return null;
+    }
+    
+    try {
+      const entry = await this.cache.get(key) as CacheEntry<T> | null;
       
       if (!entry) {
-        console.log(`🔴 [L2 Cache] MISS: ${key}`);
         return null;
       }
       
-      // Verificar se expirou
-      if (Date.now() - entry.timestamp > entry.ttl) {
+      // Verificar expiração
+      const now = Date.now();
+      if (now - entry.timestamp > entry.ttl) {
         await this.cache.delete(key);
-        console.log(`⏰ [L2 Cache] EXPIRED: ${key}`);
         return null;
       }
       
-      console.log(`🟡 [L2 Cache] HIT: ${key}`);
+      // Atualizar estatísticas de acesso
+      entry.accessCount = (entry.accessCount || 0) + 1;
+      entry.lastAccess = Date.now();
+      
       return entry.data;
     } catch (error) {
-      console.error(`❌ [L2 Cache] GET ERROR: ${key}`, error);
+      console.error(`❌ [L2 Cache] Get error for key ${key}:`, error);
       return null;
     }
   }
   
   async invalidate(key: string): Promise<void> {
-    try {
-      await this.cache.delete(key);
-      console.log(`🗑️ [L2 Cache] INVALIDATED: ${key}`);
-    } catch (error) {
-      console.error(`❌ [L2 Cache] INVALIDATE ERROR: ${key}`, error);
+    if (!this.isInitialized) {
+      return;
     }
+    
+    return RetryManager.withRetry(async () => {
+      await this.cache.delete(key);
+      if (!AdminModeManager.isInAdminMode()) {
+        console.log(`🗑️ [L2 Cache] INVALIDATED: ${key}`);
+      }
+    }, AdminModeManager.isInAdminMode());
   }
   
   async invalidatePattern(pattern: string): Promise<void> {
-    try {
-      // Usar método público da classe ArticleCache
-      const articleCache = new (await import('./indexedDBCache')).ArticleCache();
-      const keys = await articleCache.getAllKeys();
-      const matchingKeys = keys.filter(key => key.includes(pattern));
-      
-      await Promise.all(
-        matchingKeys.map(async (key) => {
-          await this.cache.delete(key);
-          console.log(`🗑️ [L2 Cache] PATTERN INVALIDATED: ${key}`);
-        })
-      );
-    } catch (error) {
-      console.error(`❌ [L2 Cache] PATTERN INVALIDATE ERROR:`, error);
+    if (!this.isInitialized) {
+      return;
     }
+    
+    return RetryManager.withRetry(async () => {
+      try {
+        // Verificar se o método existe antes de chamar
+        if (typeof this.cache.getAllKeys !== 'function') {
+          console.warn('⚠️ [L2 Cache] getAllKeys method not available for pattern invalidation');
+          return;
+        }
+        
+        const keys = await this.cache.getAllKeys();
+        const matchingKeys = keys.filter(key => key.includes(pattern));
+        
+        for (const key of matchingKeys) {
+          try {
+            await this.cache.delete(key);
+          } catch (error) {
+            console.warn(`⚠️ [L2 Cache] Failed to delete key ${key}:`, error);
+          }
+        }
+        
+        if (matchingKeys.length > 0 && !AdminModeManager.isInAdminMode()) {
+          console.log(`🗑️ [L2 Cache] Pattern invalidated: ${matchingKeys.length} entries`);
+        }
+      } catch (error) {
+        console.error(`❌ [L2 Cache] Pattern invalidation failed for ${pattern}:`, error);
+      }
+    }, AdminModeManager.isInAdminMode());
   }
   
   async clear(): Promise<void> {
-    try {
+    if (!this.isInitialized) {
+      return;
+    }
+    
+    return RetryManager.withRetry(async () => {
       await this.cache.clear();
-      console.log(`🧹 [L2 Cache] CLEARED ALL`);
-    } catch (error) {
-      console.error(`❌ [L2 Cache] CLEAR ERROR:`, error);
+      if (!AdminModeManager.isInAdminMode()) {
+        console.log(`🧹 [L2 Cache] CLEARED ALL`);
+      }
+    }, AdminModeManager.isInAdminMode());
+  }
+  
+  destroy(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
     }
   }
 }
 
-// Sistema de Cache Híbrido Principal
+// Sistema de cache híbrido principal
 class HybridCacheSystem {
   private l1Cache = new MemoryCache();
   private l2Cache = new IndexedDBCacheLayer();
@@ -190,219 +434,178 @@ class HybridCacheSystem {
     lastUpdate: Date.now()
   };
   
-  // Estratégia de cache por tipo de dados
-  private getCacheStrategy(key: string): { useL1: boolean; useL2: boolean; l1TTL?: number; l2TTL?: number } {
-    if (key.includes('featured') || key.includes('highlight')) {
-      // Artigos em destaque: L1 (5min) + L2 (10min)
-      return { useL1: true, useL2: true, l1TTL: 5 * 60 * 1000, l2TTL: 10 * 60 * 1000 };
-    }
-    
-    if (key.includes('articles_list') || key.includes('categories')) {
-      // Listas: Principalmente L2 (10min) + L1 opcional (3min)
-      return { useL1: true, useL2: true, l1TTL: 3 * 60 * 1000, l2TTL: 10 * 60 * 1000 };
-    }
-    
-    // Padrão: L1 (5min) + L2 (10min)
-    return { useL1: true, useL2: true };
+  // Método para ativar modo admin (operações instantâneas)
+  enableAdminMode(): void {
+    AdminModeManager.enableAdminMode();
   }
   
-  async get<T>(key: string): Promise<{ data: T | null; source: 'memory' | 'indexeddb' | null; hit: boolean }> {
-    const strategy = this.getCacheStrategy(key);
-    
-    try {
-      // Tentar L1 primeiro (mais rápido)
-      if (strategy.useL1) {
-        const l1Data = this.l1Cache.get<T>(key);
-        if (l1Data !== null) {
-          this.metrics.hits++;
-          trackCacheOperation('cache_hit', 'L1', key);
-          return { data: l1Data, source: 'memory', hit: true };
-        }
-      }
-      
-      // Tentar L2 se L1 falhou
-      if (strategy.useL2) {
-        const l2Data = await this.l2Cache.get<T>(key);
-        if (l2Data !== null) {
-          // Promover para L1 se estratégia permitir
-          if (strategy.useL1) {
-            this.l1Cache.set(key, l2Data, strategy.l1TTL);
-          }
-          this.metrics.hits++;
-          trackCacheOperation('cache_hit', 'L2', key);
-          return { data: l2Data, source: 'indexeddb', hit: true };
-        }
-      }
-      
-      this.metrics.misses++;
-      trackCacheOperation('cache_miss', 'L2', key);
-      return { data: null, source: null, hit: false };
-    } catch (error) {
-      console.error(`❌ [Hybrid Cache] GET ERROR: ${key}`, error);
-      this.metrics.misses++;
-      trackCacheOperation('cache_miss', 'L2', key);
-      return { data: null, source: null, hit: false };
-    }
+  disableAdminMode(): void {
+    AdminModeManager.disableAdminMode();
   }
   
-  async set<T>(key: string, data: T): Promise<void> {
-    const strategy = this.getCacheStrategy(key);
+  async get<T>(key: string): Promise<{ hit: boolean; data: T | null; source: string }> {
+    const startTime = performance.now();
     
-    try {
-      const promises: Promise<void>[] = [];
-      
-      // Salvar em L1 se estratégia permitir
-      if (strategy.useL1) {
-        this.l1Cache.set(key, data, strategy.l1TTL);
-      }
-      
-      // Salvar em L2 se estratégia permitir
-      if (strategy.useL2) {
-        promises.push(this.l2Cache.set(key, data, strategy.l2TTL));
-      }
-      
-      await Promise.all(promises);
-      this.metrics.lastUpdate = Date.now();
-      
-      console.log(`✅ [Hybrid Cache] SET: ${key} (L1: ${strategy.useL1}, L2: ${strategy.useL2})`);
-    } catch (error) {
-      console.error(`❌ [Hybrid Cache] SET ERROR: ${key}`, error);
+    // Tentar L1 primeiro
+    const l1Data = this.l1Cache.get<T>(key);
+    if (l1Data !== null) {
+      this.metrics.hits++;
+      trackCacheOperation('cache_hit', performance.now() - startTime, 'L1');
+      return { hit: true, data: l1Data, source: 'L1' };
     }
+    
+    // Tentar L2
+    const l2Data = await this.l2Cache.get<T>(key);
+    if (l2Data !== null) {
+      // Promover para L1
+      this.l1Cache.set(key, l2Data);
+      this.metrics.hits++;
+      trackCacheOperation('cache_hit', performance.now() - startTime, 'L2');
+      return { hit: true, data: l2Data, source: 'L2' };
+    }
+    
+    this.metrics.misses++;
+    trackCacheOperation('cache_miss', performance.now() - startTime);
+    return { hit: false, data: null, source: 'none' };
+  }
+  
+  async set<T>(key: string, data: T, options?: { accessCount?: number; isAdminOperation?: boolean }): Promise<void> {
+    const { accessCount = 0, isAdminOperation = false } = options || {};
+    
+    // Admin operations = bypass cache se necessário
+    if (AdminModeManager.shouldBypassCache()) {
+      console.log(`⚡ [Admin Fast] Bypassing cache for ${key}`);
+      return;
+    }
+    
+    const startTime = performance.now();
+    
+    // Armazenar em L1
+    this.l1Cache.set(key, data, accessCount, isAdminOperation);
+    
+    // Armazenar em L2 (async, não bloquear)
+    this.l2Cache.set(key, data, accessCount, isAdminOperation).catch(error => {
+      console.error(`❌ [L2 Cache] Set failed for ${key}:`, error);
+    });
+    
+    trackCacheOperation('cache_set', performance.now() - startTime);
   }
   
   async invalidate(key: string): Promise<void> {
-    try {
-      const promises: Promise<void>[] = [];
-      
-      // Invalidar L1
-      this.l1Cache.invalidate(key);
-      
-      // Invalidar L2
-      promises.push(this.l2Cache.invalidate(key));
-      
-      await Promise.all(promises);
-      this.metrics.invalidations++;
-      
-      trackCacheOperation('cache_invalidation', 'L1', key);
-      trackCacheOperation('cache_invalidation', 'L2', key);
-      
-      console.log(`🗑️ [Hybrid Cache] INVALIDATED: ${key}`);
-    } catch (error) {
-      console.error(`❌ [Hybrid Cache] INVALIDATE ERROR: ${key}`, error);
-    }
+    const startTime = performance.now();
+    
+    // Invalidar em ambos os níveis
+    this.l1Cache.invalidate(key);
+    await this.l2Cache.invalidate(key);
+    
+    this.metrics.invalidations++;
+    trackCacheOperation('cache_invalidation', performance.now() - startTime);
   }
   
   async invalidatePattern(pattern: string): Promise<void> {
-    try {
-      const promises: Promise<void>[] = [];
-      
-      // Invalidar L1
-      this.l1Cache.invalidatePattern(pattern);
-      
-      // Invalidar L2
-      promises.push(this.l2Cache.invalidatePattern(pattern));
-      
-      await Promise.all(promises);
-      this.metrics.invalidations++;
-      
-      console.log(`🗑️ [Hybrid Cache] PATTERN INVALIDATED: ${pattern}`);
-    } catch (error) {
-      console.error(`❌ [Hybrid Cache] PATTERN INVALIDATE ERROR: ${pattern}`, error);
-    }
+    const startTime = performance.now();
+    
+    // Invalidar em ambos os níveis
+    this.l1Cache.invalidatePattern(pattern);
+    await this.l2Cache.invalidatePattern(pattern);
+    
+    this.metrics.invalidations++;
+    trackCacheOperation('cache_invalidation', performance.now() - startTime);
   }
   
   async clear(): Promise<void> {
-    try {
-      const promises: Promise<void>[] = [];
-      
-      // Limpar L1
-      this.l1Cache.clear();
-      
-      // Limpar L2
-      promises.push(this.l2Cache.clear());
-      
-      await Promise.all(promises);
-      this.metrics.invalidations++;
-      
-      console.log(`🧹 [Hybrid Cache] CLEARED ALL`);
-    } catch (error) {
-      console.error(`❌ [Hybrid Cache] CLEAR ERROR:`, error);
-    }
+    const startTime = performance.now();
+    
+    this.l1Cache.clear();
+    await this.l2Cache.clear();
+    
+    this.metrics.invalidations++;
+    trackCacheOperation('cache_invalidation', performance.now() - startTime);
   }
   
-  getMetrics(): CacheMetrics & { l1Size: number; l2Size: number; l1HitRate: number; l2HitRate: number } {
-    return {
-      ...this.metrics,
-      l1Size: this.l1Cache.size(),
-      l2Size: 0, // IndexedDB size is complex to calculate, using 0 for now
-      l1HitRate: this.metrics.hits / (this.metrics.hits + this.metrics.misses) * 100 || 0,
-      l2HitRate: 0 // Simplified for now
-    };
+  getMetrics(): CacheMetrics {
+    return { ...this.metrics };
   }
   
-  // Método para invalidação automática após operações CRUD
-  async invalidateAfterCRUD(operation: 'create' | 'update' | 'delete', entityType: 'article' | 'category', entityId?: string): Promise<void> {
-    console.log(`🔄 [Hybrid Cache] Auto-invalidation after ${operation} ${entityType} ${entityId || ''}`);
+  destroy(): void {
+    this.l1Cache.destroy();
+    this.l2Cache.destroy();
+  }
+  
+  // Método para invalidação após operações CRUD (compatibilidade com useArticles)
+  async invalidateAfterCRUD(
+    operation: 'create' | 'update' | 'delete' | 'publish' | 'unpublish',
+    entityType: 'article' | 'category',
+    entityId?: string
+  ): Promise<void> {
+    const startTime = performance.now();
     
     try {
+      // Ativar modo admin para operações instantâneas
+      AdminModeManager.enableAdminMode();
+      
+      // Padrões de invalidação baseados no tipo de entidade
+      const patterns: string[] = [];
+      
       switch (entityType) {
         case 'article':
-          // Invalidar caches relacionados a artigos
-          await this.invalidatePattern('articles');
-          await this.invalidatePattern('featured');
-          await this.invalidatePattern('highlight');
+          patterns.push('articles_list', 'featured_articles', 'recent_articles', 'popular_articles');
           if (entityId) {
-            await this.invalidate(`article_${entityId}`);
+            patterns.push(`article_${entityId}`);
+          }
+          // Operações de publicação invalidam mais caches
+          if (operation === 'publish' || operation === 'unpublish') {
+            patterns.push('articles', 'featured', 'highlight');
           }
           break;
           
         case 'category':
-          // Invalidar caches relacionados a categorias
-          await this.invalidatePattern('categories');
-          await this.invalidatePattern('articles'); // Artigos têm categorias
+          patterns.push('categories_list', 'articles_list');
           if (entityId) {
-            await this.invalidate(`category_${entityId}`);
+            patterns.push(`category_${entityId}`, `articles_category_${entityId}`);
           }
           break;
       }
       
-      console.log(`✅ [Hybrid Cache] Auto-invalidation completed for ${operation} ${entityType}`);
+      // Invalidar todos os padrões identificados
+      for (const pattern of patterns) {
+        await this.invalidatePattern(pattern);
+      }
+      
+      const duration = performance.now() - startTime;
+      console.log(`⚡ [Admin Fast] Cache invalidated for ${operation} ${entityType} (${Math.round(duration)}ms)`);
+      
+      // Desabilitar modo admin após operação
+      setTimeout(() => AdminModeManager.disableAdminMode(), 500);
+      
     } catch (error) {
-      console.error(`❌ [Hybrid Cache] Auto-invalidation error:`, error);
+      console.error(`❌ [Cache Invalidation] Error in ${operation} ${entityType}:`, error);
+      throw error;
     }
   }
 }
 
-// Instância singleton do cache híbrido
-export const hybridCache = new HybridCacheSystem();
-
-// Utilitários para chaves de cache padronizadas
+// Chaves de cache padronizadas
 export const CacheKeys = {
   ARTICLES_LIST: 'articles_list',
-  ARTICLES_FEATURED: 'articles_featured',
   CATEGORIES_LIST: 'categories_list',
   ARTICLE_BY_ID: (id: string) => `article_${id}`,
   CATEGORY_BY_ID: (id: string) => `category_${id}`,
   ARTICLES_BY_CATEGORY: (categoryId: string) => `articles_category_${categoryId}`,
-} as const;
-
-// Hook para monitoramento de performance do cache
-export const useCacheMetrics = () => {
-  const getMetrics = () => hybridCache.getMetrics();
-  
-  const logPerformance = () => {
-    const metrics = getMetrics();
-    const hitRate = metrics.hits / (metrics.hits + metrics.misses) * 100;
-    
-    console.log(`📊 [Cache Performance]`, {
-      hitRate: `${hitRate.toFixed(1)}%`,
-      hits: metrics.hits,
-      misses: metrics.misses,
-      invalidations: metrics.invalidations,
-      l1Size: metrics.l1Size,
-      lastUpdate: new Date(metrics.lastUpdate).toLocaleTimeString()
-    });
-  };
-  
-  return { getMetrics, logPerformance };
+  FEATURED_ARTICLES: 'featured_articles',
+  RECENT_ARTICLES: 'recent_articles',
+  POPULAR_ARTICLES: 'popular_articles'
 };
+
+// Instância singleton
+export const hybridCache = new HybridCacheSystem();
+
+// Exportar AdminModeManager para uso externo
+export { AdminModeManager };
+
+// Cleanup ao sair
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    hybridCache.destroy();
+  });
+}
