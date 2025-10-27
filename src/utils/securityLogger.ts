@@ -283,64 +283,156 @@ export class SecurityLogger {
    * Notifica sobre alerta (pode ser expandido)
    */
   private static notifyAlert(alert: SecurityAlert): void {
-    // Log no console
-    console.warn(`[SECURITY ALERT] ${alert.severity.toUpperCase()}: ${alert.message}`);
+    // Log no console apenas para alertas críticos reais
+    if (alert.severity === SecurityLevel.CRITICAL && this.isRealThreat(alert)) {
+      console.warn(`[SECURITY ALERT] ${alert.severity.toUpperCase()}: ${alert.message}`);
+    }
     
     // Em produção, aqui poderia enviar email, webhook, etc.
     if (process.env.NODE_ENV === 'production') {
       // TODO: Implementar notificação por email/webhook
     }
   }
-  
+
   /**
-   * Métodos de conveniência para diferentes tipos de eventos
+   * Verifica se um alerta é uma ameaça real ou falso positivo
    */
-  static logLoginAttempt(success: boolean, details: Record<string, any> = {}): void {
-    if (success) {
-      this.logEvent(
-        SecurityEventType.LOGIN_SUCCESS,
-        SecurityLevel.INFO,
-        'Login realizado com sucesso',
-        details
-      );
-    } else {
-      this.logEvent(
-        SecurityEventType.LOGIN_FAILURE,
-        SecurityLevel.WARNING,
-        'Tentativa de login falhada',
-        details
-      );
+  private static isRealThreat(alert: SecurityAlert): boolean {
+    const input = alert.events[0]?.details?.input || alert.events[0]?.message || '';
+    const context = alert.events[0]?.details;
+    // Whitelist de operações normais
+    const normalOperations = [
+      'article_content',
+      'user_comment',
+      'search_query',
+      'form_data',
+      'api_response',
+      'navigation',
+      'user_input'
+    ];
+
+    // Verifica se é uma operação normal
+    if (context?.source && normalOperations.includes(context.source)) {
+      return false;
     }
+
+    // Se é conteúdo longo, provavelmente é artigo
+    if (input.length > 500) {
+      return false;
+    }
+
+    // Padrões de conteúdo seguro
+    const safePatterns = [
+      /^[a-zA-Z0-9\s\.,!?\-\(\)@#$%&*+=:;'"\/\\]+$/, // Texto com símbolos comuns
+      /^[^<>]+$/, // Sem tags HTML
+      /^\{.*\}$/, // JSON
+      /^https?:\/\//, // URLs
+    ];
+
+    if (safePatterns.some(pattern => pattern.test(input.trim()))) {
+      return false;
+    }
+
+    return true;
   }
-  
-  static logRateLimitHit(action: string, details: Record<string, any> = {}): void {
-    this.logEvent(
-      SecurityEventType.RATE_LIMIT_HIT,
-      SecurityLevel.WARNING,
-      `Rate limit atingido para ação: ${action}`,
-      { action, ...details }
-    );
+
+  /**
+   * Log de tentativa de XSS (com filtro de falsos positivos)
+   */
+  static logXSSAttempt(input: string, context?: any): void {
+    // Cria um alerta temporário para verificar se é ameaça real
+    const tempAlert: SecurityAlert = {
+      id: 'temp',
+      type: SecurityEventType.XSS_ATTEMPT,
+      level: SecurityLevel.CRITICAL,
+      message: 'XSS attempt detected',
+      timestamp: Date.now(),
+      acknowledged: false,
+      events: [{
+        id: 'temp',
+        type: SecurityEventType.XSS_ATTEMPT,
+        level: SecurityLevel.CRITICAL,
+        message: 'XSS attempt detected',
+        timestamp: Date.now(),
+        details: { input, ...context }
+      }]
+    };
+
+    // Só loga se for uma ameaça real
+    if (!this.isRealThreat(tempAlert)) {
+      return;
+    }
+
+    this.logEvent(SecurityEventType.XSS_ATTEMPT, SecurityLevel.CRITICAL, {
+      input: input.substring(0, 200),
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+      ...context
+    });
   }
-  
-  static logXSSAttempt(input: string, details: Record<string, any> = {}): void {
-    this.logEvent(
-      SecurityEventType.XSS_ATTEMPT,
-      SecurityLevel.CRITICAL,
-      'Tentativa de XSS detectada',
-      { suspiciousInput: input.substring(0, 100), ...details }
-    );
+
+  /**
+   * Log de tentativa de injection (com filtro de falsos positivos)
+   */
+  static logInjectionAttempt(input: string, type: string, context?: any): void {
+    // Cria um alerta temporário para verificar se é ameaça real
+    const tempAlert: SecurityAlert = {
+      id: 'temp',
+      type: SecurityEventType.INJECTION_ATTEMPT,
+      level: SecurityLevel.CRITICAL,
+      message: 'Injection attempt detected',
+      timestamp: Date.now(),
+      acknowledged: false,
+      events: [{
+        id: 'temp',
+        type: SecurityEventType.INJECTION_ATTEMPT,
+        level: SecurityLevel.CRITICAL,
+        message: 'Injection attempt detected',
+        timestamp: Date.now(),
+        details: { input, type, ...context }
+      }]
+    };
+
+    // Só loga se for uma ameaça real
+    if (!this.isRealThreat(tempAlert)) {
+      return;
+    }
+
+    this.logEvent(SecurityEventType.INJECTION_ATTEMPT, SecurityLevel.CRITICAL, {
+      input: input.substring(0, 200),
+      type,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+      ...context
+    });
   }
-  
-  static logInjectionAttempt(input: string, type: string, details: Record<string, any> = {}): void {
-    this.logEvent(
-      SecurityEventType.INJECTION_ATTEMPT,
-      SecurityLevel.CRITICAL,
-      `Tentativa de ${type} injection detectada`,
-      { suspiciousInput: input.substring(0, 100), injectionType: type, ...details }
-    );
-  }
-  
+
   static logSuspiciousInput(input: string, reason: string, details: Record<string, any> = {}): void {
+    // Cria um alerta temporário para verificar se é ameaça real
+    const tempAlert: SecurityAlert = {
+      id: 'temp',
+      type: SecurityEventType.SUSPICIOUS_INPUT,
+      level: SecurityLevel.WARNING,
+      message: 'Suspicious input detected',
+      timestamp: Date.now(),
+      acknowledged: false,
+      events: [{
+        id: 'temp',
+        type: SecurityEventType.SUSPICIOUS_INPUT,
+        level: SecurityLevel.WARNING,
+        message: 'Suspicious input detected',
+        timestamp: Date.now(),
+        details: { input, reason, ...details }
+      }]
+    };
+
+    // Só loga se for uma ameaça real
+    if (!this.isRealThreat(tempAlert)) {
+      return;
+    }
+
     this.logEvent(
       SecurityEventType.SUSPICIOUS_INPUT,
       SecurityLevel.WARNING,
@@ -350,6 +442,12 @@ export class SecurityLogger {
   }
   
   static logValidationError(field: string, value: string, error: string): void {
+    // Só loga erros de validação críticos
+    const criticalFields = ['password', 'email', 'admin', 'token'];
+    if (!criticalFields.includes(field.toLowerCase())) {
+      return;
+    }
+
     this.logEvent(
       SecurityEventType.VALIDATION_ERROR,
       SecurityLevel.INFO,
@@ -359,6 +457,12 @@ export class SecurityLogger {
   }
   
   static logSanitizationTriggered(input: string, output: string, details: Record<string, any> = {}): void {
+    // Só loga sanitizações significativas
+    const changePercentage = Math.abs(input.length - output.length) / input.length;
+    if (changePercentage < 0.1) { // Menos de 10% de mudança
+      return;
+    }
+
     this.logEvent(
       SecurityEventType.SANITIZATION_TRIGGERED,
       SecurityLevel.INFO,
@@ -377,6 +481,15 @@ export class SecurityLogger {
       SecurityEventType.ADMIN_ACTION,
       SecurityLevel.INFO,
       `Ação administrativa: ${action}`,
+      { action, ...details }
+    );
+  }
+
+  static logRateLimitHit(action: string, details: Record<string, any> = {}): void {
+    this.logEvent(
+      SecurityEventType.RATE_LIMIT_HIT,
+      SecurityLevel.WARNING,
+      `Rate limit atingido para ação: ${action}`,
       { action, ...details }
     );
   }

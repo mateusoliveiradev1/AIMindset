@@ -58,7 +58,7 @@ export const supabase = (() => {
   supabaseInstance = createClient(finalUrl, finalKey, {
     auth: {
       storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-      storageKey: 'supabase.auth.token',
+      storageKey: 'aimindset.auth.token', // Chave única para evitar conflitos
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true

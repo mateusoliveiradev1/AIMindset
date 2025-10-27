@@ -172,7 +172,7 @@ export const useArticles = (): UseArticlesReturn => {
                     approval_rate: 0
                   };
                 } catch (error) {
-                  console.error(`❌ [DEBUG CRÍTICO] ERRO ao buscar métricas para "${article.title}":`, error);
+                  console.warn(`⚠️ Métricas não disponíveis para "${article.title}":`, error);
                   // Em caso de erro, usar valores padrão
                   return {
                     ...article,

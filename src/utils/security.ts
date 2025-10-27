@@ -17,43 +17,75 @@ const purifyConfig = {
 };
 
 /**
- * Detecta tentativas de XSS
+ * Verifica se o input é conteúdo normal (artigo, comentário, etc.)
  */
-const detectXSSAttempt = (input: string): boolean => {
-  const xssPatterns = [
-    /<script[^>]*>.*?<\/script>/gi,
-    /javascript:/gi,
-    /on\w+\s*=/gi,
-    /<iframe[^>]*>/gi,
-    /<object[^>]*>/gi,
-    /<embed[^>]*>/gi,
-    /eval\s*\(/gi,
-    /expression\s*\(/gi
+export const isNormalContent = (input: string): boolean => {
+  // Se é muito longo, provavelmente é conteúdo de artigo
+  if (input.length > 200) {
+    return true;
+  }
+
+  // Padrões de conteúdo normal expandidos
+  const normalPatterns = [
+    /^[a-zA-Z0-9\s\.,!?\-\(\)]+$/, // Texto normal com pontuação
+    /^\w+@\w+\.\w+$/, // Email
+    /^https?:\/\//, // URLs
+    /^[A-Za-z\s]+$/, // Apenas letras e espaços
+    /^[\w\s\.,!?\-\(\)@#$%&*+=:;'"\/\\]+$/, // Texto com símbolos comuns
+    /^[^<>]+$/, // Qualquer coisa sem tags HTML
   ];
-  
-  return xssPatterns.some(pattern => pattern.test(input));
+
+  // Se contém apenas caracteres normais, é conteúdo seguro
+  if (normalPatterns.some(pattern => pattern.test(input.trim()))) {
+    return true;
+  }
+
+  // Verifica se é um JSON válido (comum em APIs)
+  try {
+    JSON.parse(input);
+    return true;
+  } catch {
+    // Não é JSON, continua verificação
+  }
+
+  return false;
 };
 
 /**
- * Detecta tentativas de injection
+ * Detecta tentativas de XSS (versão menos sensível)
  */
-const detectInjectionAttempt = (input: string): boolean => {
-  const injectionPatterns = [
-    /union\s+select/gi,
-    /drop\s+table/gi,
-    /insert\s+into/gi,
-    /delete\s+from/gi,
-    /update\s+set/gi,
-    /exec\s*\(/gi,
-    /system\s*\(/gi,
-    /cmd\s*\(/gi,
-    /\.\.\/\.\.\//gi, // Path traversal
-    /\|\s*nc\s/gi, // Netcat
-    /\|\s*wget\s/gi, // Wget
-    /\|\s*curl\s/gi // Curl
+const detectXSSAttempt = (input: string): boolean => {
+  // Só detecta ataques XSS realmente perigosos
+  const dangerousXSSPatterns = [
+    /<script[^>]*>[\s\S]*?<\/script>/gi, // Scripts completos
+    /javascript:\s*[^;]+/gi, // JavaScript URLs com código
+    /on\w+\s*=\s*["'][^"']*["']/gi, // Event handlers com código
+    /<iframe[^>]*src\s*=/gi, // iframes com src
+    /eval\s*\([^)]+\)/gi, // eval com parâmetros
+    /document\.write\s*\(/gi, // document.write
+    /window\.location\s*=/gi, // redirecionamentos
   ];
   
-  return injectionPatterns.some(pattern => pattern.test(input));
+  return dangerousXSSPatterns.some(pattern => pattern.test(input));
+};
+
+/**
+ * Detecta tentativas de injection (versão menos sensível)
+ */
+const detectInjectionAttempt = (input: string): boolean => {
+  // Só detecta tentativas de injection realmente perigosas
+  const dangerousInjectionPatterns = [
+    /union\s+select\s+.*\s+from/gi, // SQL injection completa
+    /drop\s+table\s+\w+/gi, // Drop table com nome
+    /delete\s+from\s+\w+/gi, // Delete com tabela
+    /insert\s+into\s+\w+/gi, // Insert com tabela
+    /exec\s*\(\s*["'][^"']+["']\s*\)/gi, // exec com comando
+    /system\s*\(\s*["'][^"']+["']\s*\)/gi, // system com comando
+    /\.\.\/(\.\.\/)+/gi, // Path traversal múltiplo
+    /\|\s*(nc|netcat|wget|curl)\s+/gi, // Comandos de rede
+  ];
+  
+  return dangerousInjectionPatterns.some(pattern => pattern.test(input));
 };
 
 /**
@@ -66,11 +98,17 @@ export const sanitizeInput = (input: string): string => {
   
   // Detecta tentativas de ataque antes da sanitização
   if (detectXSSAttempt(input)) {
-    SecurityLogger.logXSSAttempt(input, { source: 'sanitizeInput' });
+    // Só loga se não for conteúdo normal de artigo ou comentário
+    if (!isNormalContent(input)) {
+      SecurityLogger.logXSSAttempt(input, { source: 'sanitizeInput' });
+    }
   }
   
   if (detectInjectionAttempt(input)) {
-    SecurityLogger.logInjectionAttempt(input, 'general', { source: 'sanitizeInput' });
+    // Só loga se não for conteúdo normal de artigo ou comentário
+    if (!isNormalContent(input)) {
+      SecurityLogger.logInjectionAttempt(input, 'general', { source: 'sanitizeInput' });
+    }
   }
   
   // Remove caracteres de controle e normaliza

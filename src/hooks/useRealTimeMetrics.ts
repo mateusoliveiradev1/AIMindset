@@ -102,23 +102,13 @@ export function useRealTimeMetrics(articleIds: string[]) {
     try {
       // PRIMEIRO: Tentar usar a função get_article_metrics do Supabase
       console.log(`🎯 [REALTIME-METRICS] Tentando função get_article_metrics para ${articleId}`);
-      console.log(`🔧 [REALTIME-METRICS] Supabase configurado`);
       
       const { data: rpcData, error: rpcError } = await supabase
         .rpc('get_article_metrics', { target_article_id: articleId });
 
-      console.log(`🔍 [REALTIME-METRICS] Resultado RPC para ${articleId}:`, {
-        data: rpcData,
-        error: rpcError,
-        hasData: rpcData && rpcData.length > 0,
-        errorMessage: rpcError?.message,
-        errorDetails: rpcError?.details,
-        errorCode: rpcError?.code
-      });
-
       if (!rpcError && rpcData && rpcData.length > 0) {
         const rpcMetrics = rpcData[0];
-        console.log(`✅ [REALTIME-METRICS] Dados da função RPC para ${articleId}:`, rpcMetrics);
+        console.log(`✅ [REALTIME-METRICS] Métricas obtidas para ${articleId}`);
         
         const metrics: ArticleMetrics = {
           articleId,

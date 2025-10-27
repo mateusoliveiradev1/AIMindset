@@ -3,7 +3,7 @@
  * Verifica se todas as funcionalidades estão funcionando sem quebrar o sistema
  */
 
-import { sanitizeInput, sanitizeEmail, sanitizeName, sanitizeMessage, validators, RateLimiter } from './security.js';
+import { sanitizeInput, sanitizeEmail, sanitizeName, sanitizeMessage, validators, RateLimiter, isNormalContent } from './security.js';
 import SecurityLogger, { SecurityEventType, SecurityLevel } from './securityLogger';
 import { AdvancedRateLimit } from './advancedRateLimit';
 import { AdvancedValidator, ValidationContext } from './advancedValidation';
