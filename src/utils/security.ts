@@ -1,4 +1,5 @@
 import DOMPurify from 'dompurify';
+import SecurityLogger, { SecurityEventType, SecurityLevel } from './securityLogger';
 
 // Configuração do DOMPurify para máxima segurança
 const purifyConfig = {
@@ -16,10 +17,61 @@ const purifyConfig = {
 };
 
 /**
+ * Detecta tentativas de XSS
+ */
+const detectXSSAttempt = (input: string): boolean => {
+  const xssPatterns = [
+    /<script[^>]*>.*?<\/script>/gi,
+    /javascript:/gi,
+    /on\w+\s*=/gi,
+    /<iframe[^>]*>/gi,
+    /<object[^>]*>/gi,
+    /<embed[^>]*>/gi,
+    /eval\s*\(/gi,
+    /expression\s*\(/gi
+  ];
+  
+  return xssPatterns.some(pattern => pattern.test(input));
+};
+
+/**
+ * Detecta tentativas de injection
+ */
+const detectInjectionAttempt = (input: string): boolean => {
+  const injectionPatterns = [
+    /union\s+select/gi,
+    /drop\s+table/gi,
+    /insert\s+into/gi,
+    /delete\s+from/gi,
+    /update\s+set/gi,
+    /exec\s*\(/gi,
+    /system\s*\(/gi,
+    /cmd\s*\(/gi,
+    /\.\.\/\.\.\//gi, // Path traversal
+    /\|\s*nc\s/gi, // Netcat
+    /\|\s*wget\s/gi, // Wget
+    /\|\s*curl\s/gi // Curl
+  ];
+  
+  return injectionPatterns.some(pattern => pattern.test(input));
+};
+
+/**
  * Sanitiza strings para prevenir XSS
  */
 export const sanitizeInput = (input: string): string => {
   if (!input || typeof input !== 'string') return '';
+  
+  const originalInput = input;
+  
+  // Detecta tentativas de ataque antes da sanitização
+  if (detectXSSAttempt(input)) {
+    SecurityLogger.logXSSAttempt(input, { source: 'sanitizeInput' });
+  }
+  
+  if (detectInjectionAttempt(input)) {
+    SecurityLogger.logInjectionAttempt(input, 'general', { source: 'sanitizeInput' });
+  }
   
   // Remove caracteres de controle e normaliza
   const normalized = input.normalize('NFKC').trim();
@@ -28,13 +80,20 @@ export const sanitizeInput = (input: string): string => {
   const sanitized = DOMPurify.sanitize(normalized, purifyConfig);
   
   // Remove caracteres perigosos adicionais
-  return sanitized
+  const cleaned = sanitized
     .replace(/[<>'"&]/g, '') // Remove caracteres HTML perigosos
     .replace(/javascript:/gi, '') // Remove javascript: URLs
     .replace(/data:/gi, '') // Remove data: URLs
     .replace(/vbscript:/gi, '') // Remove vbscript: URLs
     .replace(/on\w+=/gi, ''); // Remove event handlers
     // Removido limite de 1000 caracteres para permitir artigos longos
+  
+  // Log se houve sanitização
+  if (originalInput !== cleaned) {
+    SecurityLogger.logSanitizationTriggered(originalInput, cleaned, { source: 'sanitizeInput' });
+  }
+  
+  return cleaned;
 };
 
 /**
@@ -152,6 +211,13 @@ export class RateLimiter {
       
       // Verifica se excedeu o limite
       if (data.count >= maxAttempts) {
+        // Log rate limit hit
+        SecurityLogger.logRateLimitHit(action, {
+          attempts: data.count,
+          windowMs,
+          maxAttempts,
+          remainingTime: windowMs - (now - data.firstAttempt)
+        });
         return false;
       }
       

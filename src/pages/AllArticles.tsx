@@ -99,8 +99,8 @@ const AllArticles: React.FC = () => {
     console.log('🔍 [DEBUG CRÍTICO ALLARTICLES] Artigos recebidos:', articles?.map(a => ({
       title: a.title,
       approval_rate: a.approval_rate,
-      positive_feedback: a.positive_feedback,
-      negative_feedback: a.negative_feedback
+      positive_feedback: a.positive_feedback || 0,
+      negative_feedback: a.negative_feedback || 0
     })));
     
     if (!articles || articles.length === 0) {
@@ -108,7 +108,7 @@ const AllArticles: React.FC = () => {
       return [];
     }
 
-    startRenderMeasurement('processArticles');
+    startRenderMeasurement();
     
     // Filtrar artigos
     const filtered = filterArticles(articles, searchQuery, selectedCategory);
@@ -122,16 +122,16 @@ const AllArticles: React.FC = () => {
     console.log('🔍 [DEBUG CRÍTICO ALLARTICLES] Artigos após ordenação por', sortBy, ':', sorted?.map(a => ({
       title: a.title,
       approval_rate: a.approval_rate,
-      positive_feedback: a.positive_feedback,
-      negative_feedback: a.negative_feedback,
+      positive_feedback: a.positive_feedback || 0,
+      negative_feedback: a.negative_feedback || 0,
       created_at: a.created_at
     })));
     
     console.log('🔍 [DEBUG CRÍTICO ALLARTICLES] ORDEM FINAL DOS ARTIGOS:');
     sorted?.forEach((article, index) => {
-      console.log(`${index + 1}. "${article.title}" - Rating: ${article.approval_rate}% (${article.positive_feedback}+/${article.negative_feedback}-)`);
+      console.log(`${index + 1}. "${article.title}" - Rating: ${article.approval_rate || 0}% (${article.positive_feedback || 0}+/${article.negative_feedback || 0}-)`);
     });
-    endRenderMeasurement('processArticles');
+    endRenderMeasurement();
     
     return sorted;
   }, [articles, searchQuery, selectedCategory, sortBy, filterArticles, sortArticles, startRenderMeasurement, endRenderMeasurement]);

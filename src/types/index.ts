@@ -28,8 +28,8 @@ export interface Article {
   updated_at: string;
   // meta_title removido - coluna não existe na tabela
   // meta_description removido - coluna não existe na tabela
-  category?: Category;
-  tags?: string[] | string | null;
+  category?: Category | { name: string } | string; // Compatibilidade com supabase.ts
+  tags: string[] | string | null;
   reading_time?: string | number; // Adicionado para compatibilidade com componentes
   read_time?: number | string;
   // views removido - coluna não existe na tabela

@@ -222,7 +222,13 @@ export function usePerformanceOptimization(options: UsePerformanceOptimizationOp
           if (typeof article.category === 'string') {
             return article.category === selectedCategory;
           }
-          return article.category?.id === selectedCategory;
+          if (article.category && 'id' in article.category) {
+            return article.category.id === selectedCategory;
+          }
+          if (article.category && 'name' in article.category) {
+            return article.category.name === selectedCategory;
+          }
+          return false;
         });
       }
 

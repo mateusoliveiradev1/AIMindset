@@ -2,7 +2,16 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { devSecurityTest } from './utils/securityTest'
 // import { initServiceWorker } from './utils/serviceWorker'
+
+// Executar testes de segurança em desenvolvimento
+if (import.meta.env.DEV) {
+  // Aguardar um pouco para garantir que o DOM esteja carregado
+  setTimeout(() => {
+    devSecurityTest();
+  }, 1000);
+}
 
 // Desabilitar Service Worker temporariamente para corrigir erros no preview
 // Inicializar Service Worker para cache offline e performance

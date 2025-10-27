@@ -117,8 +117,12 @@ export async function getSupabaseStats() {
 // Exportar tipos para compatibilidade com propriedades adicionais
 export type Article = Database['public']['Tables']['articles']['Row'] & {
   category?: Category | { name: string } | string;
-  tags?: string[] | string | null; // Permitir string ou array
+  tags: string[] | string | null; // Permitir string ou array - obrigatório para compatibilidade
   reading_time?: number | string; // Propriedade para tempo de leitura
+  positive_feedback?: number;
+  negative_feedback?: number;
+  total_comments?: number;
+  approval_rate?: number;
 };
 export type Category = Database['public']['Tables']['categories']['Row'];
 export type NewsletterSubscriber = Database['public']['Tables']['newsletter_subscribers']['Row'];
@@ -156,7 +160,7 @@ export type Database = {
           updated_at: string;
           // views removido - coluna não existe na tabela
           // reading_time removido - coluna não existe na tabela
-          tags: string[] | null;
+          tags: string[] | string | null;
           // meta_title removido - coluna não existe na tabela
         };
         Insert: {
@@ -173,7 +177,7 @@ export type Database = {
           updated_at?: string;
           // views removido - coluna não existe na tabela
           // reading_time removido - coluna não existe na tabela
-          tags?: string[] | null;
+          tags?: string[] | string | null;
           // meta_title removido - coluna não existe na tabela
         };
         Update: {
@@ -190,7 +194,7 @@ export type Database = {
           updated_at?: string;
           // views removido - coluna não existe na tabela
           // reading_time removido - coluna não existe na tabela
-          tags?: string[] | null;
+          tags?: string[] | string | null;
           // meta_title removido - coluna não existe na tabela
         };
       };
