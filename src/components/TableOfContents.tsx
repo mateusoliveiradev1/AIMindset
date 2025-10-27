@@ -68,53 +68,35 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
         // DEBUG: Log do scroll
         console.log('📏 [TOC DEBUG] Scroll:', { scrollY, tocLength: toc.length });
         
-        // Procurar pela seção de comentários usando diferentes seletores possíveis
-        const commentSelectors = [
-          '[data-testid="comment-section"]',
-          '.comment-section',
-          '#comments',
-          '[class*="CommentSection"]',
-          '[class*="comment"]'
-        ];
+        // Procurar pela seção de artigos relacionados
+        let relatedArticlesElement = null;
         
-        let commentsElement = null;
-        for (const selector of commentSelectors) {
-          commentsElement = document.querySelector(selector);
-          if (commentsElement) {
-            console.log('💬 [TOC DEBUG] Encontrou seção de comentários com seletor:', selector);
+        // Primeiro, procurar por texto "Artigos Relacionados"
+        const allElements = document.querySelectorAll('*');
+        for (const element of allElements) {
+          const text = element.textContent?.toLowerCase() || '';
+          if (text.includes('artigos relacionados') && (element.tagName === 'H3' || element.tagName === 'H2')) {
+            relatedArticlesElement = element.closest('section, div') || element;
+            console.log('📚 [TOC DEBUG] Encontrou seção de artigos relacionados por texto');
             break;
           }
         }
         
-        // Se não encontrou pelos seletores, procurar por texto que contenha "comentário"
-        if (!commentsElement) {
-          const allElements = document.querySelectorAll('*');
-          for (const element of allElements) {
-            const text = element.textContent?.toLowerCase() || '';
-            if (text.includes('comentário') && text.includes('deixe') || 
-                text.includes('comentário') && element.tagName === 'H3') {
-              commentsElement = element.closest('div, section, article') || element;
-              console.log('💬 [TOC DEBUG] Encontrou seção de comentários por texto');
-              break;
-            }
-          }
-        }
-        
-        let isAtCommentsSection = false;
-        if (commentsElement) {
-          const rect = commentsElement.getBoundingClientRect();
-          // Considera que chegou na seção de comentários quando ela está visível na viewport
-          isAtCommentsSection = rect.top <= windowHeight * 0.7; // 70% da altura da tela
-          console.log('💬 [TOC DEBUG] Posição dos comentários:', { rectTop: rect.top, threshold: windowHeight * 0.7, isAtCommentsSection });
+        let isAtRelatedArticles = false;
+        if (relatedArticlesElement) {
+          const rect = relatedArticlesElement.getBoundingClientRect();
+          // Considera que chegou na seção de artigos relacionados quando ela está visível na viewport
+          isAtRelatedArticles = rect.top <= windowHeight * 0.8; // 80% da altura da tela
+          console.log('📚 [TOC DEBUG] Posição dos artigos relacionados:', { rectTop: rect.top, threshold: windowHeight * 0.8, isAtRelatedArticles });
         } else {
-          console.log('💬 [TOC DEBUG] Seção de comentários não encontrada');
+          console.log('📚 [TOC DEBUG] Seção de artigos relacionados não encontrada');
         }
         
-        setIsAtComments(isAtCommentsSection);
+        setIsAtComments(isAtRelatedArticles);
         
-        // TEMPORÁRIO: Mostrar o botão sempre que scroll > 200 e há TOC (ignorar comentários por enquanto)
-        const shouldShow = scrollY > 200 && toc.length > 0;
-        console.log('👁️ [TOC DEBUG] Visibilidade:', { shouldShow, scrollY, tocLength: toc.length, isAtCommentsSection });
+        // Esconder o índice quando chegar nos artigos relacionados
+        const shouldShow = scrollY > 200 && toc.length > 0 && !isAtRelatedArticles;
+        console.log('👁️ [TOC DEBUG] Visibilidade:', { shouldShow, scrollY, tocLength: toc.length, isAtRelatedArticles });
         setIsVisible(shouldShow);
       }, 10);
     };
