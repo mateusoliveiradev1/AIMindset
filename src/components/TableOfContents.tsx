@@ -163,45 +163,51 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
     };
   }, [toc.length, isAtComments]);
 
-  // Função para scroll suave para o heading - usando a função do hook
-  const handleScrollToHeading = useCallback((headingId: string, closeModal: boolean = false) => {
-    console.log('🎯 [TOC COMPONENT DEBUG] Tentando navegar para:', headingId);
+  // Função para scroll suave para o heading - MÉTODO DIRETO E SIMPLES
+  const handleScrollToHeading = (id: string) => {
+    console.log('🎯 [TOC Component] Clique no TOC - ID:', id);
     
-    // Usar a função scrollToHeading do hook que já tem a lógica correta
-    scrollToHeading(headingId);
-
-    if (closeModal) {
+    // Fechar modal se estiver aberto (mobile)
+    if (isModalOpen) {
+      console.log('🎯 [TOC Component] Fechando modal...');
       setIsModalOpen(false);
     }
-  }, [scrollToHeading]);
-
-  // Melhor gerenciamento do scroll do body - evita deslocamento
-  useEffect(() => {
-    if (isModalOpen && !isDesktop) {
-      // Salvar a posição atual do scroll
-      const scrollY = window.scrollY;
+    
+    // MÉTODO DIRETO - sem usar hook complicado
+    const cleanId = id.startsWith('#') ? id.slice(1) : id;
+    const element = document.getElementById(cleanId);
+    
+    console.log('🎯 [TOC Component] Elemento encontrado:', element);
+    
+    if (element) {
+      console.log('🎯 [TOC Component] ✅ SCROLL DIRETO');
       
-      // Aplicar estilos para prevenir scroll sem deslocar o conteúdo
-      document.body.style.position = 'fixed';
-      document.body.style.top = `-${scrollY}px`;
-      document.body.style.width = '100%';
-      document.body.style.overflow = 'hidden';
+      // Método 1: scrollIntoView simples
+      element.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
       
-      return () => {
-        // Restaurar estilos e posição do scroll
-        const bodyTop = document.body.style.top;
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.width = '';
-        document.body.style.overflow = '';
-        
-        if (bodyTop) {
-          const scrollY = parseInt(bodyTop || '0') * -1;
-          window.scrollTo(0, scrollY);
-        }
-      };
+      // Método 2: window.scrollTo como backup
+      setTimeout(() => {
+        const rect = element.getBoundingClientRect();
+        const scrollTop = window.pageYOffset + rect.top - 100;
+        window.scrollTo({ 
+          top: scrollTop, 
+          behavior: 'smooth' 
+        });
+      }, 100);
+    } else {
+      console.error('🎯 [TOC Component] ❌ Elemento não encontrado:', cleanId);
     }
-  }, [isModalOpen, isDesktop]);
+  };
+
+  // REMOVIDO - gerenciamento de scroll do body que pode interferir
+  // useEffect(() => {
+  //   if (isModalOpen && !isDesktop) {
+  //     // Código removido para evitar conflitos de scroll
+  //   }
+  // }, [isModalOpen, isDesktop]);
 
   // Fechar modal ao clicar fora ou pressionar ESC
   useEffect(() => {
@@ -250,11 +256,14 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
           }`}
           style={{
-            // Área de toque maior para mobile
-            minWidth: '56px',
-            minHeight: '56px',
-            padding: '16px',
-            WebkitTapHighlightColor: 'transparent'
+            // Área de toque otimizada para mobile (mínimo 44px recomendado)
+            minWidth: '60px',
+            minHeight: '60px',
+            padding: '18px',
+            WebkitTapHighlightColor: 'transparent',
+            // Melhor feedback tátil
+            touchAction: 'manipulation',
+            userSelect: 'none'
           }}
           title="Índice do artigo"
           type="button"
@@ -337,7 +346,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
                             e.preventDefault();
                             e.stopPropagation();
                             console.log('🎯 [TOC MODAL CLICK DEBUG] Clicou no item:', item.id, item.text);
-                            handleScrollToHeading(item.id, true);
+                            handleScrollToHeading(item.id);
                           }}
                           className={`w-full text-left rounded-lg transition-all duration-200 touch-manipulation ${
                             activeId === item.id
@@ -347,12 +356,14 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
                           style={{ 
                             paddingLeft: `${(item.level - 1) * 16 + 16}px`,
                             paddingRight: '16px',
-                            paddingTop: '12px',
-                            paddingBottom: '12px',
-                            minHeight: '48px', // Área de toque adequada
+                            paddingTop: '14px',
+                            paddingBottom: '14px',
+                            minHeight: '52px', // Área de toque otimizada (mínimo 44px + padding)
                             fontSize: '16px', // Tamanho de fonte adequado para mobile
                             lineHeight: '1.4',
-                            WebkitTapHighlightColor: 'transparent'
+                            WebkitTapHighlightColor: 'transparent',
+                            touchAction: 'manipulation',
+                            userSelect: 'none'
                           }}
                           type="button"
                           data-heading-id={item.id}

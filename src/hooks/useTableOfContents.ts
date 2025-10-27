@@ -296,29 +296,39 @@ export const useTableOfContents = (
     };
   }, [toc, throttledSetActiveId]);
 
+  // Debounce para evitar múltiplos scrolls simultâneos
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const scrollToHeading = useCallback((id: string) => {
-    console.log('🎯 [TOC DEBUG] Tentando navegar para:', id);
-    const element = document.getElementById(id);
-    if (element) {
-      console.log('✅ [TOC DEBUG] Elemento encontrado:', element);
-      const headerOffset = 100;
-      const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
-      const offsetPosition = elementPosition - headerOffset;
-
-      console.log('📍 [TOC DEBUG] Posições:', {
-        elementPosition,
-        headerOffset,
-        offsetPosition,
-        currentScroll: window.pageYOffset
-      });
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
-    } else {
-      console.error('❌ [TOC DEBUG] Elemento não encontrado com ID:', id);
+    console.log('🎯 [TOC] Iniciando scroll para:', id);
+    
+    // Remover # se presente
+    const cleanId = id.startsWith('#') ? id.slice(1) : id;
+    console.log('🎯 [TOC] ID limpo:', cleanId);
+    
+    // Buscar elemento
+    const element = document.getElementById(cleanId);
+    console.log('🎯 [TOC] Elemento encontrado:', element);
+    console.log('🎯 [TOC] Posição do elemento:', element?.getBoundingClientRect());
+    
+    if (!element) {
+      console.warn('🎯 [TOC] ❌ Elemento não encontrado:', cleanId);
+      // Tentar buscar todos os elementos com IDs para debug
+      const allElements = document.querySelectorAll('[id]');
+      console.log('🎯 [TOC] Todos os elementos com ID:', Array.from(allElements).map(el => el.id));
+      return;
     }
+
+    console.log('🎯 [TOC] ✅ Executando scrollIntoView...');
+    
+    // Scroll suave para o elemento
+    element.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+      inline: 'nearest'
+    });
+    
+    console.log('🎯 [TOC] ✅ Scroll executado com scrollIntoView');
   }, []);
 
   return {

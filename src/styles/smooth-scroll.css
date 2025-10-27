@@ -1,0 +1,54 @@
+/* Scroll suave global para melhor experiência */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Otimizações específicas para mobile */
+@media (max-width: 768px) {
+  html {
+    /* Scroll mais suave em dispositivos móveis */
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  body {
+    /* Previne bounce scroll no iOS */
+    overscroll-behavior: contain;
+  }
+}
+
+/* Desabilitar scroll-behavior quando há preferência por movimento reduzido */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Otimizações para performance de scroll */
+* {
+  /* Melhora performance de scroll em elementos com transform */
+  will-change: auto;
+}
+
+/* Elementos que fazem scroll devem ter otimização */
+.scroll-container {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Suavização específica para navegação do TOC */
+.toc-scroll-target {
+  scroll-margin-top: 80px; /* Offset padrão para mobile */
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .toc-scroll-target {
+    scroll-margin-top: 90px; /* Offset para tablet */
+  }
+}
+
+@media (min-width: 1024px) {
+  .toc-scroll-target {
+    scroll-margin-top: 100px; /* Offset para desktop */
+  }
+}

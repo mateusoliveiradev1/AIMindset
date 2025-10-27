@@ -16,6 +16,9 @@
 /* Import dos focus states elegantes */
 @import './styles/focus-states.css';
 
+/* Import do scroll suave otimizado */
+@import './styles/smooth-scroll.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

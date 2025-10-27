@@ -296,7 +296,7 @@ const Article: React.FC = () => {
                       const id = `heading-h1-${String(children).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
                       console.log('🎯 [MARKDOWN DEBUG] H1 ID gerado:', id);
                       return (
-                        <h1 {...props} id={id} className="text-2xl font-bold mb-4 text-white">
+                        <h1 {...props} id={id} className="text-2xl font-bold mb-4 text-white toc-scroll-target">
                           {children}
                         </h1>
                       );
@@ -306,7 +306,7 @@ const Article: React.FC = () => {
                       const id = `heading-h2-${String(children).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
                       console.log('🎯 [MARKDOWN DEBUG] H2 ID gerado:', id);
                       return (
-                        <h2 {...props} id={id} className="text-xl font-bold mb-3 text-white">
+                        <h2 {...props} id={id} className="text-xl font-bold mb-3 text-white toc-scroll-target">
                           {children}
                         </h2>
                       );
@@ -316,7 +316,7 @@ const Article: React.FC = () => {
                       const id = `heading-h3-${String(children).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
                       console.log('🎯 [MARKDOWN DEBUG] H3 ID gerado:', id);
                       return (
-                        <h3 {...props} id={id} className="text-lg font-bold mb-2 text-white">
+                        <h3 {...props} id={id} className="text-lg font-bold mb-2 text-white toc-scroll-target">
                           {children}
                         </h3>
                       );
@@ -324,7 +324,7 @@ const Article: React.FC = () => {
                     h4: ({ children, ...props }) => {
                       const id = `heading-h4-${String(children).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
                       return (
-                        <h4 {...props} id={id} className="text-base font-bold mb-2 text-white">
+                        <h4 {...props} id={id} className="text-base font-bold mb-2 text-white toc-scroll-target">
                           {children}
                         </h4>
                       );
@@ -332,7 +332,7 @@ const Article: React.FC = () => {
                     h5: ({ children, ...props }) => {
                       const id = `heading-h5-${String(children).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
                       return (
-                        <h5 {...props} id={id} className="text-sm font-bold mb-2 text-white">
+                        <h5 {...props} id={id} className="text-sm font-bold mb-2 text-white toc-scroll-target">
                           {children}
                         </h5>
                       );
@@ -340,7 +340,7 @@ const Article: React.FC = () => {
                     h6: ({ children, ...props }) => {
                       const id = `heading-h6-${String(children).toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
                       return (
-                        <h6 {...props} id={id} className="text-xs font-bold mb-2 text-white">
+                        <h6 {...props} id={id} className="text-xs font-bold mb-2 text-white toc-scroll-target">
                           {children}
                         </h6>
                       );
