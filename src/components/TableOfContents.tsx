@@ -111,7 +111,7 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
             tagName: commentsSection.tagName,
             id: commentsSection.id,
             className: commentsSection.className,
-            dataset: commentsSection.dataset
+            dataset: (commentsSection as HTMLElement).dataset
           });
           
           commentsObserver = new IntersectionObserver(
