@@ -13,8 +13,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Article, Category } from '../lib/supabase';
 import { supabase } from '../lib/supabase';
-import { hybridCache, CacheKeys, useCacheMetrics } from '../utils/hybridCache';
-import { cacheInvalidation, useCacheInvalidation } from '../utils/cacheInvalidation';
+import { hybridCache, CacheKeys } from '../utils/hybridCache';
+import { cacheInvalidation, useCacheInvalidationStatus } from '../utils/cacheInvalidation';
 
 // Interface para prefetch inteligente
 interface PrefetchConfig {
@@ -307,21 +307,18 @@ export const useArticlesWithCache = (prefetchConfig?: Partial<PrefetchConfig>) =
   );
   
   // Hooks de monitoramento
-  const { logPerformance } = useCacheMetrics();
-  const { onInvalidation } = useCacheInvalidation();
+  const { isInvalidating, lastInvalidation, clearCache } = useCacheInvalidationStatus();
   
   // Listener para invalidações automáticas
   useEffect(() => {
-    const unsubscribe = onInvalidation((event) => {
-      console.log(`🔄 [useArticlesWithCache] Cache invalidated:`, event);
+    if (lastInvalidation) {
+      console.log(`🔄 [useArticlesWithCache] Cache invalidated:`, lastInvalidation);
       // Re-fetch apenas se necessário
-      if (event.entityType === 'article' || event.entityType === 'category') {
+      if (lastInvalidation.entityType === 'article' || lastInvalidation.entityType === 'category') {
         fetchData(true); // Force refresh
       }
-    });
-    
-    return unsubscribe;
-  }, []);
+    }
+  }, [lastInvalidation]);
   
   // Buscar artigos com cache híbrido
   const fetchArticles = useCallback(async (forceRefresh: boolean = false): Promise<Article[]> => {
@@ -524,8 +521,7 @@ export const useArticlesWithCache = (prefetchConfig?: Partial<PrefetchConfig>) =
         });
       }
       
-      // Log de performance
-      logPerformance();
+      // Log de performance (removed as logPerformance is not available)
       
       console.log(`✅ [useArticlesWithCache] Data fetch completed:`, {
         articles: articlesData?.length || 0,
@@ -540,7 +536,7 @@ export const useArticlesWithCache = (prefetchConfig?: Partial<PrefetchConfig>) =
     } finally {
       setLoading(false);
     }
-  }, [fetchArticles, fetchCategories, logPerformance, cacheStatus]);
+  }, [fetchArticles, fetchCategories, cacheStatus]);
 
   // Inicialização automática
   useEffect(() => {

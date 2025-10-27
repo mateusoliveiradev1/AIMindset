@@ -20,7 +20,19 @@ const AllArticles: React.FC = () => {
   // DEBUG: Log para verificar se o componente está sendo renderizado
   console.log('🔍 AllArticles component rendered');
 
-  const [searchParams, setSearchParams] = useSearchParams();
+  // Verificação de segurança para useSearchParams
+  let searchParams: URLSearchParams;
+  let setSearchParams: (params: URLSearchParams | ((prev: URLSearchParams) => URLSearchParams)) => void;
+  
+  try {
+    [searchParams, setSearchParams] = useSearchParams();
+  } catch (error) {
+    console.error('❌ Erro ao usar useSearchParams:', error);
+    // Fallback seguro
+    searchParams = new URLSearchParams();
+    setSearchParams = () => {};
+  }
+
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || '');
   const [sortBy, setSortBy] = useState<SortBy>('rating');

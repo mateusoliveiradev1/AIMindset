@@ -72,26 +72,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const mounted = useRef(true);
 
-  // 🔥 FUNÇÃO PARA SALVAR USER NO LOCALSTORAGE
-  const saveUserToStorage = (userData: User | null) => {
-    // console.log('💾 SALVANDO USER NO LOCALSTORAGE:', userData?.email);
-    if (userData) {
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
-    } else {
-      localStorage.removeItem(USER_STORAGE_KEY);
+  // 🧹 FUNÇÃO PARA LIMPAR LOCALSTORAGE QUANDO CHEIO
+  const clearLocalStorageIfNeeded = () => {
+    try {
+      // Tentar salvar um item pequeno para testar se há espaço
+      const testKey = 'test_quota';
+      localStorage.setItem(testKey, 'test');
+      localStorage.removeItem(testKey);
+    } catch (error) {
+      console.warn('🧹 localStorage cheio, limpando dados antigos...');
+      
+      // Limpar dados que não são essenciais
+      const keysToKeep = [USER_STORAGE_KEY, SUPABASE_USER_STORAGE_KEY];
+      const allKeys = Object.keys(localStorage);
+      
+      for (const key of allKeys) {
+        if (!keysToKeep.includes(key)) {
+          localStorage.removeItem(key);
+        }
+      }
+      
+      console.log('✅ localStorage limpo, mantendo apenas dados essenciais');
     }
-    setUser(userData);
   };
 
-  // 🔥 FUNÇÃO PARA SALVAR SUPABASE USER NO LOCALSTORAGE
-  const saveSupabaseUserToStorage = (supabaseUserData: SupabaseUser | null) => {
-    // console.log('💾 SALVANDO SUPABASE USER NO LOCALSTORAGE:', supabaseUserData?.email);
-    if (supabaseUserData) {
-      localStorage.setItem(SUPABASE_USER_STORAGE_KEY, JSON.stringify(supabaseUserData));
-    } else {
-      localStorage.removeItem(SUPABASE_USER_STORAGE_KEY);
+  // 🔥 FUNÇÃO PARA SALVAR USER NO LOCALSTORAGE COM TRATAMENTO DE QUOTA
+  const saveUserToStorage = (userData: User | null) => {
+    try {
+      if (userData) {
+        clearLocalStorageIfNeeded();
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
+      } else {
+        localStorage.removeItem(USER_STORAGE_KEY);
+      }
+      setUser(userData);
+    } catch (error) {
+      console.error('💥 ERRO AO SALVAR USER:', error);
+      // Em caso de erro, ainda atualiza o estado
+      setUser(userData);
     }
-    setSupabaseUser(supabaseUserData);
+  };
+
+  // 🔥 FUNÇÃO PARA SALVAR SUPABASE USER NO LOCALSTORAGE COM TRATAMENTO DE QUOTA
+  const saveSupabaseUserToStorage = (supabaseUserData: SupabaseUser | null) => {
+    try {
+      if (supabaseUserData) {
+        clearLocalStorageIfNeeded();
+        localStorage.setItem(SUPABASE_USER_STORAGE_KEY, JSON.stringify(supabaseUserData));
+      } else {
+        localStorage.removeItem(SUPABASE_USER_STORAGE_KEY);
+      }
+      setSupabaseUser(supabaseUserData);
+    } catch (error) {
+      console.error('💥 ERRO AO SALVAR SUPABASE USER:', error);
+      // Em caso de erro, ainda atualiza o estado
+      setSupabaseUser(supabaseUserData);
+    }
   };
 
   // Função simplificada para verificar admin COM TIMEOUT DE SEGURANÇA E BYPASS RLS
@@ -319,10 +355,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('🚀 INICIANDO LOGIN:', email);
       setIsLoading(true);
       
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      // 🧹 LIMPEZA FORÇADA DO LOCALSTORAGE ANTES DO LOGIN
+      console.log('🧹 LIMPANDO LOCALSTORAGE FORÇADAMENTE...');
+      try {
+        // Limpar todos os dados não essenciais
+        const keysToKeep = ['aimindset.auth.token', 'aimindset.auth.user', 'aimindset.supabase.user'];
+        const allKeys = Object.keys(localStorage);
+        
+        for (const key of allKeys) {
+          if (!keysToKeep.includes(key)) {
+            localStorage.removeItem(key);
+          }
+        }
+        
+        // Se ainda estiver cheio, limpar TUDO
+        try {
+          localStorage.setItem('test-quota', 'test');
+          localStorage.removeItem('test-quota');
+        } catch {
+          console.log('🚨 LOCALSTORAGE AINDA CHEIO - LIMPANDO TUDO!');
+          localStorage.clear();
+        }
+      } catch (cleanError) {
+        console.warn('⚠️ Erro na limpeza do localStorage:', cleanError);
+        // Tentar limpar tudo como último recurso
+        try {
+          localStorage.clear();
+        } catch {
+          console.error('💥 Não foi possível limpar localStorage');
+        }
+      }
+      
+      // 🔧 INTERCEPTAR ERRO DO SUPABASE COM FALLBACK
+      let authResult;
+      try {
+        authResult = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+      } catch (quotaError) {
+        if (quotaError.message?.includes('QuotaExceededError') || quotaError.message?.includes('quota')) {
+          console.log('🚨 QUOTA EXCEEDED - TENTANDO FALLBACK...');
+          
+          // Limpar tudo e tentar novamente
+          localStorage.clear();
+          
+          // Tentar novamente após limpeza
+          authResult = await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+        } else {
+          throw quotaError;
+        }
+      }
+      
+      const { data, error } = authResult;
 
       console.log('📡 RESPOSTA SUPABASE:', { data: !!data.user, error: !!error });
 

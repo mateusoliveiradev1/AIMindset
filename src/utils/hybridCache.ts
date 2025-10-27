@@ -271,19 +271,19 @@ class IndexedDBCacheLayer {
     
     try {
       // Verificar se o método existe antes de chamar
-      if (typeof this.cache.getAllKeys !== 'function') {
+      if (typeof (this.cache as any).getAllKeys !== 'function') {
         console.warn('⚠️ [L2 Cache] getAllKeys method not available, skipping cleanup');
         return;
       }
       
-      const keys = await this.cache.getAllKeys();
+      const keys = await (this.cache as any).getAllKeys();
       const now = Date.now();
       let cleanedCount = 0;
       
       for (const key of keys) {
         try {
-          const entry = await this.cache.get(key);
-          if (entry && now - entry.timestamp > entry.ttl) {
+          const entry = await this.cache.get(key) as any;
+          if (entry && entry.timestamp && entry.ttl && now - entry.timestamp > entry.ttl) {
             await this.cache.delete(key);
             cleanedCount++;
           }
@@ -377,12 +377,12 @@ class IndexedDBCacheLayer {
     return RetryManager.withRetry(async () => {
       try {
         // Verificar se o método existe antes de chamar
-        if (typeof this.cache.getAllKeys !== 'function') {
+        if (typeof (this.cache as any).getAllKeys !== 'function') {
           console.warn('⚠️ [L2 Cache] getAllKeys method not available for pattern invalidation');
           return;
         }
         
-        const keys = await this.cache.getAllKeys();
+        const keys = await (this.cache as any).getAllKeys();
         const matchingKeys = keys.filter(key => key.includes(pattern));
         
         for (const key of matchingKeys) {
@@ -450,7 +450,7 @@ class HybridCacheSystem {
     const l1Data = this.l1Cache.get<T>(key);
     if (l1Data !== null) {
       this.metrics.hits++;
-      trackCacheOperation('cache_hit', performance.now() - startTime, 'L1');
+      trackCacheOperation('cache_hit', 'L1', key, performance.now() - startTime);
       return { hit: true, data: l1Data, source: 'L1' };
     }
     
@@ -460,12 +460,12 @@ class HybridCacheSystem {
       // Promover para L1
       this.l1Cache.set(key, l2Data);
       this.metrics.hits++;
-      trackCacheOperation('cache_hit', performance.now() - startTime, 'L2');
+      trackCacheOperation('cache_hit', 'L2', key, performance.now() - startTime);
       return { hit: true, data: l2Data, source: 'L2' };
     }
     
     this.metrics.misses++;
-    trackCacheOperation('cache_miss', performance.now() - startTime);
+    trackCacheOperation('cache_miss', 'L1', key, performance.now() - startTime);
     return { hit: false, data: null, source: 'none' };
   }
   
@@ -488,7 +488,7 @@ class HybridCacheSystem {
       console.error(`❌ [L2 Cache] Set failed for ${key}:`, error);
     });
     
-    trackCacheOperation('cache_set', performance.now() - startTime);
+    trackCacheOperation('cache_set', 'L1', key, performance.now() - startTime);
   }
   
   async invalidate(key: string): Promise<void> {
@@ -499,7 +499,7 @@ class HybridCacheSystem {
     await this.l2Cache.invalidate(key);
     
     this.metrics.invalidations++;
-    trackCacheOperation('cache_invalidation', performance.now() - startTime);
+    trackCacheOperation('cache_invalidation', 'L1', key, performance.now() - startTime);
   }
   
   async invalidatePattern(pattern: string): Promise<void> {
@@ -510,7 +510,7 @@ class HybridCacheSystem {
     await this.l2Cache.invalidatePattern(pattern);
     
     this.metrics.invalidations++;
-    trackCacheOperation('cache_invalidation', performance.now() - startTime);
+    trackCacheOperation('cache_invalidation', 'L1', pattern, performance.now() - startTime);
   }
   
   async clear(): Promise<void> {
@@ -520,7 +520,7 @@ class HybridCacheSystem {
     await this.l2Cache.clear();
     
     this.metrics.invalidations++;
-    trackCacheOperation('cache_invalidation', performance.now() - startTime);
+    trackCacheOperation('cache_invalidation', 'L1', 'clear_all', performance.now() - startTime);
   }
   
   getMetrics(): CacheMetrics {

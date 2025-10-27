@@ -10,6 +10,7 @@
  * - Detecção automática de corrupção
  */
 
+import React, { useState, useEffect } from 'react';
 import { hybridCache, CacheKeys } from './hybridCache';
 
 // Tipos para operações CRUD
@@ -475,11 +476,11 @@ export const checkCacheIntegrity = () =>
 
 // Hook para status de invalidação de cache
 export const useCacheInvalidationStatus = () => {
-  const [isInvalidating, setIsInvalidating] = React.useState(false);
-  const [lastInvalidation, setLastInvalidation] = React.useState<InvalidationEvent | null>(null);
-  const [integrityErrors, setIntegrityErrors] = React.useState<Map<string, string[]>>(new Map());
+  const [isInvalidating, setIsInvalidating] = useState(false);
+  const [lastInvalidation, setLastInvalidation] = useState(null);
+  const [integrityErrors, setIntegrityErrors] = useState(new Map());
 
-  React.useEffect(() => {
+  useEffect(() => {
     // Subscrever a eventos de invalidação
     const checkStatus = () => {
       const history = cacheInvalidation.getInvalidationHistory();
@@ -571,10 +572,10 @@ export class AdminCacheUtils {
 
 // Hook React para monitorar invalidações
 export function useInvalidationMonitor() {
-  const [lastInvalidation, setLastInvalidation] = React.useState<InvalidationEvent | null>(null);
-  const [integrityStatus, setIntegrityStatus] = React.useState<IntegrityCheckResult | null>(null);
+  const [lastInvalidation, setLastInvalidation] = useState(null);
+  const [integrityStatus, setIntegrityStatus] = useState(null);
   
-  React.useEffect(() => {
+  useEffect(() => {
     const unsubscribe = cacheInvalidation.onInvalidation('*', (event) => {
       setLastInvalidation(event);
     });
@@ -593,6 +594,3 @@ export function useInvalidationMonitor() {
     clearHistory: () => cacheInvalidation.clearHistory()
   };
 }
-
-// React import (will be available in React components)
-declare const React: any;

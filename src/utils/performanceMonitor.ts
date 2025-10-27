@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { hybridCache } from './hybridCache';
 
 // Performance metrics interface
@@ -15,6 +16,7 @@ export interface PerformanceMetrics {
 export type PerformanceEvent = 
   | 'cache_hit'
   | 'cache_miss'
+  | 'cache_set'
   | 'api_request'
   | 'api_error'
   | 'cache_invalidation';
@@ -310,11 +312,11 @@ setInterval(() => {
   performanceMonitor.cleanup();
 }, 60 * 60 * 1000);
 
-// Performance monitoring hook for React components
-export function usePerformanceMetrics() {
-  const [metrics, setMetrics] = React.useState<PerformanceMetrics | null>(null);
+// Hook para monitorar performance em tempo real
+export const usePerformanceMonitor = () => {
+  const [metrics, setMetrics] = useState(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const unsubscribe = performanceMonitor.subscribe(setMetrics);
     setMetrics(performanceMonitor.getMetrics());
     return unsubscribe;
@@ -326,6 +328,3 @@ export function usePerformanceMetrics() {
     reset: () => performanceMonitor.reset()
   };
 }
-
-// React import (will be available in React components)
-declare const React: any;

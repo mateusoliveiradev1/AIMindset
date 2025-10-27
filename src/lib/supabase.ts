@@ -57,7 +57,21 @@ export const supabase = (() => {
   // Criar nova instância apenas se não existir
   supabaseInstance = createClient(finalUrl, finalKey, {
     auth: {
-      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      // 🔧 USAR SESSIONSTORAGE COMO FALLBACK PARA EVITAR QUOTA EXCEEDED
+      storage: (() => {
+        if (typeof window === 'undefined') return undefined;
+        
+        // Tentar usar localStorage primeiro, mas com fallback para sessionStorage
+        try {
+          // Testar se localStorage está disponível e não cheio
+          window.localStorage.setItem('test-quota-check', 'test');
+          window.localStorage.removeItem('test-quota-check');
+          return window.localStorage;
+        } catch (error) {
+          console.warn('⚠️ localStorage não disponível, usando sessionStorage:', error);
+          return window.sessionStorage;
+        }
+      })(),
       storageKey: 'aimindset.auth.token', // Chave única para evitar conflitos
       autoRefreshToken: true,
       persistSession: true,

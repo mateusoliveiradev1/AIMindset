@@ -65,7 +65,7 @@ export interface SecurityAlert {
   id: string;
   timestamp: number;
   type: string;
-  severity: SecurityLevel;
+  level: SecurityLevel;
   message: string;
   events: SecurityEvent[];
   acknowledged: boolean;
@@ -219,7 +219,7 @@ export class SecurityLogger {
       id: this.generateId(),
       timestamp: Date.now(),
       type,
-      severity: this.getAlertSeverity(type),
+      level: this.getAlertSeverity(type),
       message: this.getAlertMessage(type, events.length),
       events,
       acknowledged: false
@@ -284,8 +284,8 @@ export class SecurityLogger {
    */
   private static notifyAlert(alert: SecurityAlert): void {
     // Log no console apenas para alertas críticos reais
-    if (alert.severity === SecurityLevel.CRITICAL && this.isRealThreat(alert)) {
-      console.warn(`[SECURITY ALERT] ${alert.severity.toUpperCase()}: ${alert.message}`);
+    if (alert.level === SecurityLevel.CRITICAL && this.isRealThreat(alert)) {
+      console.warn(`[SECURITY ALERT] ${alert.level.toUpperCase()}: ${alert.message}`);
     }
     
     // Em produção, aqui poderia enviar email, webhook, etc.
