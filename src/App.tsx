@@ -126,12 +126,12 @@ function App() {
               cacheStrategy="moderate"
             >
               <AccessibilityManager
-                enableAutoAria={true}
-                enableKeyboardNavigation={true}
-                enableScreenReaderSupport={true}
-                enableHighContrast={false}
-                enableFocusManagement={true}
-              >
+                 enableAutoAria={true}
+                 enableKeyboardNavigation={true}
+                 enableScreenReaderOptimizations={true}
+                 enableFocusManagement={true}
+                 announcePageChanges={true}
+               >
                 <Router>
                   <AppContent />
                   <Toaster 
