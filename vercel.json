@@ -9,6 +9,12 @@
     "VITE_SUPABASE_ANON_KEY": "@vite_supabase_anon_key",
     "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key"
   },
+  "rewrites": [
+    {
+      "source": "/((?!api|_next|_static|favicon.ico|robots.txt|site.webmanifest|sw.js|offline.html|assets).*)",
+      "destination": "/index.html"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)\\.(js|jsx|ts|tsx|mjs)$",
