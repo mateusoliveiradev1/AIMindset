@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { validateFeedback, hasAlreadySubmittedFeedback, markFeedbackAsSubmitted } from '../utils/feedbackValidation';
 import { toast } from 'sonner';
+import { invalidateFeedbackMetrics } from '../utils/forceCacheCleanup';
 
 export interface Feedback {
   id: string;
@@ -66,6 +67,15 @@ export const useFeedback = (articleId: string): UseFeedbackReturn => {
 
       if (insertError) {
         throw insertError;
+      }
+
+      // IMPORTANTE: Invalidar cache após inserir feedback
+      try {
+        await invalidateFeedbackMetrics();
+        console.log('✅ [FEEDBACK] Cache de métricas invalidado após feedback');
+      } catch (cacheError) {
+        console.warn('⚠️ [FEEDBACK] Erro ao invalidar cache:', cacheError);
+        // Não falhar a operação por causa do cache
       }
 
       // Marcar como enviado no localStorage
