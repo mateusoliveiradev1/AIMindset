@@ -1,488 +1,284 @@
-// Sistema de monitoramento de performance em tempo real
+import { hybridCache } from './hybridCache';
+
+// Performance metrics interface
 export interface PerformanceMetrics {
-  // Core Web Vitals
-  fcp: number | null; // First Contentful Paint
-  lcp: number | null; // Largest Contentful Paint
-  fid: number | null; // First Input Delay
-  cls: number | null; // Cumulative Layout Shift
-  ttfb: number | null; // Time to First Byte
-  
-  // Métricas customizadas
-  memoryUsage: number;
-  renderTime: number;
-  bundleSize: number;
   cacheHitRate: number;
-  
-  // Métricas de rede
-  connectionType: string;
-  effectiveType: string;
-  downlink: number;
-  rtt: number;
-  
-  // Timestamps
-  timestamp: number;
-  sessionId: string;
+  averageResponseTime: number;
+  totalRequests: number;
+  cacheHits: number;
+  cacheMisses: number;
+  errorRate: number;
+  lastUpdated: Date;
 }
 
-export interface PerformanceAlert {
-  type: 'warning' | 'error' | 'info';
-  metric: string;
-  value: number;
-  threshold: number;
-  message: string;
-  timestamp: number;
-}
+// Performance event types
+export type PerformanceEvent = 
+  | 'cache_hit'
+  | 'cache_miss'
+  | 'api_request'
+  | 'api_error'
+  | 'cache_invalidation';
 
-export interface PerformanceConfig {
-  // Thresholds para alertas
-  thresholds: {
-    fcp: number;
-    lcp: number;
-    fid: number;
-    cls: number;
-    memoryUsage: number;
-    renderTime: number;
-  };
-  
-  // Configurações de coleta
-  sampleRate: number; // 0-1, porcentagem de sessões para monitorar
-  reportInterval: number; // Intervalo em ms para reportar métricas
-  maxReports: number; // Máximo de relatórios por sessão
-  
-  // Callbacks
-  onMetricCollected?: (metric: PerformanceMetrics) => void;
-  onAlert?: (alert: PerformanceAlert) => void;
-  onReport?: (report: PerformanceReport) => void;
-}
-
-export interface PerformanceReport {
-  sessionId: string;
-  metrics: PerformanceMetrics[];
-  alerts: PerformanceAlert[];
-  summary: {
-    avgFCP: number;
-    avgLCP: number;
-    avgFID: number;
-    avgCLS: number;
-    avgMemoryUsage: number;
-    totalAlerts: number;
-    sessionDuration: number;
-  };
-  deviceInfo: {
-    userAgent: string;
-    viewport: { width: number; height: number };
-    deviceMemory: number;
-    hardwareConcurrency: number;
-  };
-  timestamp: number;
+// Performance data point
+interface PerformanceDataPoint {
+  timestamp: Date;
+  event: PerformanceEvent;
+  duration?: number;
+  cacheLayer?: 'L1' | 'L2';
+  key?: string;
+  error?: string;
 }
 
 class PerformanceMonitor {
-  private config: PerformanceConfig;
-  private metrics: PerformanceMetrics[] = [];
-  private alerts: PerformanceAlert[] = [];
-  private sessionId: string;
-  private startTime: number;
-  private observer: PerformanceObserver | null = null;
-  private intervalId: number | null = null;
-  private isMonitoring = false;
+  private dataPoints: PerformanceDataPoint[] = [];
+  private maxDataPoints = 1000; // Keep last 1000 events
+  private listeners: ((metrics: PerformanceMetrics) => void)[] = [];
 
-  // Thresholds padrão baseados nas recomendações do Google
-  private defaultConfig: PerformanceConfig = {
-    thresholds: {
-      fcp: 1200, // 1.2s
-      lcp: 2000, // 2.0s
-      fid: 50,   // 50ms
-      cls: 0.1,  // 0.1
-      memoryUsage: 50 * 1024 * 1024, // 50MB
-      renderTime: 16 // 16ms (60fps)
-    },
-    sampleRate: 1.0, // 100% em desenvolvimento
-    reportInterval: 30000, // 30 segundos
-    maxReports: 100
-  };
+  // Record a performance event
+  recordEvent(event: PerformanceEvent, options?: {
+    duration?: number;
+    cacheLayer?: 'L1' | 'L2';
+    key?: string;
+    error?: string;
+  }) {
+    const dataPoint: PerformanceDataPoint = {
+      timestamp: new Date(),
+      event,
+      ...options
+    };
 
-  constructor(config?: Partial<PerformanceConfig>) {
-    this.config = { ...this.defaultConfig, ...config };
-    this.sessionId = this.generateSessionId();
-    this.startTime = Date.now();
-  }
+    this.dataPoints.push(dataPoint);
 
-  start(): void {
-    if (this.isMonitoring) return;
-
-    // Verificar se deve monitorar baseado na taxa de amostragem
-    if (Math.random() > this.config.sampleRate) {
-      console.log('Performance monitoring skipped due to sample rate');
-      return;
+    // Keep only recent data points
+    if (this.dataPoints.length > this.maxDataPoints) {
+      this.dataPoints = this.dataPoints.slice(-this.maxDataPoints);
     }
 
-    this.isMonitoring = true;
-    console.log('Performance monitoring started');
+    // Notify listeners
+    this.notifyListeners();
+  }
 
-    // Inicializar observadores
-    this.initializeObservers();
+  // Get current performance metrics
+  getMetrics(): PerformanceMetrics {
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     
-    // Coletar métricas iniciais
-    this.collectInitialMetrics();
-    
-    // Configurar coleta periódica
-    this.intervalId = window.setInterval(() => {
-      this.collectMetrics();
-    }, this.config.reportInterval);
+    // Filter recent events (last hour)
+    const recentEvents = this.dataPoints.filter(
+      point => point.timestamp >= oneHourAgo
+    );
 
-    // Listener para beforeunload
-    window.addEventListener('beforeunload', () => {
-      this.generateReport();
+    const totalRequests = recentEvents.filter(
+      point => point.event === 'api_request'
+    ).length;
+
+    const cacheHits = recentEvents.filter(
+      point => point.event === 'cache_hit'
+    ).length;
+
+    const cacheMisses = recentEvents.filter(
+      point => point.event === 'cache_miss'
+    ).length;
+
+    const errors = recentEvents.filter(
+      point => point.event === 'api_error'
+    ).length;
+
+    const requestEvents = recentEvents.filter(
+      point => point.event === 'api_request' && point.duration
+    );
+
+    const averageResponseTime = requestEvents.length > 0
+      ? requestEvents.reduce((sum, event) => sum + (event.duration || 0), 0) / requestEvents.length
+      : 0;
+
+    const totalCacheRequests = cacheHits + cacheMisses;
+    const cacheHitRate = totalCacheRequests > 0 ? (cacheHits / totalCacheRequests) * 100 : 0;
+    const errorRate = totalRequests > 0 ? (errors / totalRequests) * 100 : 0;
+
+    return {
+      cacheHitRate,
+      averageResponseTime,
+      totalRequests,
+      cacheHits,
+      cacheMisses,
+      errorRate,
+      lastUpdated: now
+    };
+  }
+
+  // Get detailed cache statistics
+  getCacheStats() {
+    const metrics = this.getMetrics();
+    const cacheMetrics = hybridCache.getMetrics();
+    
+    return {
+      ...metrics,
+      l1CacheSize: cacheMetrics.l1Size,
+      l2CacheSize: cacheMetrics.l2Size,
+      l1HitRate: cacheMetrics.l1HitRate,
+      l2HitRate: cacheMetrics.l2HitRate,
+      totalCacheSize: cacheMetrics.l1Size + cacheMetrics.l2Size
+    };
+  }
+
+  // Subscribe to metrics updates
+  subscribe(callback: (metrics: PerformanceMetrics) => void) {
+    this.listeners.push(callback);
+    
+    // Return unsubscribe function
+    return () => {
+      const index = this.listeners.indexOf(callback);
+      if (index > -1) {
+        this.listeners.splice(index, 1);
+      }
+    };
+  }
+
+  // Notify all listeners
+  private notifyListeners() {
+    const metrics = this.getMetrics();
+    this.listeners.forEach(callback => {
+      try {
+        callback(metrics);
+      } catch (error) {
+        console.error('Error in performance metrics listener:', error);
+      }
     });
   }
 
-  stop(): void {
-    if (!this.isMonitoring) return;
-
-    this.isMonitoring = false;
-    
-    if (this.observer) {
-      this.observer.disconnect();
-      this.observer = null;
-    }
-    
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
-
-    // Gerar relatório final
-    this.generateReport();
-    
-    console.log('Performance monitoring stopped');
+  // Clear all data (for testing)
+  clear() {
+    this.dataPoints = [];
+    this.notifyListeners();
   }
 
-  private initializeObservers(): void {
-    if (!('PerformanceObserver' in window)) {
-      console.warn('PerformanceObserver not supported');
-      return;
-    }
-
-    try {
-      this.observer = new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) {
-          this.processPerformanceEntry(entry);
-        }
-      });
-
-      // Observar diferentes tipos de métricas
-      this.observer.observe({ entryTypes: ['paint', 'largest-contentful-paint', 'first-input', 'layout-shift', 'navigation', 'resource'] });
-    } catch (error) {
-      console.error('Error initializing PerformanceObserver:', error);
-    }
+  // Export data for analysis
+  exportData() {
+    return {
+      dataPoints: [...this.dataPoints],
+      metrics: this.getMetrics(),
+      cacheStats: this.getCacheStats()
+    };
   }
 
-  private processPerformanceEntry(entry: PerformanceEntry): void {
-    switch (entry.entryType) {
-      case 'paint':
-        if (entry.name === 'first-contentful-paint') {
-          this.updateMetric('fcp', entry.startTime);
-        }
-        break;
-        
-      case 'largest-contentful-paint':
-        this.updateMetric('lcp', entry.startTime);
-        break;
-        
-      case 'first-input':
-        const fidEntry = entry as PerformanceEventTiming;
-        this.updateMetric('fid', fidEntry.processingStart - fidEntry.startTime);
-        break;
-        
-      case 'layout-shift':
-        const clsEntry = entry as any; // LayoutShift interface não está disponível em todos os tipos
-        if (!clsEntry.hadRecentInput) {
-          this.updateMetric('cls', clsEntry.value);
-        }
-        break;
-        
-      case 'navigation':
-        const navEntry = entry as PerformanceNavigationTiming;
-        this.updateMetric('ttfb', navEntry.responseStart - navEntry.requestStart);
-        break;
-    }
-  }
-
-  private updateMetric(metricName: keyof PerformanceMetrics, value: number): void {
-    // Verificar threshold e gerar alerta se necessário
-    const threshold = this.config.thresholds[metricName as keyof typeof this.config.thresholds];
-    if (threshold && value > threshold) {
-      this.generateAlert(metricName, value, threshold);
-    }
-  }
-
-  private collectInitialMetrics(): void {
-    const metrics = this.createMetricsSnapshot();
-    this.metrics.push(metrics);
-    this.config.onMetricCollected?.(metrics);
-  }
-
-  private collectMetrics(): void {
-    if (this.metrics.length >= this.config.maxReports) {
-      console.log('Max reports reached, stopping collection');
-      this.stop();
-      return;
-    }
-
-    const metrics = this.createMetricsSnapshot();
-    this.metrics.push(metrics);
-    this.config.onMetricCollected?.(metrics);
-  }
-
-  private createMetricsSnapshot(): PerformanceMetrics {
-    const now = Date.now();
-    
-    // Coletar Core Web Vitals
-    const paintEntries = performance.getEntriesByType('paint');
-    const fcpEntry = paintEntries.find(entry => entry.name === 'first-contentful-paint');
-    
-    const lcpEntries = performance.getEntriesByType('largest-contentful-paint');
-    const lcpEntry = lcpEntries[lcpEntries.length - 1]; // Última entrada LCP
-    
-    const fidEntries = performance.getEntriesByType('first-input');
-    const fidEntry = fidEntries[0] as PerformanceEventTiming;
-    
-    const clsEntries = performance.getEntriesByType('layout-shift');
-    const clsValue = clsEntries
-      .filter((entry: any) => !entry.hadRecentInput)
-      .reduce((sum: number, entry: any) => sum + entry.value, 0);
-
-    const navEntries = performance.getEntriesByType('navigation');
-    const navEntry = navEntries[0] as PerformanceNavigationTiming;
-
-    // Coletar informações de memória
-    const memoryInfo = (performance as any).memory;
-    const memoryUsage = memoryInfo ? memoryInfo.usedJSHeapSize : 0;
-
-    // Coletar informações de rede
-    const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+  // Get performance summary for admin dashboard
+  getSummary() {
+    const metrics = this.getMetrics();
+    const cacheStats = this.getCacheStats();
     
     return {
-      fcp: fcpEntry ? fcpEntry.startTime : null,
-      lcp: lcpEntry ? lcpEntry.startTime : null,
-      fid: fidEntry ? fidEntry.processingStart - fidEntry.startTime : null,
-      cls: clsValue || null,
-      ttfb: navEntry ? navEntry.responseStart - navEntry.requestStart : null,
-      
-      memoryUsage,
-      renderTime: this.calculateRenderTime(),
-      bundleSize: this.estimateBundleSize(),
-      cacheHitRate: this.calculateCacheHitRate(),
-      
-      connectionType: connection?.type || 'unknown',
-      effectiveType: connection?.effectiveType || 'unknown',
-      downlink: connection?.downlink || 0,
-      rtt: connection?.rtt || 0,
-      
-      timestamp: now,
-      sessionId: this.sessionId
+      status: this.getHealthStatus(metrics),
+      cacheEfficiency: Math.round(metrics.cacheHitRate),
+      responseTime: Math.round(metrics.averageResponseTime),
+      totalRequests: metrics.totalRequests,
+      errorRate: Math.round(metrics.errorRate * 100) / 100,
+      recommendations: this.getRecommendations(metrics)
     };
   }
 
-  private calculateRenderTime(): number {
-    // Estimar tempo de render baseado em performance.now()
-    const start = performance.now();
-    // Simular operação de render
-    for (let i = 0; i < 1000; i++) {
-      document.createElement('div');
+  // Determine system health status
+  private getHealthStatus(metrics: PerformanceMetrics): 'excellent' | 'good' | 'warning' | 'critical' {
+    if (metrics.errorRate > 10) return 'critical';
+    if (metrics.errorRate > 5 || metrics.cacheHitRate < 50) return 'warning';
+    if (metrics.cacheHitRate > 80 && metrics.averageResponseTime < 500) return 'excellent';
+    return 'good';
+  }
+
+  // Generate performance recommendations
+  private getRecommendations(metrics: PerformanceMetrics): string[] {
+    const recommendations: string[] = [];
+
+    if (metrics.cacheHitRate < 60) {
+      recommendations.push('Consider increasing cache TTL or optimizing cache keys');
     }
-    return performance.now() - start;
+
+    if (metrics.averageResponseTime > 1000) {
+      recommendations.push('API response times are high - consider optimizing queries');
+    }
+
+    if (metrics.errorRate > 5) {
+      recommendations.push('High error rate detected - check API connectivity');
+    }
+
+    if (metrics.totalRequests < 10) {
+      recommendations.push('Low request volume - metrics may not be representative');
+    }
+
+    return recommendations;
   }
+}
 
-  private estimateBundleSize(): number {
-    // Estimar tamanho do bundle baseado nos recursos carregados
-    const resources = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
-    return resources
-      .filter(resource => resource.name.includes('.js') || resource.name.includes('.css'))
-      .reduce((total, resource) => total + (resource.transferSize || 0), 0);
-  }
+// Global performance monitor instance
+export const performanceMonitor = new PerformanceMonitor();
 
-  private calculateCacheHitRate(): number {
-    // Calcular taxa de cache hit baseado nos recursos
-    const resources = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
-    const cachedResources = resources.filter(resource => resource.transferSize === 0);
-    return resources.length > 0 ? cachedResources.length / resources.length : 0;
-  }
+// React hook for performance monitoring
+import { useState, useEffect } from 'react';
 
-  private generateAlert(metric: string, value: number, threshold: number): void {
-    const alert: PerformanceAlert = {
-      type: value > threshold * 2 ? 'error' : 'warning',
-      metric,
-      value,
-      threshold,
-      message: `${metric.toUpperCase()} (${value.toFixed(2)}) exceeded threshold (${threshold})`,
-      timestamp: Date.now()
-    };
+export const usePerformanceMetrics = () => {
+  const [metrics, setMetrics] = useState<PerformanceMetrics>(
+    performanceMonitor.getMetrics()
+  );
+  const [cacheStats, setCacheStats] = useState(
+    performanceMonitor.getCacheStats()
+  );
 
-    this.alerts.push(alert);
-    this.config.onAlert?.(alert);
+  useEffect(() => {
+    const unsubscribe = performanceMonitor.subscribe(setMetrics);
     
-    console.warn(`Performance Alert: ${alert.message}`);
-  }
+    // Update cache stats periodically
+    const interval = setInterval(() => {
+      setCacheStats(performanceMonitor.getCacheStats());
+    }, 5000);
 
-  private generateReport(): PerformanceReport {
-    const report: PerformanceReport = {
-      sessionId: this.sessionId,
-      metrics: this.metrics,
-      alerts: this.alerts,
-      summary: this.calculateSummary(),
-      deviceInfo: this.getDeviceInfo(),
-      timestamp: Date.now()
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
     };
+  }, []);
 
-    this.config.onReport?.(report);
-    return report;
-  }
-
-  private calculateSummary() {
-    const validMetrics = this.metrics.filter(m => m.fcp !== null);
-    
-    return {
-      avgFCP: this.average(validMetrics.map(m => m.fcp).filter(v => v !== null) as number[]),
-      avgLCP: this.average(validMetrics.map(m => m.lcp).filter(v => v !== null) as number[]),
-      avgFID: this.average(validMetrics.map(m => m.fid).filter(v => v !== null) as number[]),
-      avgCLS: this.average(validMetrics.map(m => m.cls).filter(v => v !== null) as number[]),
-      avgMemoryUsage: this.average(validMetrics.map(m => m.memoryUsage)),
-      totalAlerts: this.alerts.length,
-      sessionDuration: Date.now() - this.startTime
-    };
-  }
-
-  private getDeviceInfo() {
-    return {
-      userAgent: navigator.userAgent,
-      viewport: {
-        width: window.innerWidth,
-        height: window.innerHeight
-      },
-      deviceMemory: (navigator as any).deviceMemory || 0,
-      hardwareConcurrency: navigator.hardwareConcurrency || 0
-    };
-  }
-
-  private average(numbers: number[]): number {
-    return numbers.length > 0 ? numbers.reduce((sum, n) => sum + n, 0) / numbers.length : 0;
-  }
-
-  private generateSessionId(): string {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  // Métodos públicos para acesso aos dados
-  getCurrentMetrics(): PerformanceMetrics | null {
-    return this.metrics[this.metrics.length - 1] || null;
-  }
-
-  getAllMetrics(): PerformanceMetrics[] {
-    return [...this.metrics];
-  }
-
-  getAlerts(): PerformanceAlert[] {
-    return [...this.alerts];
-  }
-
-  getSessionId(): string {
-    return this.sessionId;
-  }
-}
-
-// Instância singleton
-let performanceMonitor: PerformanceMonitor | null = null;
-
-export function initPerformanceMonitor(config?: Partial<PerformanceConfig>): PerformanceMonitor {
-  if (performanceMonitor) {
-    console.warn('Performance monitor already initialized');
-    return performanceMonitor;
-  }
-
-  performanceMonitor = new PerformanceMonitor(config);
-  return performanceMonitor;
-}
-
-export function getPerformanceMonitor(): PerformanceMonitor | null {
-  return performanceMonitor;
-}
-
-export function startPerformanceMonitoring(config?: Partial<PerformanceConfig>): void {
-  const monitor = initPerformanceMonitor(config);
-  monitor.start();
-}
-
-export function stopPerformanceMonitoring(): void {
-  if (performanceMonitor) {
-    performanceMonitor.stop();
-    performanceMonitor = null;
-  }
-}
-
-// Hook para React
-export function usePerformanceMonitor(config?: Partial<PerformanceConfig>) {
-  const monitor = initPerformanceMonitor(config);
-  
   return {
-    start: () => monitor.start(),
-    stop: () => monitor.stop(),
-    getCurrentMetrics: () => monitor.getCurrentMetrics(),
-    getAllMetrics: () => monitor.getAllMetrics(),
-    getAlerts: () => monitor.getAlerts(),
-    getSessionId: () => monitor.getSessionId()
+    metrics,
+    cacheStats,
+    summary: performanceMonitor.getSummary(),
+    exportData: () => performanceMonitor.exportData(),
+    clearData: () => performanceMonitor.clear()
   };
-}
+};
 
-// Utilitários para análise de performance
-export function analyzePerformance(metrics: PerformanceMetrics[]): {
-  score: number;
-  grade: 'A' | 'B' | 'C' | 'D' | 'F';
-  recommendations: string[];
-} {
-  if (metrics.length === 0) {
-    return { score: 0, grade: 'F', recommendations: ['No metrics available'] };
+// Utility functions for performance tracking
+export const trackApiRequest = async <T>(
+  operation: () => Promise<T>,
+  key?: string
+): Promise<T> => {
+  const startTime = Date.now();
+  
+  try {
+    performanceMonitor.recordEvent('api_request', { key });
+    const result = await operation();
+    const duration = Date.now() - startTime;
+    
+    performanceMonitor.recordEvent('api_request', { 
+      duration, 
+      key 
+    });
+    
+    return result;
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    performanceMonitor.recordEvent('api_error', { 
+      duration, 
+      key,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+    throw error;
   }
+};
 
-  const latest = metrics[metrics.length - 1];
-  let score = 100;
-  const recommendations: string[] = [];
-
-  // Avaliar Core Web Vitals
-  if (latest.fcp && latest.fcp > 1200) {
-    score -= 20;
-    recommendations.push('Optimize First Contentful Paint (FCP)');
-  }
-
-  if (latest.lcp && latest.lcp > 2000) {
-    score -= 25;
-    recommendations.push('Optimize Largest Contentful Paint (LCP)');
-  }
-
-  if (latest.fid && latest.fid > 50) {
-    score -= 20;
-    recommendations.push('Optimize First Input Delay (FID)');
-  }
-
-  if (latest.cls && latest.cls > 0.1) {
-    score -= 15;
-    recommendations.push('Reduce Cumulative Layout Shift (CLS)');
-  }
-
-  // Avaliar uso de memória
-  if (latest.memoryUsage > 50 * 1024 * 1024) {
-    score -= 10;
-    recommendations.push('Optimize memory usage');
-  }
-
-  // Determinar grade
-  let grade: 'A' | 'B' | 'C' | 'D' | 'F';
-  if (score >= 90) grade = 'A';
-  else if (score >= 80) grade = 'B';
-  else if (score >= 70) grade = 'C';
-  else if (score >= 60) grade = 'D';
-  else grade = 'F';
-
-  return { score: Math.max(0, score), grade, recommendations };
-}
+export const trackCacheOperation = (
+  event: 'cache_hit' | 'cache_miss' | 'cache_invalidation',
+  cacheLayer: 'L1' | 'L2',
+  key: string
+) => {
+  performanceMonitor.recordEvent(event, { cacheLayer, key });
+};

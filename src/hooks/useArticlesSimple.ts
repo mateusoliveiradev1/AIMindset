@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { Article, Category } from '../lib/supabase';
 import { supabase } from '../lib/supabase';
+import { hybridCache, CacheKeys } from '../utils/hybridCache';
 
 export const useArticlesSimple = () => {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -8,11 +9,22 @@ export const useArticlesSimple = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchArticles = useCallback(async () => {
+  const fetchArticles = useCallback(async (forceRefresh: boolean = false) => {
     try {
       console.log('🔄 [Simple] Buscando artigos...');
       setLoading(true);
       setError(null);
+      
+      // Try cache first if not forcing refresh
+      if (!forceRefresh) {
+        const cached = await hybridCache.get<Article[]>(CacheKeys.ARTICLES_LIST);
+        if (cached.data) {
+          console.log(`🟢 [Simple] Using cached articles from ${cached.source}`);
+          setArticles(cached.data);
+          setLoading(false);
+          return;
+        }
+      }
       
       const { data, error } = await supabase
         .from('articles')
@@ -41,8 +53,13 @@ export const useArticlesSimple = () => {
         return;
       }
 
-      console.log('✅ [Simple] Artigos carregados:', data.length);
-      setArticles(data as Article[]);
+      const articlesData = data as Article[];
+      
+      // Cache the results
+      await hybridCache.set(CacheKeys.ARTICLES_LIST, articlesData);
+
+      console.log('✅ [Simple] Artigos carregados:', articlesData.length);
+      setArticles(articlesData);
     } catch (err) {
       console.error('❌ [Simple] Exceção:', err);
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
@@ -51,9 +68,19 @@ export const useArticlesSimple = () => {
     }
   }, []);
 
-  const fetchCategories = useCallback(async () => {
+  const fetchCategories = useCallback(async (forceRefresh: boolean = false) => {
     try {
       console.log('🔄 [Simple] Buscando categorias...');
+      
+      // Try cache first if not forcing refresh
+      if (!forceRefresh) {
+        const cached = await hybridCache.get<Category[]>(CacheKeys.CATEGORIES_LIST);
+        if (cached.data) {
+          console.log(`🟢 [Simple] Using cached categories from ${cached.source}`);
+          setCategories(cached.data);
+          return;
+        }
+      }
       
       const { data, error } = await supabase
         .from('categories')
@@ -68,8 +95,13 @@ export const useArticlesSimple = () => {
         return;
       }
 
-      console.log('✅ [Simple] Categorias carregadas:', data?.length || 0);
-      setCategories(data as Category[] || []);
+      const categoriesData = data as Category[] || [];
+      
+      // Cache the results
+      await hybridCache.set(CacheKeys.CATEGORIES_LIST, categoriesData);
+
+      console.log('✅ [Simple] Categorias carregadas:', categoriesData.length);
+      setCategories(categoriesData);
     } catch (err) {
       console.error('❌ [Simple] Exceção categorias:', err);
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
@@ -102,7 +134,7 @@ export const useArticlesSimple = () => {
     refresh: async () => {
       setLoading(true);
       try {
-        await Promise.all([fetchArticles(), fetchCategories()]);
+        await Promise.all([fetchArticles(true), fetchCategories(true)]);
       } finally {
         setLoading(false);
       }

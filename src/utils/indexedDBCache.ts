@@ -29,8 +29,8 @@ interface SearchOptions {
 class IndexedDBCache {
   private dbName: string;
   private dbVersion: number;
-  private db: IDBDatabase | null = null;
-  private storeName: string;
+  protected db: IDBDatabase | null = null;
+  protected storeName: string;
   private indexNames: string[];
 
   constructor(
@@ -81,16 +81,16 @@ class IndexedDBCache {
     });
   }
 
-  // Verificar se o banco está inicializado
-  private ensureInitialized(): void {
+  // Garantir que o banco está inicializado
+  protected async ensureInitialized(): Promise<void> {
     if (!this.db) {
-      throw new Error('IndexedDB not initialized. Call init() first.');
+      await this.init();
     }
   }
 
   // Armazenar item no cache
   async set<T>(key: string, data: T, options: CacheOptions = {}): Promise<void> {
-    this.ensureInitialized();
+    await this.ensureInitialized();
 
     const now = Date.now();
     const item: CacheItem<T> = {
@@ -118,7 +118,7 @@ class IndexedDBCache {
 
   // Recuperar item do cache
   async get<T>(key: string): Promise<T | null> {
-    this.ensureInitialized();
+    await this.ensureInitialized();
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.storeName], 'readonly');
@@ -149,7 +149,7 @@ class IndexedDBCache {
 
   // Armazenar múltiplos itens em lote
   async setMany<T>(items: Array<{ key: string; data: T; options?: CacheOptions }>): Promise<void> {
-    this.ensureInitialized();
+    await this.ensureInitialized();
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.storeName], 'readwrite');
@@ -192,7 +192,7 @@ class IndexedDBCache {
 
   // Recuperar múltiplos itens
   async getMany<T>(keys: string[]): Promise<Array<{ key: string; data: T | null }>> {
-    this.ensureInitialized();
+    await this.ensureInitialized();
 
     const results: Array<{ key: string; data: T | null }> = [];
 
@@ -210,7 +210,7 @@ class IndexedDBCache {
 
   // Buscar itens por critérios
   async search<T>(options: SearchOptions = {}): Promise<Array<CacheItem<T>>> {
-    this.ensureInitialized();
+    await this.ensureInitialized();
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.storeName], 'readonly');
@@ -263,6 +263,8 @@ class IndexedDBCache {
 
   // Buscar por tags
   async getByTags<T>(tags: string[], options: SearchOptions = {}): Promise<Array<CacheItem<T>>> {
+    await this.ensureInitialized();
+
     return this.search<T>({
       ...options,
       filters: { ...options.filters, tags }
@@ -271,7 +273,7 @@ class IndexedDBCache {
 
   // Deletar item
   async delete(key: string): Promise<void> {
-    this.ensureInitialized();
+    await this.ensureInitialized();
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.storeName], 'readwrite');
@@ -285,7 +287,7 @@ class IndexedDBCache {
 
   // Deletar múltiplos itens
   async deleteMany(keys: string[]): Promise<void> {
-    this.ensureInitialized();
+    await this.ensureInitialized();
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.storeName], 'readwrite');
@@ -313,7 +315,7 @@ class IndexedDBCache {
 
   // Limpar itens expirados
   async clearExpired(): Promise<number> {
-    this.ensureInitialized();
+    await this.ensureInitialized();
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.storeName], 'readwrite');
@@ -348,7 +350,7 @@ class IndexedDBCache {
     oldestItem: number;
     newestItem: number;
   }> {
-    this.ensureInitialized();
+    await this.ensureInitialized();
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.storeName], 'readonly');
@@ -376,7 +378,7 @@ class IndexedDBCache {
 
   // Limpar todo o cache
   async clear(): Promise<void> {
-    this.ensureInitialized();
+    await this.ensureInitialized();
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([this.storeName], 'readwrite');
@@ -493,6 +495,25 @@ export class ArticleCache extends IndexedDBCache {
     });
     return items.map(item => item.data);
   }
+
+  // Obter todas as chaves do cache
+  async getAllKeys(): Promise<string[]> {
+    await this.init();
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([this.storeName], 'readonly');
+      const store = transaction.objectStore(this.storeName);
+      const request = store.getAllKeys();
+      
+      request.onsuccess = () => {
+        resolve(request.result as string[]);
+      };
+      
+      request.onerror = () => reject(new Error(`Failed to get all keys: ${request.error}`));
+    });
+  }
+
+
 }
 
 export default IndexedDBCache;

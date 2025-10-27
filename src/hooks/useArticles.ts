@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { Article, Category } from '../lib/supabase';
-import { supabase, supabaseServiceClient } from '../lib/supabase';
-import { supabaseAdmin } from '../lib/supabase-admin';
+import { supabase } from '../lib/supabase';
+import { hybridCache, CacheKeys } from '../utils/hybridCache';
+import { AdminCacheUtils } from '../utils/cacheInvalidation';
 import { supabaseWithRetry } from '../utils/supabaseRetry';
 
 export type { Article, Category };
@@ -9,8 +10,8 @@ export type { Article, Category };
 // Debug logs para verificar conexão
 console.log('🔍 useArticles: Verificando clientes Supabase...', {
   supabase: !!supabase,
-  supabaseServiceClient: !!supabaseServiceClient,
-  supabaseAdmin: !!supabaseAdmin
+  supabaseServiceClient: !!supabase,
+  supabaseAdmin: false
 });
 
 // Função para gerar slug a partir do título
@@ -73,9 +74,12 @@ export interface UseArticlesReturn {
   categories: Category[];
   loading: boolean;
   error: string | null;
+  articlesCount: number;
+  categoriesCount: number;
   hasMore: boolean;
   loadMore: () => Promise<void>;
   refresh: () => Promise<void>;
+  adminUtils: typeof AdminCacheUtils;
   createArticle: (article: Omit<Article, 'id' | 'created_at' | 'updated_at'>) => Promise<boolean>;
   updateArticle: (id: string, article: Partial<Article>) => Promise<boolean>;
   updateArticlePublished: (id: string, published: boolean) => Promise<boolean>; // 🚨 FUNÇÃO DE EMERGÊNCIA
@@ -98,138 +102,87 @@ export const useArticles = (): UseArticlesReturn => {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
 
-  const fetchArticles = useCallback(async () => {
-    try {
-      console.log('🔄 [useArticles] Buscando artigos do Supabase...');
-      console.log('🌍 [useArticles] Environment check:', {
-        url: import.meta.env.VITE_SUPABASE_URL ? 'SET' : 'NOT SET',
-        key: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'SET' : 'NOT SET'
-      });
-      setLoading(true);
-      setError(null);
-      
-      // Função para buscar artigos com retry
-      const fetchWithRetry = async () => {
-        console.log('🔍 [DEBUG] Iniciando fetchWithRetry...');
+    // Cache-aware fetch articles
+    const fetchArticles = useCallback(async (forceRefresh: boolean = false) => {
+      try {
+        setLoading(true);
+        setError(null);
         
-        // Tentar primeiro com cliente normal
-        const normalResult = await supabaseWithRetry(
-          async () => {
-            console.log('🔍 [DEBUG] Executando query com cliente normal...');
-            
-            // Primeiro buscar os artigos
-            const articlesResult = await supabase
-              .from('articles')
-              .select(`
-                *,
-                category:categories (
-                  id,
-                  name,
-                  slug,
-                  description
-                )
-              `)
-              .order('created_at', { ascending: false });
-            
-            if (articlesResult.error || !articlesResult.data) {
-              return articlesResult;
-            }
+        // Try cache first if not forcing refresh
+        if (!forceRefresh) {
+          const cached = await hybridCache.get<Article[]>(CacheKeys.ARTICLES_LIST);
+          if (cached.data) {
+            console.log(`🟢 [useArticles] Using cached articles from ${cached.source}`);
+            setArticles(cached.data);
+            setLoading(false);
+            return;
+          }
+        }
 
-            // Buscar métricas para cada artigo usando a função get_article_metrics
+        console.log('🔄 [useArticles] Buscando artigos do Supabase...');
+        console.log('🔍 [DEBUG] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
+        console.log('🔍 [DEBUG] Supabase Key exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+
+        // Função para buscar artigos com retry
+        const fetchWithRetry = async () => {
+          // Tentar primeiro com cliente normal
+          const normalResult = await supabaseWithRetry(
+            async () => {
+              const articlesResult = await supabase
+                .from('articles')
+                .select(`
+                  *,
+                  category:categories (
+                    id,
+                    name,
+                    slug,
+                    description
+                  )
+                `)
+                .order('created_at', { ascending: false });
+              
+              if (articlesResult.error || !articlesResult.data) {
+                return articlesResult;
+              }
+
+              // Buscar métricas para cada artigo usando a função get_article_metrics
             const articlesWithMetrics = await Promise.all(
               articlesResult.data.map(async (article) => {
                 try {
-                  console.log(`🎯 [DEBUG CRÍTICO] Chamando get_article_metrics para "${article.title}" (ID: ${article.id})`);
-                  
-                  const { data: metrics, error: metricsError } = await supabase
-                    .rpc('get_article_metrics', { target_article_id: article.id });
-                  
-                  console.log(`🔍 [DEBUG CRÍTICO] Resultado RPC para "${article.title}":`, {
-                    id: article.id,
-                    metrics_raw: metrics,
-                    metrics_length: metrics?.length || 0,
-                    error: metricsError,
-                    error_message: metricsError?.message,
-                    error_details: metricsError?.details
-                  });
-                  
-                  if (metricsError) {
-                    console.error(`❌ [DEBUG CRÍTICO] ERRO na RPC para "${article.title}":`, metricsError);
-                    throw metricsError;
-                  }
+                  const { data: metrics } = await supabase
+                    .rpc('get_article_metrics', { article_id_param: article.id });
                   
                   if (metrics && metrics.length > 0) {
                     const metric = metrics[0];
-                    const processedArticle = {
+                    return {
                       ...article,
-                      positive_feedback: Number(metric.positive_feedback) || 0,
-                      negative_feedback: Number(metric.negative_feedback) || 0,
-                      total_comments: Number(metric.total_comments) || 0,
-                      approval_rate: Number(metric.approval_rate) || 0
+                      positive_feedback: metric.positive_feedback || 0,
+                      negative_feedback: metric.negative_feedback || 0,
+                      total_comments: metric.total_comments || 0,
+                      approval_rate: metric.approval_rate || 0
                     };
-                    
-                    console.log(`✅ [DEBUG CRÍTICO] Artigo COM métricas "${article.title}":`, {
-                      positive_feedback: processedArticle.positive_feedback,
-                      negative_feedback: processedArticle.negative_feedback,
-                      total_comments: processedArticle.total_comments,
-                      approval_rate: processedArticle.approval_rate,
-                      calculated_rate: processedArticle.positive_feedback + processedArticle.negative_feedback > 0 ? 
-                        (processedArticle.positive_feedback / (processedArticle.positive_feedback + processedArticle.negative_feedback)) * 100 : 0,
-                      raw_metric: metric
-                    });
-                    
-                    return processedArticle;
                   }
                   
                   // Se não há métricas, usar valores padrão
-                  const defaultArticle = {
+                  return {
                     ...article,
                     positive_feedback: 0,
                     negative_feedback: 0,
                     total_comments: 0,
                     approval_rate: 0
                   };
-                  
-                  console.log(`⚠️ [DEBUG CRÍTICO] Artigo SEM métricas "${article.title}":`, {
-                    positive_feedback: 0,
-                    negative_feedback: 0,
-                    total_comments: 0,
-                    approval_rate: 0,
-                    reason: 'metrics array empty or null'
-                  });
-                  
-                  return defaultArticle;
                 } catch (error) {
                   console.error(`❌ [DEBUG CRÍTICO] ERRO ao buscar métricas para "${article.title}":`, error);
                   // Em caso de erro, usar valores padrão
-                  const errorArticle = {
+                  return {
                     ...article,
                     positive_feedback: 0,
                     negative_feedback: 0,
                     total_comments: 0,
                     approval_rate: 0
                   };
-                  
-                  console.log(`❌ [DEBUG CRÍTICO] Artigo com ERRO "${article.title}":`, {
-                    error: error.message,
-                    fallback_values: { positive_feedback: 0, negative_feedback: 0, approval_rate: 0 }
-                  });
-                  
-                  return errorArticle;
                 }
               })
-            );
-
-            console.log('🔍 [DEBUG CRÍTICO] RESUMO FINAL - Todos os artigos processados:', 
-              articlesWithMetrics.map(a => ({
-                title: a.title,
-                id: a.id,
-                approval_rate: a.approval_rate,
-                positive_feedback: a.positive_feedback,
-                negative_feedback: a.negative_feedback,
-                total_comments: a.total_comments,
-                created_at: a.created_at
-              }))
             );
 
             return {
@@ -255,78 +208,10 @@ export const useArticles = (): UseArticlesReturn => {
           console.log('🔄 [useArticles] Tentando com cliente admin...');
         }
 
-        const adminResult = await supabaseWithRetry(
-          async () => {
-            // Primeiro buscar os artigos com admin client
-            const articlesResult = await supabaseAdmin
-              .from('articles')
-              .select(`
-                *,
-                category:categories (
-                  id,
-                  name,
-                  slug,
-                  description
-                )
-              `)
-              .order('created_at', { ascending: false });
-            
-            if (articlesResult.error || !articlesResult.data) {
-              return articlesResult;
-            }
+        // Se falhou com cliente normal, lançar erro
+        throw new Error(normalResult.error?.message || 'Falha ao buscar artigos');
 
-            // Buscar métricas para cada artigo usando a função get_article_metrics
-            const articlesWithMetrics = await Promise.all(
-              articlesResult.data.map(async (article) => {
-                try {
-                  const { data: metrics } = await supabaseAdmin
-                    .rpc('get_article_metrics', { article_id_param: article.id });
-                  
-                  if (metrics && metrics.length > 0) {
-                    const metric = metrics[0];
-                    return {
-                      ...article,
-                      positive_feedback: metric.positive_feedback || 0,
-                      negative_feedback: metric.negative_feedback || 0,
-                      total_comments: metric.total_comments || 0,
-                      approval_rate: metric.approval_rate || 0
-                    };
-                  }
-                  
-                  // Se não há métricas, usar valores padrão
-                  return {
-                    ...article,
-                    positive_feedback: 0,
-                    negative_feedback: 0,
-                    total_comments: 0,
-                    approval_rate: 0
-                  };
-                } catch (error) {
-                  console.warn('⚠️ Erro ao buscar métricas para artigo (admin):', article.id, error);
-                  return {
-                    ...article,
-                    positive_feedback: 0,
-                    negative_feedback: 0,
-                    total_comments: 0,
-                    approval_rate: 0
-                  };
-                }
-              })
-            );
-
-            return {
-              ...articlesResult,
-              data: articlesWithMetrics
-            };
-          },
-          'Fetch Articles (Admin Client)'
-        );
-
-        console.log('🔍 [DEBUG] adminResult completo:', adminResult);
-        console.log('🔍 [DEBUG] adminResult.success:', adminResult.success);
-        console.log('🔍 [DEBUG] adminResult.data:', adminResult.data);
-
-        return adminResult;
+        // Este código não será executado devido ao throw acima
       };
 
       const result = await fetchWithRetry();
@@ -344,8 +229,13 @@ export const useArticles = (): UseArticlesReturn => {
         return;
       }
 
-      console.log('✅ [useArticles] Artigos carregados com sucesso:', (result.data as Article[]).length);
-      setArticles(result.data as Article[] || []);
+      const articlesData = result.data as Article[];
+      
+      // Cache the results
+      await hybridCache.set(CacheKeys.ARTICLES_LIST, articlesData);
+
+      console.log('✅ [useArticles] Artigos carregados com sucesso:', articlesData.length);
+      setArticles(articlesData);
     } catch (err) {
       console.error('❌ Error fetching articles:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch articles');
@@ -354,8 +244,18 @@ export const useArticles = (): UseArticlesReturn => {
     }
   }, []);
 
-  const fetchCategories = useCallback(async () => {
+  const fetchCategories = useCallback(async (forceRefresh: boolean = false) => {
     try {
+      // Try cache first if not forcing refresh
+      if (!forceRefresh) {
+        const cached = await hybridCache.get<Category[]>(CacheKeys.CATEGORIES_LIST);
+        if (cached.data) {
+          console.log(`🟢 [useArticles] Using cached categories from ${cached.source}`);
+          setCategories(cached.data);
+          return;
+        }
+      }
+
       console.log('🔄 [useArticles] Buscando categorias do Supabase...');
       console.log('🔍 [DEBUG] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
       console.log('🔍 [DEBUG] Supabase Key exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
@@ -379,42 +279,31 @@ export const useArticles = (): UseArticlesReturn => {
           return { data: normalResult.data, error: null };
         }
 
-        // Se falhou com cliente normal, tentar com admin
-        console.warn('⚠️ [useArticles] Tentando categorias com supabaseAdmin...');
-        const adminResult = await supabaseWithRetry(
-          () => supabaseAdmin
-            .from('categories')
-            .select('*')
-            .order('name', { ascending: true }),
-          'Fetch Categories (Admin Client)'
-        );
-
-        console.log('🔍 [DEBUG] Categories response (admin):', adminResult);
-
-        return { 
-          data: adminResult.data, 
-          error: adminResult.error || normalResult.error 
-        };
+        // Se falhou com cliente normal, lançar erro
+        throw new Error(normalResult.error?.message || 'Falha ao buscar categorias');
       };
 
-      const { data, error: fetchError } = await fetchWithRetry();
+      const { data, error: fetchError } = await fetchWithRetry().catch(err => ({ data: null, error: err }));
 
       if (fetchError) {
-        console.error('❌ Error fetching categories:', fetchError);
+        console.error('❌ [useArticles] Erro ao buscar categorias:', fetchError);
         setError(fetchError.message || 'Erro ao carregar categorias');
         return;
       }
 
-      if (!data || (data as Category[]).length === 0) {
+      if (!data || (Array.isArray(data) && data.length === 0)) {
         console.warn('⚠️ [useArticles] Nenhuma categoria encontrada no banco');
-        console.log('🔍 [DEBUG] Data received:', data);
         setCategories([]);
         return;
       }
 
-      console.log('✅ [useArticles] Categorias carregadas com sucesso:', (data as Category[])?.length || 0);
-      console.log('📋 [useArticles] Categorias:', (data as Category[])?.map(cat => ({ id: cat.id, name: cat.name, slug: cat.slug })));
-      setCategories((data as Category[]) || []);
+      const categoriesData = data as Category[];
+      
+      // Cache the results
+      await hybridCache.set(CacheKeys.CATEGORIES_LIST, categoriesData);
+
+      console.log('✅ [useArticles] Categorias carregadas com sucesso:', categoriesData.length);
+      setCategories(categoriesData);
     } catch (err) {
       console.error('❌ Error fetching categories:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch categories');
@@ -423,9 +312,13 @@ export const useArticles = (): UseArticlesReturn => {
 
   // Only fetch data when explicitly called, not on mount
   const refreshArticles = useCallback(async (): Promise<void> => {
+    console.log('🔄 [refreshArticles] Iniciando refresh com busca fresca...');
     setLoading(true);
     try {
-      await Promise.all([fetchArticles(), fetchCategories()]);
+      // 🔥 CORREÇÃO CRÍTICA: FORÇAR BUSCA FRESCA (forceRefresh = true)
+      // Isso garante que não use cache após operações CRUD
+      await Promise.all([fetchArticles(true), fetchCategories(true)]);
+      console.log('✅ [refreshArticles] Refresh concluído com dados frescos do Supabase');
     } finally {
       setLoading(false);
     }
@@ -517,7 +410,7 @@ export const useArticles = (): UseArticlesReturn => {
       const { published, ...articleDataWithoutPublished } = articleWithSlug;
       
       // PRIMEIRA INSERÇÃO - Todos os campos EXCETO published
-      const { data, error: insertError } = await supabaseServiceClient
+      const { data, error: insertError } = await supabase
         .from('articles')
         .insert([articleDataWithoutPublished])
         .select()
@@ -532,7 +425,7 @@ export const useArticles = (): UseArticlesReturn => {
       if (published !== undefined && data?.id) {
         console.log('🔧 Atualizando campo published no artigo criado:', published);
         
-        const { error: publishedError } = await supabaseServiceClient
+        const { error: publishedError } = await supabase
           .from('articles')
           .update({ published: Boolean(published) })
           .eq('id', data.id);
@@ -578,8 +471,13 @@ export const useArticles = (): UseArticlesReturn => {
       // console.log('- Slug final:', data?.slug);
       // console.log('- Dados retornados:', data);
       
+      // 🔥 CORREÇÃO CRÍTICA: INVALIDAR CACHE APÓS CRIAR ARTIGO
+      console.log('🗑️ INVALIDANDO CACHE após createArticle...');
+      await hybridCache.invalidateAfterCRUD('create', 'article', data?.id);
+      console.log('✅ Cache invalidado com sucesso!');
+      
       // console.log('🔄 ATUALIZANDO LISTA DE ARTIGOS...');
-      await fetchArticles();
+      await fetchArticles(true); // Force refresh
       // console.log('✅ LISTA DE ARTIGOS ATUALIZADA!');
       
       // console.log('🎉🎉🎉 PROCESSO CONCLUÍDO COM SUCESSO TOTAL!');
@@ -686,8 +584,13 @@ export const useArticles = (): UseArticlesReturn => {
       console.log('✅ SUCESSO! Artigos atualizados:', data.length);
       console.log('✅ Dados atualizados:', data[0]);
 
+      // 🔥 CORREÇÃO CRÍTICA: INVALIDAR CACHE APÓS ATUALIZAR ARTIGO
+      console.log('🗑️ INVALIDANDO CACHE após updateArticle...');
+      await hybridCache.invalidateAfterCRUD('update', 'article', id);
+      console.log('✅ Cache invalidado com sucesso!');
+      
       console.log('🔄 Atualizando lista de artigos...');
-      await fetchArticles();
+      await fetchArticles(true); // Force refresh
       console.log('✅ PROCESSO COMPLETO - Artigo atualizado com sucesso!');
       return true;
       
@@ -717,7 +620,7 @@ export const useArticles = (): UseArticlesReturn => {
       });
       
       // Usar RPC que aceita BOOLEAN direto
-      const { data, error } = await supabaseServiceClient
+      const { data, error } = await supabase
         .rpc('emergency_update_published', {
           article_id: id,
           published_value: published  // BOOLEAN direto
@@ -738,6 +641,12 @@ export const useArticles = (): UseArticlesReturn => {
       }
 
       console.log('✅ Published atualizado com sucesso via RPC:', data);
+      
+      // 🔥 CORREÇÃO CRÍTICA: INVALIDAR CACHE IMEDIATAMENTE APÓS OPERAÇÃO CRUD
+      console.log('🗑️ INVALIDANDO CACHE após updateArticlePublished...');
+      await hybridCache.invalidateAfterCRUD('update', 'article', id);
+      console.log('✅ Cache invalidado com sucesso!');
+      
       return true;
     } catch (error) {
       console.error('❌ Erro geral em updateArticlePublished:', error);
@@ -759,7 +668,12 @@ export const useArticles = (): UseArticlesReturn => {
         throw deleteError;
       }
 
-      await fetchArticles();
+      // 🔥 CORREÇÃO CRÍTICA: INVALIDAR CACHE APÓS DELETAR ARTIGO
+      console.log('🗑️ INVALIDANDO CACHE após deleteArticle...');
+      await hybridCache.invalidateAfterCRUD('delete', 'article', id);
+      console.log('✅ Cache invalidado com sucesso!');
+
+      await fetchArticles(true); // Force refresh
       return true;
     } catch (err) {
       console.error('Error deleting article:', err);
@@ -850,15 +764,21 @@ export const useArticles = (): UseArticlesReturn => {
     try {
       setError(null);
       
-      const { error: insertError } = await supabase
+      const { data, error: insertError } = await supabase
         .from('categories')
-        .insert([categoryData]);
+        .insert([categoryData])
+        .select();
 
       if (insertError) {
         throw insertError;
       }
 
-      await fetchCategories();
+      // 🔥 CORREÇÃO CRÍTICA: INVALIDAR CACHE APÓS CRIAR CATEGORIA
+      console.log('🗑️ INVALIDANDO CACHE após createCategory...');
+      await hybridCache.invalidateAfterCRUD('create', 'category', data?.[0]?.id);
+      console.log('✅ Cache invalidado com sucesso!');
+
+      await fetchCategories(true); // Force refresh
       return true;
     } catch (err) {
       console.error('Error creating category:', err);
@@ -880,7 +800,12 @@ export const useArticles = (): UseArticlesReturn => {
         throw updateError;
       }
 
-      await fetchCategories();
+      // 🔥 CORREÇÃO CRÍTICA: INVALIDAR CACHE APÓS ATUALIZAR CATEGORIA
+      console.log('🗑️ INVALIDANDO CACHE após updateCategory...');
+      await hybridCache.invalidateAfterCRUD('update', 'category', id);
+      console.log('✅ Cache invalidado com sucesso!');
+
+      await fetchCategories(true); // Force refresh
       return true;
     } catch (err) {
       console.error('Error updating category:', err);
@@ -902,7 +827,12 @@ export const useArticles = (): UseArticlesReturn => {
         throw deleteError;
       }
 
-      await fetchCategories();
+      // 🔥 CORREÇÃO CRÍTICA: INVALIDAR CACHE APÓS DELETAR CATEGORIA
+      console.log('🗑️ INVALIDANDO CACHE após deleteCategory...');
+      await hybridCache.invalidateAfterCRUD('delete', 'category', id);
+      console.log('✅ Cache invalidado com sucesso!');
+
+      await fetchCategories(true); // Force refresh
       return true;
     } catch (err) {
       console.error('Error deleting category:', err);
@@ -937,19 +867,27 @@ export const useArticles = (): UseArticlesReturn => {
     await refreshArticles();
   }, [refreshArticles]);
 
-  // Initialize data on mount
-  useEffect(() => {
-    refreshArticles();
-  }, [refreshArticles]);
+  // Initialize data on mount - removed duplicate useEffect
 
   return {
     articles,
     categories,
     loading,
     error,
+    articlesCount: articles.length,
+    categoriesCount: categories.length,
+    refresh: async () => {
+      setLoading(true);
+      try {
+        await Promise.all([fetchArticles(true), fetchCategories(true)]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    // Admin utilities for cache invalidation
+    adminUtils: AdminCacheUtils,
     hasMore,
     loadMore,
-    refresh,
     createArticle,
     updateArticle,
     updateArticlePublished, // 🚨 FUNÇÃO DE EMERGÊNCIA PARA PUBLISHED
