@@ -30,7 +30,7 @@ const Categories = lazy(() => import('./pages/Categories'));
 const Article = lazy(() => import('./pages/Article'));
 const Newsletter = lazy(() => import('./pages/Newsletter'));
 const Privacy = lazy(() => import('./pages/Privacy'));
-const Admin = lazy(() => import('./pages/Admin').then(module => ({ default: module.Admin })));
+const Admin = lazy(() => import('./pages/Admin'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
 
 // Loading component otimizado
