@@ -78,107 +78,79 @@ function AppContent() {
 
   return (
     <>
-      <WebVitalsOptimizer 
-        enableReporting={true}
-        enableOptimizations={true}
-      />
-      <ResourceOptimizer>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-          {/* Public routes with Layout - usando componentes lazy otimizados */}
-          <Route path="/" element={<Layout><LazyComponents.Home /></Layout>} />
-          <Route path="/categoria" element={<Layout><Categories /></Layout>} />
-          <Route path="/categoria/:slug" element={<Layout><Category /></Layout>} />
-          <Route path="/artigo/:slug" element={<Layout><Article /></Layout>} />
-          <Route path="/artigos" element={<Layout><LazyComponents.AllArticles /></Layout>} />
-          <Route path="/contato" element={<Layout><LazyComponents.Contact /></Layout>} />
-          <Route path="/newsletter" element={<Layout><Newsletter /></Layout>} />
-          <Route path="/sobre" element={<Layout><LazyComponents.About /></Layout>} />
-          <Route path="/politica-privacidade" element={<Layout><Privacy /></Layout>} />
-          
-          {/* Admin routes without Layout */}
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-          
-          {/* Performance Test routes - usando componentes lazy otimizados */}
-          <Route path="/performance-test" element={<Layout><LazyComponents.PerformanceTest /></Layout>} />
-          <Route path="/scalability-test" element={<Layout><LazyComponents.ScalabilityTest /></Layout>} />
-        </Routes>
-      </Suspense>
-      
-      {/* Botão Voltar ao Topo - Global */}
-      <ScrollToTop />
-      </ResourceOptimizer>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+        {/* Public routes with Layout - usando componentes lazy otimizados */}
+        <Route path="/" element={<Layout><LazyComponents.Home /></Layout>} />
+        <Route path="/categoria" element={<Layout><Categories /></Layout>} />
+        <Route path="/categoria/:slug" element={<Layout><Category /></Layout>} />
+        <Route path="/artigo/:slug" element={<Layout><Article /></Layout>} />
+        <Route path="/artigos" element={<Layout><LazyComponents.AllArticles /></Layout>} />
+        <Route path="/contato" element={<Layout><LazyComponents.Contact /></Layout>} />
+        <Route path="/newsletter" element={<Layout><Newsletter /></Layout>} />
+        <Route path="/sobre" element={<Layout><LazyComponents.About /></Layout>} />
+        <Route path="/politica-privacidade" element={<Layout><Privacy /></Layout>} />
+        
+        {/* Admin routes without Layout */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+        
+        {/* Performance Test routes - usando componentes lazy otimizados */}
+        <Route path="/performance-test" element={<Layout><LazyComponents.PerformanceTest /></Layout>} />
+        <Route path="/scalability-test" element={<Layout><LazyComponents.ScalabilityTest /></Layout>} />
+      </Routes>
+    </Suspense>
+    
+    {/* Botão Voltar ao Topo - Global */}
+    <ScrollToTop />
     </>
   );
 }
 
 function App() {
   return (
-    <ErrorBoundary
-      fallback={
-        <div className="min-h-screen bg-dark-surface flex items-center justify-center p-4">
-          <Card className="max-w-md w-full text-center">
-            <div className="text-4xl mb-4">🚨</div>
-            <h2 className="text-xl font-bold text-white mb-4">Erro na Aplicação</h2>
-            <p className="text-futuristic-gray mb-6">
-              Algo deu errado. Tente recarregar a página.
-            </p>
-            <div className="flex gap-4 justify-center">
-              <Button onClick={() => window.location.reload()} className="bg-gradient-to-r from-lime-green to-neon-purple">
-                🔄 Recarregar
-              </Button>
-            </div>
-          </Card>
-        </div>
-      }
-    >
-      <CriticalCSS>
-        <HelmetProvider>
-          <ProgressiveEnhancementProvider>
-            <AuthProvider>
-              <ToastProvider>
-                <PerformanceManager
-                  criticalResources={[]}
-                  prefetchResources={[
-                    '/artigos',
-                    '/categorias',
-                    '/sobre',
-                    '/contato'
-                  ]}
-                  enableImageOptimization={true}
-                  enableLazyLoading={true}
-                  cacheStrategy="moderate"
-                >
-                  <AccessibilityManager
-                    enableAutoAria={true}
-                    enableKeyboardNavigation={true}
-                    enableScreenReaderOptimizations={true}
-                    enableFocusManagement={true}
-                    announcePageChanges={true}
-                  >
-                    <Router>
-                      <AppContent />
-                    </Router>
-                  </AccessibilityManager>
-                </PerformanceManager>
-              </ToastProvider>
-              <Toaster 
-                theme="dark"
-                position="bottom-right"
-                toastOptions={{
-                  style: {
-                    background: '#1A1A1A',
-                    color: '#B0B0B0',
-                    border: '1px solid rgba(106, 13, 173, 0.3)',
-                  },
-                }}
-              />
-            </AuthProvider>
-          </ProgressiveEnhancementProvider>
-        </HelmetProvider>
-      </CriticalCSS>
-    </ErrorBoundary>
+    <div className="min-h-screen bg-dark-surface">
+      <HelmetProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <PerformanceManager
+              criticalResources={[]}
+              prefetchResources={[
+                '/artigos',
+                '/categorias',
+                '/sobre',
+                '/contato'
+              ]}
+              enableImageOptimization={true}
+              enableLazyLoading={true}
+              cacheStrategy="moderate"
+            >
+              <AccessibilityManager
+                enableAutoAria={true}
+                enableKeyboardNavigation={true}
+                enableScreenReaderSupport={true}
+                enableHighContrast={false}
+                enableFocusManagement={true}
+              >
+                <Router>
+                  <AppContent />
+                  <Toaster 
+                    position="top-right"
+                    toastOptions={{
+                      style: {
+                        background: '#1a1a1a',
+                        color: '#ffffff',
+                        border: '1px solid #333333'
+                      }
+                    }}
+                  />
+                </Router>
+              </AccessibilityManager>
+            </PerformanceManager>
+          </ToastProvider>
+        </AuthProvider>
+      </HelmetProvider>
+    </div>
   );
 }
 
