@@ -114,15 +114,11 @@ export class ForceCacheCleanup {
       for (const key of cacheKeys) {
         const cached = await hybridCache.get(key);
         if (cached.hit && cached.data) {
-          // Se os dados foram buscados há mais de 1 hora, considerar desatualizados
-          const cacheAge = Date.now() - (cached.timestamp || 0);
-          const oneHour = 60 * 60 * 1000;
-          
-          if (cacheAge > oneHour) {
-            result.hasStaleData = true;
-            result.issues.push(`Cache ${key} muito antigo (${Math.round(cacheAge / oneHour)}h)`);
-            result.recommendations.push(`Invalidar cache ${key}`);
-          }
+          // Nota: hybridCache.get() não retorna timestamp diretamente
+          // Consideramos que dados em cache podem estar desatualizados se existem
+          result.hasStaleData = true;
+          result.issues.push(`Cache ${key} pode estar desatualizado`);
+          result.recommendations.push(`Invalidar cache ${key}`);
         }
       }
       
