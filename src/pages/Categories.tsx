@@ -79,35 +79,35 @@ const Categories: React.FC = () => {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           {categories.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" role="list" aria-label="Lista de categorias">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8" role="list" aria-label="Lista de categorias">
               {categories.map((category) => {
                 const IconComponent = categoryIcons[category.slug as keyof typeof categoryIcons] || Brain;
                 const articleCount = getArticleCount(category.id);
                 
                 return (
-                  <Card key={category.id} className="glass-effect hover-lift group">
-                    <div className="p-8">
+                  <Card key={category.id} className="glass-effect hover-lift group h-full">
+                    <div className="p-4 sm:p-6 lg:p-8 h-full flex flex-col">
                       {/* Ícone da categoria */}
-                      <div className="flex items-center justify-center w-16 h-16 bg-neon-gradient rounded-full mb-6 mx-auto group-hover:scale-110 transition-transform duration-300">
-                        <IconComponent className="w-8 h-8 text-white" aria-hidden="true" />
+                      <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-neon-gradient rounded-full mb-4 sm:mb-6 mx-auto group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
+                        <IconComponent className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-white" aria-hidden="true" />
                       </div>
 
                       {/* Nome da categoria */}
-                      <h2 className="text-2xl font-orbitron font-bold text-white text-center mb-4 group-hover:text-lime-green transition-colors duration-300">
+                      <h2 className="text-lg sm:text-xl lg:text-2xl font-orbitron font-bold text-white text-center mb-3 sm:mb-4 group-hover:text-lime-green transition-colors duration-300 line-clamp-2">
                         {category.name}
                       </h2>
 
                       {/* Descrição */}
-                      <p className="text-futuristic-gray text-center mb-6 leading-relaxed">
+                      <p className="text-sm sm:text-base text-futuristic-gray text-center mb-4 sm:mb-6 leading-relaxed flex-grow line-clamp-3 sm:line-clamp-4">
                         {category.description || 'Explore artigos desta categoria'}
                       </p>
 
                       {/* Estatísticas */}
-                      <div className="flex items-center justify-center space-x-4 mb-6" aria-label={`${articleCount} ${articleCount === 1 ? 'artigo' : 'artigos'} nesta categoria`}>
+                      <div className="flex items-center justify-center space-x-4 mb-4 sm:mb-6 flex-shrink-0" aria-label={`${articleCount} ${articleCount === 1 ? 'artigo' : 'artigos'} nesta categoria`}>
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-lime-green">
+                          <div className="text-xl sm:text-2xl font-bold text-lime-green">
                             {articleCount}
                           </div>
                           <div className="text-xs text-futuristic-gray">
@@ -117,15 +117,16 @@ const Categories: React.FC = () => {
                       </div>
 
                       {/* Botão para ver categoria */}
-                      <div className="text-center">
+                      <div className="text-center flex-shrink-0">
                         <Link to={`/categoria/${category.slug}`}>
                           <Button 
-                            className="w-full bg-transparent border border-neon-purple/30 text-white hover:bg-neon-gradient hover:border-transparent transition-all duration-300 group-hover:neon-glow"
+                            className="w-full bg-transparent border border-neon-purple/30 text-white hover:bg-neon-gradient hover:border-transparent transition-all duration-300 group-hover:neon-glow text-sm sm:text-base py-2 sm:py-3"
                             aria-label={`Explorar categoria ${category.name}`}
                           >
                             <span className="flex items-center justify-center">
-                              Explorar categoria
-                              <ArrowRight className="w-4 h-4 ml-2 transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true" />
+                              <span className="hidden sm:inline">Explorar categoria</span>
+                              <span className="sm:hidden">Explorar</span>
+                              <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1 sm:ml-2 transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true" />
                             </span>
                           </Button>
                         </Link>
