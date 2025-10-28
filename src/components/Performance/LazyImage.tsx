@@ -12,6 +12,9 @@ interface LazyImageProps {
   onError?: () => void;
 }
 
+// Cache para detecção de suporte WebP
+let webpSupport: boolean | null = null;
+
 const LazyImage: React.FC<LazyImageProps> = ({
   src,
   alt,
@@ -26,7 +29,37 @@ const LazyImage: React.FC<LazyImageProps> = ({
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [isInView, setIsInView] = useState(false);
+  const [supportsWebP, setSupportsWebP] = useState<boolean>(false);
   const imgRef = useRef<HTMLImageElement>(null);
+
+  // Detectar suporte WebP
+  useEffect(() => {
+    const detectWebPSupport = async () => {
+      if (webpSupport !== null) {
+        setSupportsWebP(webpSupport);
+        return;
+      }
+
+      try {
+        const webpData = 'data:image/webp;base64,UklGRjoAAABXRUJQVlA4IC4AAACyAgCdASoCAAIALmk0mk0iIiIiIgBoSygABc6WWgAA/veff/0PP8bA//LwYAAA';
+        const img = new Image();
+        
+        const promise = new Promise<boolean>((resolve) => {
+          img.onload = () => resolve(img.width === 2 && img.height === 2);
+          img.onerror = () => resolve(false);
+        });
+        
+        img.src = webpData;
+        webpSupport = await promise;
+        setSupportsWebP(webpSupport);
+      } catch {
+        webpSupport = false;
+        setSupportsWebP(false);
+      }
+    };
+
+    detectWebPSupport();
+  }, []);
 
   // Intersection Observer para lazy loading
   useEffect(() => {
@@ -59,6 +92,19 @@ const LazyImage: React.FC<LazyImageProps> = ({
     onError?.();
   };
 
+  // Converter extensão para WebP se suportado
+  const getWebPSrc = (originalSrc: string) => {
+    if (!supportsWebP) return originalSrc;
+    
+    // Para imagens locais, tentar versão WebP
+    if (!originalSrc.startsWith('http') && !originalSrc.startsWith('data:')) {
+      const webpSrc = originalSrc.replace(/\.(png|jpg|jpeg)$/i, '.webp');
+      return webpSrc;
+    }
+    
+    return originalSrc;
+  };
+
   // Gerar srcSet para diferentes densidades de tela e tamanhos responsivos
   const generateSrcSet = (originalSrc: string) => {
     if (originalSrc.includes('trae-api-us.mchost.guru')) {
@@ -83,20 +129,83 @@ const LazyImage: React.FC<LazyImageProps> = ({
   const getOptimizedSrc = (originalSrc: string) => {
     if (originalSrc.includes('trae-api-us.mchost.guru')) {
       // Adicionar formato WebP se suportado
-      const supportsWebP = () => {
-        const canvas = document.createElement('canvas');
-        return canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
-      };
-
-      if (supportsWebP()) {
+      if (supportsWebP) {
         return `${originalSrc}&format=webp`;
       }
     }
-    return originalSrc;
+    return getWebPSrc(originalSrc);
   };
 
   const optimizedSrc = getOptimizedSrc(src);
   const srcSet = generateSrcSet(optimizedSrc);
+
+  // Se suporta WebP e é uma imagem local, usar picture element
+  const shouldUsePicture = supportsWebP && !src.startsWith('http') && !src.startsWith('data:') && /\.(png|jpg|jpeg)$/i.test(src);
+
+  if (shouldUsePicture) {
+    const webpSrc = src.replace(/\.(png|jpg|jpeg)$/i, '.webp');
+    
+    return (
+      <div className={`relative overflow-hidden ${className}`}>
+        {/* Placeholder enquanto carrega */}
+        {!isLoaded && !hasError && (
+          <img
+            src={placeholder}
+            alt=""
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+              isLoaded ? 'opacity-0' : 'opacity-100'
+            }`}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Picture element com WebP e fallback */}
+        <picture>
+          <source 
+            srcSet={isInView ? webpSrc : undefined} 
+            type="image/webp" 
+          />
+          <img
+            ref={imgRef}
+            src={isInView ? src : placeholder}
+            alt={alt}
+            width={width}
+            height={height}
+            loading={loading}
+            className={`w-full h-full object-cover transition-opacity duration-300 ${
+              isLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+            onLoad={handleLoad}
+            onError={handleError}
+            decoding="async"
+            fetchPriority={loading === 'eager' ? 'high' : 'low'}
+          />
+        </picture>
+
+        {/* Fallback para erro */}
+        {hasError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-100 text-gray-500">
+            <div className="text-center">
+              <svg
+                className="mx-auto h-12 w-12 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+              <p className="mt-2 text-sm">Erro ao carregar imagem</p>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={`relative overflow-hidden ${className}`}>
