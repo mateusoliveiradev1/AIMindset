@@ -14,7 +14,9 @@ import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { InfiniteScrollLoader } from '../components/UI/InfiniteScrollLoader';
 import { VirtualizedArticleList } from '../components/Performance/VirtualizedArticleList';
 import { usePerformanceOptimization } from '../hooks/usePerformanceOptimization';
+import { hybridCache } from '../utils/hybridCache';
 import { SortBy } from '../types';
+import { useAutoFeedbackSync } from '../hooks/useAutoFeedbackSync';
 
 const AllArticles: React.FC = () => {
   // DEBUG: Log para verificar se o componente está sendo renderizado
@@ -190,6 +192,32 @@ const AllArticles: React.FC = () => {
     return Math.ceil(wordCount / wordsPerMinute);
   }, []);
 
+  // Sistema 100% automático de sincronização de feedbacks
+  const { forceSyncNow, isActive } = useAutoFeedbackSync();
+  
+  // Sistema automático: escutar mudanças de feedback
+  React.useEffect(() => {
+    const handleFeedbackChange = (event: CustomEvent) => {
+      console.log('🔄 [AllArticles] Feedback mudou automaticamente:', event.detail);
+      // Recarregar artigos automaticamente quando feedback muda
+      refresh();
+    };
+
+    const handleForceSync = () => {
+      console.log('🔄 [AllArticles] Sincronização forçada detectada');
+      refresh();
+    };
+
+    // Escutar eventos de mudança de feedback
+    window.addEventListener('feedbackChanged', handleFeedbackChange as EventListener);
+    window.addEventListener('forceFeedbackSync', handleForceSync);
+
+    return () => {
+      window.removeEventListener('feedbackChanged', handleFeedbackChange as EventListener);
+      window.removeEventListener('forceFeedbackSync', handleForceSync);
+    };
+  }, [refresh]);
+  
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-dark-bg via-dark-surface to-dark-bg flex items-center justify-center">
@@ -264,7 +292,23 @@ const AllArticles: React.FC = () => {
                     { id: 'rating', label: 'Melhor Avaliados', value: 'rating', icon: <TrendingUp className="w-4 h-4" /> }
                   ]}
                   selectedValue={sortBy}
-                  onSelect={(value) => setSortBy(value as SortBy)}
+                  onSelect={async (value) => {
+                    const newSortBy = value as SortBy;
+                    setSortBy(newSortBy);
+                    
+                    // Se mudou para rating, força refresh para buscar dados frescos
+                    if (newSortBy === 'rating') {
+                      console.log('🔄 [AllArticles] Mudou para rating - forçando refresh');
+                      await refresh();
+                      // Forçar invalidação do cache para garantir dados frescos
+                      await hybridCache.invalidatePattern('articles');
+                      await hybridCache.invalidatePattern('metrics');
+                      // Aguardar um pouco para garantir que os dados foram atualizados
+                      setTimeout(() => {
+                        console.log('🔄 [AllArticles] Refresh completo após mudança para rating');
+                      }, 500);
+                    }
+                  }}
                   placeholder="Ordenar"
                   icon={<SortAsc className="w-4 h-4" />}
                   className="min-w-[140px]"

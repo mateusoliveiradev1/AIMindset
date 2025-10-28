@@ -1,9 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import type { Article, Category } from '../lib/supabase';
 import { supabase } from '../lib/supabase';
 import { hybridCache, CacheKeys } from '../utils/hybridCache';
 import { AdminCacheUtils } from '../utils/cacheInvalidation';
 import { supabaseWithRetry } from '../utils/supabaseRetry';
+import { useAutoFeedbackSync } from './useAutoFeedbackSync';
 
 export type { Article, Category };
 
@@ -101,6 +102,9 @@ export const useArticles = (): UseArticlesReturn => {
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
+
+  // Sistema 100% automático de sincronização de feedbacks
+  const { forceSyncNow, isActive } = useAutoFeedbackSync();
 
     // Cache-aware fetch articles
     const fetchArticles = useCallback(async (forceRefresh: boolean = false) => {
@@ -883,6 +887,71 @@ export const useArticles = (): UseArticlesReturn => {
       } finally {
         setLoading(false);
       }
+    },
+    // Admin utilities for cache invalidation
+    adminUtils: AdminCacheUtils,
+    hasMore,
+    loadMore,
+    createArticle,
+    updateArticle,
+    updateArticlePublished, // 🚨 FUNÇÃO DE EMERGÊNCIA PARA PUBLISHED
+    deleteArticle,
+    createCategory,
+    updateCategory,
+    deleteCategory,
+    getArticleById,
+    getPublishedArticles,
+    getArticlesByCategory,
+    searchArticles,
+    refreshArticles
+  };
+
+  // Sistema automático: escutar mudanças de feedback para invalidar cache
+  React.useEffect(() => {
+    const handleFeedbackChange = (event: CustomEvent) => {
+      console.log('🔄 [useArticles] Feedback mudou automaticamente:', event.detail);
+      
+      // Invalidar cache automaticamente
+      hybridCache.invalidatePattern('articles');
+      hybridCache.invalidatePattern('metrics');
+      
+      // Recarregar dados automaticamente
+      fetchArticles(true); // Force refresh
+      fetchCategories(true); // Force refresh
+    };
+
+    const handleForceSync = () => {
+      console.log('🔄 [useArticles] Sincronização forçada detectada');
+      
+      // Invalidar todo o cache
+      hybridCache.invalidatePattern('articles');
+      hybridCache.invalidatePattern('metrics');
+      hybridCache.invalidatePattern('categories');
+      
+      // Recarregar tudo
+      fetchArticles(true);
+      fetchCategories(true);
+    };
+
+    // Escutar eventos de mudança de feedback
+    window.addEventListener('feedbackChanged', handleFeedbackChange as EventListener);
+    window.addEventListener('forceFeedbackSync', handleForceSync);
+
+    return () => {
+      window.removeEventListener('feedbackChanged', handleFeedbackChange as EventListener);
+      window.removeEventListener('forceFeedbackSync', handleForceSync);
+    };
+  }, [fetchArticles, fetchCategories]);
+
+  return {
+    articles,
+    categories,
+    loading,
+    error,
+    articlesCount: articles.length,
+    categoriesCount: categories.length,
+    refresh: async () => {
+      await Promise.all([fetchArticles(true), fetchCategories(true)]);
     },
     // Admin utilities for cache invalidation
     adminUtils: AdminCacheUtils,

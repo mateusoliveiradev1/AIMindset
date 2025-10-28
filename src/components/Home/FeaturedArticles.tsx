@@ -2,27 +2,122 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Clock, ArrowRight, Tag } from 'lucide-react';
 import { useArticles } from '../../hooks/useArticles';
+import { useAutoFeedbackSync } from '../../hooks/useAutoFeedbackSync';
+import { Article } from '../../types';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
 // import LazyImage from '../Performance/LazyImage';
 
 const FeaturedArticles: React.FC = () => {
   const { articles, loading, refreshArticles } = useArticles();
-  const featuredArticles = articles.filter(article => article.published).slice(0, 3);
+  
+  // Sistema 100% automático de sincronização de feedbacks
+  const { forceSyncNow, isActive } = useAutoFeedbackSync();
+  
+  // Função para ordenar artigos por rating/feedback (mesma lógica do usePerformanceOptimization)
+  const sortArticlesByRating = (articles: Article[]) => {
+    return [...articles].sort((a, b) => {
+      const getTotalFeedback = (article: Article): number => {
+        return (article.positive_feedback || 0) + (article.negative_feedback || 0);
+      };
 
-  // Debug logs
-  console.log('🔍 FeaturedArticles Debug:', {
+      const getRating = (article: Article): number => {
+        // Usar approval_rate se disponível
+        if (typeof article.approval_rate === 'number') {
+          return article.approval_rate;
+        }
+         
+        // Fallback para campos antigos se approval_rate não estiver disponível
+        const positive = article.positive_feedback || 0;
+        const negative = article.negative_feedback || 0;
+        const total = positive + negative;
+         
+        if (total === 0) {
+          return 0;
+        }
+         
+        return (positive / total) * 100;
+      };
+
+      const totalFeedbackA = getTotalFeedback(a);
+      const totalFeedbackB = getTotalFeedback(b);
+      const ratingA = getRating(a);
+      const ratingB = getRating(b);
+      
+      console.log(`🏆 [Featured] Comparando: "${a.title}" (${totalFeedbackA} feedback, ${ratingA.toFixed(1)}%) vs "${b.title}" (${totalFeedbackB} feedback, ${ratingB.toFixed(1)}%)`);
+      
+      // PRIORIDADE 1: Artigos com mais feedback primeiro
+      if (totalFeedbackA !== totalFeedbackB) {
+        return totalFeedbackB - totalFeedbackA;
+      }
+      
+      // PRIORIDADE 2: Se total de feedback igual, ordenar por approval rate
+      if (ratingA !== ratingB) {
+        return ratingB - ratingA;
+      }
+      
+      // PRIORIDADE 3: Se tudo igual, ordenar por data (mais recente primeiro)
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+  };
+  
+  // Selecionar os 3 MELHORES artigos publicados (não aleatórios)
+  const featuredArticles = sortArticlesByRating(
+    articles.filter(article => article.published)
+  ).slice(0, 3);
+
+  // Debug logs - VERSÃO NOVA COM ORDENAÇÃO
+  console.log('🔍 FeaturedArticles Debug - NOVA VERSÃO COM ORDENAÇÃO:', {
     articles: articles.length,
     loading,
     featuredArticles: featuredArticles.length,
-    allArticles: articles
+    featuredTitles: featuredArticles.map(a => a.title),
+    featuredRatings: featuredArticles.map(a => ({
+      title: a.title,
+      positive: a.positive_feedback || 0,
+      negative: a.negative_feedback || 0,
+      total: (a.positive_feedback || 0) + (a.negative_feedback || 0),
+      approval_rate: a.approval_rate || 0,
+      created_at: a.created_at
+    })),
+    allArticles: articles,
+    autoSyncActive: isActive
   });
 
   // Carregar artigos quando o componente montar
   React.useEffect(() => {
-    console.log('🚀 FeaturedArticles: Chamando refreshArticles...');
-    refreshArticles();
+    if (!loading && articles.length === 0) {
+      refreshArticles();
+    }
+  }, [loading, articles.length, refreshArticles]);
+
+  // Sistema automático: escutar mudanças de feedback
+  React.useEffect(() => {
+    const handleFeedbackChange = (event: CustomEvent) => {
+      console.log('🔄 [Featured] Feedback mudou automaticamente:', event.detail);
+      // Recarregar artigos automaticamente quando feedback muda
+      refreshArticles();
+    };
+
+    const handleForceSync = () => {
+      console.log('🔄 [Featured] Sincronização forçada detectada');
+      refreshArticles();
+    };
+
+    // Escutar eventos de mudança de feedback
+    window.addEventListener('feedbackChanged', handleFeedbackChange as EventListener);
+    window.addEventListener('forceFeedbackSync', handleForceSync);
+
+    return () => {
+      window.removeEventListener('feedbackChanged', handleFeedbackChange as EventListener);
+      window.removeEventListener('forceFeedbackSync', handleForceSync);
+    };
   }, [refreshArticles]);
+
+  // Forçar refresh para testar
+  React.useEffect(() => {
+    console.log('🔄 FeaturedArticles: Componente montado/atualizado - Sistema automático:', isActive);
+  }, [isActive]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {

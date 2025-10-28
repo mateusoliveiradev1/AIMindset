@@ -28,27 +28,27 @@ BEGIN
   SELECT 
     a.id as article_id,
     COALESCE(
-      (SELECT COUNT(*) FROM article_feedback af WHERE af.article_id = a.id AND af.feedback_type = 'positive'),
+      (SELECT COUNT(*) FROM feedback f WHERE f.article_id = a.id AND f.useful = true),
       0
     )::BIGINT as positive_feedback,
     COALESCE(
-      (SELECT COUNT(*) FROM article_feedback af WHERE af.article_id = a.id AND af.feedback_type = 'negative'),
+      (SELECT COUNT(*) FROM feedback f WHERE f.article_id = a.id AND f.useful = false),
       0
     )::BIGINT as negative_feedback,
     COALESCE(
-      (SELECT COUNT(*) FROM comments c WHERE c.article_id = a.id AND c.approved = true),
+      (SELECT COUNT(*) FROM comments c WHERE c.article_id = a.id),
       0
     )::BIGINT as total_comments,
     CASE 
       WHEN (
-        (SELECT COUNT(*) FROM article_feedback af WHERE af.article_id = a.id AND af.feedback_type = 'positive') +
-        (SELECT COUNT(*) FROM article_feedback af WHERE af.article_id = a.id AND af.feedback_type = 'negative')
+        (SELECT COUNT(*) FROM feedback f WHERE f.article_id = a.id AND f.useful = true) +
+        (SELECT COUNT(*) FROM feedback f WHERE f.article_id = a.id AND f.useful = false)
       ) > 0 THEN
         ROUND(
-          (SELECT COUNT(*) FROM article_feedback af WHERE af.article_id = a.id AND af.feedback_type = 'positive')::NUMERIC * 100.0 /
+          (SELECT COUNT(*) FROM feedback f WHERE f.article_id = a.id AND f.useful = true)::NUMERIC * 100.0 /
           (
-            (SELECT COUNT(*) FROM article_feedback af WHERE af.article_id = a.id AND af.feedback_type = 'positive') +
-            (SELECT COUNT(*) FROM article_feedback af WHERE af.article_id = a.id AND af.feedback_type = 'negative')
+            (SELECT COUNT(*) FROM feedback f WHERE f.article_id = a.id AND f.useful = true) +
+            (SELECT COUNT(*) FROM feedback f WHERE f.article_id = a.id AND f.useful = false)
           )::NUMERIC,
           2
         )

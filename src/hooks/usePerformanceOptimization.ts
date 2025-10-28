@@ -303,63 +303,54 @@ export function usePerformanceOptimization(options: UsePerformanceOptimizationOp
           case 'title':
             return a.title.localeCompare(b.title);
           case 'rating':
-            // Ordenar por avaliação usando dados reais de feedback do banco de dados
-            const getRating = (article: Article): number => {
-              console.log(`🔍 [DEBUG CRÍTICO ORDENAÇÃO] Calculando rating para "${article.title}":`, {
-                 approval_rate: article.approval_rate,
-                 positive_feedback: article.positive_feedback,
-                 negative_feedback: article.negative_feedback,
-                 total_feedback: (article.positive_feedback || 0) + (article.negative_feedback || 0)
-               });
-               
-               // Usar approval_rate se disponível
-               if (typeof article.approval_rate === 'number') {
-                 console.log(`✅ [DEBUG CRÍTICO ORDENAÇÃO] Usando approval_rate para "${article.title}": ${article.approval_rate}`);
-                 return article.approval_rate;
-               }
-               
-               // Fallback para campos antigos se approval_rate não estiver disponível
-               const positive = article.positive_feedback || 0;
-               const negative = article.negative_feedback || 0;
-               const total = positive + negative;
-               
-               if (total === 0) {
-                 console.log(`⚠️ [DEBUG CRÍTICO ORDENAÇÃO] Sem feedback para "${article.title}", retornando 0`);
-                 return 0;
-               }
-               
-               const calculatedRate = (positive / total) * 100;
-               console.log(`📊 [DEBUG CRÍTICO ORDENAÇÃO] Calculando rate para "${article.title}": ${calculatedRate}% (${positive}/${total})`);
-               return calculatedRate;
-             };
+            // Ordenar por avaliação priorizando: 1) Total de feedback, 2) Approval rate, 3) Data
+            const getTotalFeedback = (article: Article): number => {
+              return (article.positive_feedback || 0) + (article.negative_feedback || 0);
+            };
 
-             const ratingA = getRating(a);
-             const ratingB = getRating(b);
-             
-             console.log(`🔍 [DEBUG CRÍTICO ORDENAÇÃO] Comparando ratings: "${a.title}" (${ratingA}) vs "${b.title}" (${ratingB})`);
-             
-             // Se os ratings são iguais, usar quantidade total de feedback como critério secundário
-             if (ratingA === ratingB) {
-               const totalFeedbackA = (a.positive_feedback || 0) + (a.negative_feedback || 0);
-               const totalFeedbackB = (b.positive_feedback || 0) + (b.negative_feedback || 0);
+            const getRating = (article: Article): number => {
+              // Usar approval_rate se disponível
+              if (typeof article.approval_rate === 'number') {
+                return article.approval_rate;
+              }
                
-               console.log(`📊 [DEBUG CRÍTICO ORDENAÇÃO] Ratings iguais, comparando total de feedback: "${a.title}" (${totalFeedbackA}) vs "${b.title}" (${totalFeedbackB})`);
+              // Fallback para campos antigos se approval_rate não estiver disponível
+              const positive = article.positive_feedback || 0;
+              const negative = article.negative_feedback || 0;
+              const total = positive + negative;
                
-               // Se o total de feedback também for igual, usar data como critério terciário
-               if (totalFeedbackA === totalFeedbackB) {
-                 const dateComparison = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-                 console.log(`📅 [DEBUG CRÍTICO ORDENAÇÃO] Total de feedback igual, ordenando por data: "${a.title}" vs "${b.title}" = ${dateComparison}`);
-                 return dateComparison;
-               }
+              if (total === 0) {
+                return 0;
+              }
                
-               const feedbackComparison = totalFeedbackB - totalFeedbackA; // Mais feedback primeiro
-               console.log(`📊 [DEBUG CRÍTICO ORDENAÇÃO] Resultado da comparação por feedback: ${feedbackComparison} (${totalFeedbackB} - ${totalFeedbackA})`);
-               return feedbackComparison;
-             }
-             
-             const ratingComparison = ratingB - ratingA; // Maior rating primeiro
-             console.log(`📊 [DEBUG CRÍTICO ORDENAÇÃO] Resultado da comparação: ${ratingComparison} (${ratingB} - ${ratingA})`);
-             return ratingComparison;
+              return (positive / total) * 100;
+            };
+
+            const totalFeedbackA = getTotalFeedback(a);
+            const totalFeedbackB = getTotalFeedback(b);
+            const ratingA = getRating(a);
+            const ratingB = getRating(b);
+            
+            console.log(`🔍 [DEBUG CRÍTICO ORDENAÇÃO] Comparando: "${a.title}" (${totalFeedbackA} feedback, ${ratingA.toFixed(1)}%) vs "${b.title}" (${totalFeedbackB} feedback, ${ratingB.toFixed(1)}%)`);
+            
+            // PRIORIDADE 1: Artigos com mais feedback primeiro
+            if (totalFeedbackA !== totalFeedbackB) {
+              const feedbackComparison = totalFeedbackB - totalFeedbackA;
+              console.log(`📊 [DEBUG CRÍTICO ORDENAÇÃO] Ordenando por total de feedback: ${feedbackComparison} (${totalFeedbackB} - ${totalFeedbackA})`);
+              return feedbackComparison;
+            }
+            
+            // PRIORIDADE 2: Se total de feedback igual, ordenar por approval rate
+            if (ratingA !== ratingB) {
+              const ratingComparison = ratingB - ratingA;
+              console.log(`📊 [DEBUG CRÍTICO ORDENAÇÃO] Total de feedback igual, ordenando por rating: ${ratingComparison} (${ratingB} - ${ratingA})`);
+              return ratingComparison;
+            }
+            
+            // PRIORIDADE 3: Se tudo igual, ordenar por data (mais recente primeiro)
+            const dateComparison = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            console.log(`📅 [DEBUG CRÍTICO ORDENAÇÃO] Tudo igual, ordenando por data: ${dateComparison}`);
+            return dateComparison;
           default:
             return 0;
         }

@@ -26,7 +26,8 @@ export const useArticlesSimple = () => {
         }
       }
       
-      const { data, error } = await supabase
+      // Buscar artigos com métricas de feedback
+      const { data: articlesData, error } = await supabase
         .from('articles')
         .select(`
           *,
@@ -39,27 +40,68 @@ export const useArticlesSimple = () => {
         `)
         .order('created_at', { ascending: false });
 
-      console.log('🔍 [Simple] Resultado da query:', { data, error });
-
       if (error) {
         console.error('❌ [Simple] Erro:', error);
         setError(error.message);
         return;
       }
 
-      if (!data || data.length === 0) {
+      if (!articlesData || articlesData.length === 0) {
         console.warn('⚠️ [Simple] Nenhum artigo encontrado');
         setArticles([]);
         return;
       }
 
-      const articlesData = data as Article[];
+      // Buscar métricas para cada artigo usando a função get_article_metrics
+      const articlesWithMetrics = await Promise.all(
+        articlesData.map(async (article) => {
+          try {
+            console.log(`🔍 [Simple] Buscando métricas para "${article.title}"`);
+            const { data: metrics } = await supabase
+              .rpc('get_article_metrics', { article_id_param: article.id });
+            
+            if (metrics && metrics.length > 0) {
+              const metric = metrics[0];
+              console.log(`✅ [Simple] Métricas encontradas para "${article.title}":`, metric);
+              return {
+                ...article,
+                positive_feedback: metric.positive_feedback || 0,
+                negative_feedback: metric.negative_feedback || 0,
+                total_comments: metric.total_comments || 0,
+                approval_rate: metric.approval_rate || 0
+              };
+            }
+            
+            console.log(`⚠️ [Simple] Nenhuma métrica para "${article.title}"`);
+            return {
+              ...article,
+              positive_feedback: 0,
+              negative_feedback: 0,
+              total_comments: 0,
+              approval_rate: 0
+            };
+          } catch (error) {
+            console.warn(`⚠️ [Simple] Erro ao buscar métricas para "${article.title}":`, error);
+            return {
+              ...article,
+              positive_feedback: 0,
+              negative_feedback: 0,
+              total_comments: 0,
+              approval_rate: 0
+            };
+          }
+        })
+      );
+
+      const data = articlesWithMetrics as Article[];
+
+      console.log('🔍 [Simple] Resultado da query:', { data, error: null });
       
       // Cache the results
-      await hybridCache.set(CacheKeys.ARTICLES_LIST, articlesData);
+      await hybridCache.set(CacheKeys.ARTICLES_LIST, data);
 
-      console.log('✅ [Simple] Artigos carregados:', articlesData.length);
-      setArticles(articlesData);
+      console.log('✅ [Simple] Artigos carregados:', data.length);
+      setArticles(data);
     } catch (err) {
       console.error('❌ [Simple] Exceção:', err);
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
@@ -132,8 +174,12 @@ export const useArticlesSimple = () => {
     articlesCount: articles.length,
     categoriesCount: categories.length,
     refresh: async () => {
+      console.log('🔄 [Simple] Forçando refresh...');
       setLoading(true);
       try {
+        // Limpar cache antes de buscar dados frescos
+        await hybridCache.delete(CacheKeys.ARTICLES_LIST);
+        await hybridCache.delete(CacheKeys.CATEGORIES_LIST);
         await Promise.all([fetchArticles(true), fetchCategories(true)]);
       } finally {
         setLoading(false);

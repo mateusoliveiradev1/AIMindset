@@ -215,10 +215,10 @@ const Articles: React.FC = () => {
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as SortBy)}
-                    className="bg-dark-surface/50 border border-neon-purple/30 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-lime-green focus:ring-2 focus:ring-lime-green/20 transition-all duration-300 hover:border-neon-purple/50 min-w-[120px]"
+                    className="bg-dark-surface/50 border border-neon-purple/30 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-lime-green focus:ring-2 focus:ring-lime-green/20 transition-all duration-300 hover:border-neon-purple/50 min-w-[140px]"
                   >
-                    <option value="date">Data</option>
-                    <option value="title">Título</option>
+                    <option value="date">Mais Recente</option>
+                    <option value="title">Título A-Z</option>
                     <option value="rating">Melhor Avaliados</option>
                   </select>
                 </div>
