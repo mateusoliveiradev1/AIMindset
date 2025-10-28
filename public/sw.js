@@ -3,6 +3,8 @@ const CACHE_NAME = 'aimindset-extreme-v2.0.0';
 const STATIC_CACHE = 'static-extreme-v2.0.0';
 const DYNAMIC_CACHE = 'dynamic-extreme-v2.0.0';
 const API_CACHE = 'api-extreme-v2.0.0';
+const SUPABASE_CACHE = 'supabase-extreme-v2.0.0';
+const ARTICLES_CACHE = 'articles-extreme-v2.0.0';
 const IMAGE_CACHE = 'images-extreme-v2.0.0';
 const FONT_CACHE = 'fonts-extreme-v2.0.0';
 const CSS_CACHE = 'css-extreme-v2.0.0';
@@ -42,8 +44,18 @@ const CACHE_CONFIG = {
   },
   api: {
     strategy: CACHE_STRATEGIES.FASTEST,
-    maxAge: 2 * 60 * 1000, // 2 minutos para API
+    maxAge: 5 * 60 * 1000, // 5 minutos para API geral
     maxEntries: 200
+  },
+  supabase: {
+    strategy: CACHE_STRATEGIES.STALE_WHILE_REVALIDATE,
+    maxAge: 10 * 60 * 1000, // 10 minutos para Supabase
+    maxEntries: 300
+  },
+  articles: {
+    strategy: CACHE_STRATEGIES.CACHE_FIRST,
+    maxAge: 30 * 60 * 1000, // 30 minutos para artigos
+    maxEntries: 500
   },
   images: {
     strategy: CACHE_STRATEGIES.CACHE_FIRST,
@@ -132,6 +144,10 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(handleJSRequest(request));
   } else if (isStaticAsset(url)) {
     event.respondWith(handleStaticAsset(request));
+  } else if (isSupabaseRequest(url)) {
+    event.respondWith(handleSupabaseRequest(request));
+  } else if (isArticleRequest(url)) {
+    event.respondWith(handleArticleRequest(request));
   } else if (isAPIRequest(url)) {
     event.respondWith(handleAPIRequest(request));
   } else if (isImageRequest(url)) {
@@ -190,8 +206,18 @@ function isStaticAsset(url) {
 
 function isAPIRequest(url) {
   return url.pathname.startsWith('/api/') || 
-         url.hostname.includes('supabase.co') ||
          (url.hostname.includes('localhost') && url.port === '3001');
+}
+
+function isSupabaseRequest(url) {
+  return url.hostname.includes('supabase.co') || 
+         url.hostname.includes('supabase.io');
+}
+
+function isArticleRequest(url) {
+  return url.pathname.includes('/articles') || 
+         url.pathname.includes('/posts') ||
+         url.pathname.includes('/blog');
 }
 
 function isImageRequest(url) {
@@ -288,6 +314,82 @@ async function handleAPIRequest(request) {
   }
 }
 
+async function handleSupabaseRequest(request) {
+  const cache = await caches.open(SUPABASE_CACHE);
+  
+  try {
+    // Estratégia Stale-While-Revalidate para Supabase
+    const cachedResponse = await cache.match(request);
+    
+    if (cachedResponse) {
+      // Retorna cache imediatamente e atualiza em background
+      const networkPromise = fetch(request).then(response => {
+        if (response.ok && request.method === 'GET') {
+          cache.put(request, response.clone());
+        }
+        return response;
+      }).catch(() => {});
+      
+      // Não aguarda a network, retorna cache imediatamente
+      networkPromise.catch(() => {});
+      return cachedResponse;
+    }
+    
+    // Se não tem cache, busca na network
+    const networkResponse = await fetch(request);
+    if (networkResponse.ok && request.method === 'GET') {
+      cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+    
+  } catch (error) {
+    console.error('[SW] Supabase request failed:', error);
+    return new Response(
+      JSON.stringify({ 
+        error: 'Offline', 
+        message: 'Dados do Supabase não disponíveis offline' 
+      }),
+      { 
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+  }
+}
+
+async function handleArticleRequest(request) {
+  const cache = await caches.open(ARTICLES_CACHE);
+  
+  try {
+    // Cache First para artigos (conteúdo mais estável)
+    const cachedResponse = await cache.match(request);
+    
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
+    // Se não tem cache, busca na network
+    const networkResponse = await fetch(request);
+    if (networkResponse.ok && request.method === 'GET') {
+      cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+    
+  } catch (error) {
+    console.error('[SW] Article request failed:', error);
+    return new Response(
+      JSON.stringify({ 
+        error: 'Offline', 
+        message: 'Artigo não disponível offline' 
+      }),
+      { 
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+  }
+}
+
 async function handleImageRequest(request) {
   const cache = await caches.open(IMAGE_CACHE);
   const cachedResponse = await cache.match(request);
@@ -328,7 +430,18 @@ async function handleDynamicRequest(request) {
 
 async function cleanupOldCaches() {
   const cacheNames = await caches.keys();
-  const validCaches = [CACHE_NAME, STATIC_CACHE, DYNAMIC_CACHE, API_CACHE, IMAGE_CACHE];
+  const validCaches = [
+    CACHE_NAME, 
+    STATIC_CACHE, 
+    DYNAMIC_CACHE, 
+    API_CACHE, 
+    SUPABASE_CACHE,
+    ARTICLES_CACHE,
+    IMAGE_CACHE,
+    FONT_CACHE,
+    CSS_CACHE,
+    JS_CACHE
+  ];
   
   return Promise.all(
     cacheNames

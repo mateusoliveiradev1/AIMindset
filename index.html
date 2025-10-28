@@ -14,12 +14,16 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://supabase.co" crossorigin>
     
-    <!-- Preload recursos críticos -->
-    <link rel="modulepreload" href="/src/main.tsx">
-    <link rel="modulepreload" href="/src/App.tsx">
-    <link rel="modulepreload" href="/src/pages/Home.tsx">
+    <!-- Preload recursos críticos removido - causava ERR_ABORTED em produção -->
     
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src 'self' fonts.gstatic.com; img-src 'self' data: blob: https: videos.openai.com images.unsplash.com; connect-src 'self' *.supabase.co wss://*.supabase.co videos.openai.com images.unsplash.com; media-src 'self' blob: data: videos.openai.com; object-src 'none'; base-uri 'self'; form-action 'self';" />
+    <!-- Preload fontes críticas -->
+    <link rel="preload" href="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2" as="font" type="font/woff2" crossorigin>
+    
+    <!-- Preload CSS crítico -->
+    <link rel="preload" href="/src/index.css" as="style">
+    <link rel="preload" href="/src/styles/mobile-usability.css" as="style">
+    
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' data:; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src 'self' fonts.gstatic.com; img-src 'self' data: blob: https: videos.openai.com images.unsplash.com; connect-src 'self' *.supabase.co wss://*.supabase.co videos.openai.com images.unsplash.com; media-src 'self' blob: data: videos.openai.com; object-src 'none'; base-uri 'self'; form-action 'self';" />
     
     <!-- Critical CSS Inline para melhor FCP -->
     <style>

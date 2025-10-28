@@ -173,16 +173,23 @@ export function usePerformanceMonitor(config: PerformanceConfig = {}) {
 
   // Preload crítico de recursos
   const preloadCriticalResources = useCallback(() => {
-    const criticalResources = [
-      '/src/pages/Home.tsx',
-      '/src/components/ui/Button.tsx',
-      '/src/components/ui/Card.tsx'
+    // ❌ REMOVIDO: modulepreload de arquivos .tsx causava ERR_ABORTED em produção
+    // Em produção, o Vite compila .tsx para .js com nomes de hash
+    // Os modulepreloads são gerenciados automaticamente pelo Vite
+    
+    // ✅ ALTERNATIVA: Preload apenas de recursos estáticos críticos
+    const criticalStaticResources = [
+      '/fonts/orbitron-variable.woff2',
+      '/fonts/inter-variable.woff2'
     ];
 
-    criticalResources.forEach(resource => {
+    criticalStaticResources.forEach(resource => {
       const link = document.createElement('link');
-      link.rel = 'modulepreload';
+      link.rel = 'preload';
       link.href = resource;
+      link.as = 'font';
+      link.type = 'font/woff2';
+      link.crossOrigin = 'anonymous';
       document.head.appendChild(link);
     });
   }, []);
