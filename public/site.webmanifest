@@ -1,15 +1,11 @@
 {
-  "name": "AIMindset - Inteligência Artificial",
+  "name": "AIMindset",
   "short_name": "AIMindset",
-  "description": "Plataforma de artigos sobre Inteligência Artificial com design futurístico",
+  "description": "Transforme sua mente com inteligência artificial",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0A0A0A",
-  "theme_color": "#3B82F6",
-  "orientation": "portrait-primary",
-  "scope": "/",
-  "lang": "pt-BR",
-  "categories": ["education", "technology", "news"],
+  "background_color": "#0D1B2A",
+  "theme_color": "#6A0DAD",
   "icons": [
     {
       "src": "/favicon-16x16.png",
@@ -29,7 +25,8 @@
     {
       "src": "/favicon.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }
