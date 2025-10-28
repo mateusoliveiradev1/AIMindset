@@ -356,6 +356,10 @@ class IndexedDBCacheLayer {
     }
   }
   
+  async delete(key: string): Promise<void> {
+    await this.invalidate(key);
+  }
+
   async invalidate(key: string): Promise<void> {
     if (!this.isInitialized) {
       return;
@@ -523,6 +527,10 @@ class HybridCacheSystem {
     trackCacheOperation('cache_invalidation', 'L1', 'clear_all', performance.now() - startTime);
   }
   
+  async delete(key: string): Promise<void> {
+    await this.invalidate(key);
+  }
+
   getMetrics(): CacheMetrics {
     return { ...this.metrics };
   }
