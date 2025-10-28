@@ -9,6 +9,7 @@ import { useArticles } from '../hooks/useArticles';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '../components/UI/PullToRefreshIndicator';
 import { useHomeOptimization } from '../hooks/useHomeOptimization';
+import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor';
 
 const Home: React.FC = () => {
   const { categories } = useArticles();
@@ -17,6 +18,15 @@ const Home: React.FC = () => {
     pageType: 'home',
     fallbackTitle: 'AIMindset - Inteligência Artificial e Produtividade',
     fallbackDescription: 'Descubra como a inteligência artificial pode transformar sua produtividade. Artigos, dicas e insights sobre IA, automação e tecnologia.'
+  });
+
+  // Performance monitoring EXTREMO - 100% invisível
+  const { trackComponentRender, getPerformanceData, getWebVitalsScore } = usePerformanceMonitor({
+    enableWebVitals: true,
+    enableResourceMonitoring: true,
+    enableIntersectionObserver: true,
+    enableIdleCallback: true,
+    reportingThreshold: 1000
   });
 
   // Pull-to-refresh otimizado com debounce para mobile/tablet
@@ -37,6 +47,11 @@ const Home: React.FC = () => {
 
   // Criar uma ref mutável para o container
   const mutableContainerRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Track component mount - INVISÍVEL
+  useEffect(() => {
+    trackComponentRender('Home', true);
+  }, [trackComponentRender]);
 
   // Pré-carregar metadados das categorias para navegação fluida
   useEffect(() => {

@@ -2,6 +2,23 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
+    
+    <!-- Resource Hints EXTREMOS para performance máxima -->
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    <link rel="dns-prefetch" href="//fonts.gstatic.com">
+    <link rel="dns-prefetch" href="//supabase.co">
+    <link rel="dns-prefetch" href="//images.unsplash.com">
+    <link rel="dns-prefetch" href="//videos.openai.com">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://supabase.co" crossorigin>
+    
+    <!-- Preload recursos críticos -->
+    <link rel="modulepreload" href="/src/main.tsx">
+    <link rel="modulepreload" href="/src/App.tsx">
+    <link rel="modulepreload" href="/src/pages/Home.tsx">
+    
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src 'self' fonts.gstatic.com; img-src 'self' data: blob: https: videos.openai.com images.unsplash.com; connect-src 'self' *.supabase.co wss://*.supabase.co videos.openai.com images.unsplash.com; media-src 'self' blob: data: videos.openai.com; object-src 'none'; base-uri 'self'; form-action 'self';" />
     
     <!-- Critical CSS Inline para melhor FCP -->

@@ -33,11 +33,12 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        // Code splitting manual para chunks otimizados
+        // Code splitting simplificado e mais estável
         manualChunks: {
-          // Vendor chunks
+          // Vendor chunks básicos
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['lucide-react', 'sonner', 'react-helmet-async']
+          'ui-vendor': ['lucide-react', 'sonner', 'react-helmet-async'],
+          'supabase-vendor': ['@supabase/supabase-js']
         },
         // Nomes de chunks mais limpos
         chunkFileNames: (chunkInfo) => {
@@ -59,11 +60,11 @@ export default defineConfig({
           return `assets/[name]-[hash][extname]`
         }
       },
-      // Tree shaking otimizado
+      // Tree shaking mais conservador
       treeshake: {
-        moduleSideEffects: false,
-        propertyReadSideEffects: false,
-        unknownGlobalSideEffects: false
+        moduleSideEffects: 'no-external',
+        propertyReadSideEffects: true,
+        unknownGlobalSideEffects: true
       }
     },
     // Configurações de chunk size
@@ -94,11 +95,20 @@ export default defineConfig({
       'react-dom',
       'react-router-dom',
       'lucide-react',
-      'sonner'
+      'sonner',
+      'react-helmet-async',
+      '@supabase/supabase-js'
     ],
     exclude: [
-      // Excluir dependências que devem ser carregadas dinamicamente
-    ]
+      // Excluir service workers e web workers
+      'sw.js',
+      'workbox-*'
+    ],
+    // Pre-bundling agressivo
+    force: false,
+    esbuildOptions: {
+      target: 'es2020'
+    }
   },
   // Configurações de preview
   preview: {

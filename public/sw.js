@@ -1,62 +1,95 @@
-// Service Worker para cache offline e performance
-const CACHE_NAME = 'aimindset-v1.0.0';
-const STATIC_CACHE = 'static-v1.0.0';
-const DYNAMIC_CACHE = 'dynamic-v1.0.0';
-const API_CACHE = 'api-v1.0.0';
-const IMAGE_CACHE = 'images-v1.0.0';
+// Service Worker EXTREMO para performance máxima
+const CACHE_NAME = 'aimindset-extreme-v2.0.0';
+const STATIC_CACHE = 'static-extreme-v2.0.0';
+const DYNAMIC_CACHE = 'dynamic-extreme-v2.0.0';
+const API_CACHE = 'api-extreme-v2.0.0';
+const IMAGE_CACHE = 'images-extreme-v2.0.0';
+const FONT_CACHE = 'fonts-extreme-v2.0.0';
+const CSS_CACHE = 'css-extreme-v2.0.0';
+const JS_CACHE = 'js-extreme-v2.0.0';
 
-// Recursos estáticos para cache
-const STATIC_ASSETS = [
+// Recursos críticos para cache agressivo
+const CRITICAL_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
-  // CSS e JS serão adicionados dinamicamente
+  '/favicon.svg',
+  '/apple-touch-icon.png',
+  '/favicon-16x16.png',
+  '/favicon-32x32.png',
+  '/robots.txt',
+  '/site.webmanifest',
+  '/offline.html'
 ];
 
-// Estratégias de cache
+// Estratégias de cache otimizadas
 const CACHE_STRATEGIES = {
   CACHE_FIRST: 'cache-first',
   NETWORK_FIRST: 'network-first',
   STALE_WHILE_REVALIDATE: 'stale-while-revalidate',
   NETWORK_ONLY: 'network-only',
-  CACHE_ONLY: 'cache-only'
+  CACHE_ONLY: 'cache-only',
+  FASTEST: 'fastest' // Nova estratégia: cache e network em paralelo
 };
 
-// Configurações de cache por tipo de recurso
+// Configurações extremas de cache
 const CACHE_CONFIG = {
   static: {
     strategy: CACHE_STRATEGIES.CACHE_FIRST,
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dias
-    maxEntries: 100
+    maxAge: 365 * 24 * 60 * 60 * 1000, // 1 ano para assets estáticos
+    maxEntries: 500
   },
   api: {
-    strategy: CACHE_STRATEGIES.NETWORK_FIRST,
-    maxAge: 5 * 60 * 1000, // 5 minutos
-    maxEntries: 50
+    strategy: CACHE_STRATEGIES.FASTEST,
+    maxAge: 2 * 60 * 1000, // 2 minutos para API
+    maxEntries: 200
   },
   images: {
     strategy: CACHE_STRATEGIES.CACHE_FIRST,
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dias para imagens
+    maxEntries: 1000
+  },
+  fonts: {
+    strategy: CACHE_STRATEGIES.CACHE_FIRST,
+    maxAge: 365 * 24 * 60 * 60 * 1000, // 1 ano para fontes
+    maxEntries: 50
+  },
+  css: {
+    strategy: CACHE_STRATEGIES.CACHE_FIRST,
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dias para CSS
+    maxEntries: 100
+  },
+  js: {
+    strategy: CACHE_STRATEGIES.CACHE_FIRST,
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dias para JS
     maxEntries: 200
   },
   dynamic: {
     strategy: CACHE_STRATEGIES.STALE_WHILE_REVALIDATE,
-    maxAge: 24 * 60 * 60 * 1000, // 1 dia
-    maxEntries: 100
+    maxAge: 60 * 60 * 1000, // 1 hora para conteúdo dinâmico
+    maxEntries: 300
   }
 };
 
-// Instalação do Service Worker
+// Instalação EXTREMA do Service Worker
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing Service Worker');
+  console.log('[SW] Installing EXTREME Service Worker v2.0.0');
   
   event.waitUntil(
     Promise.all([
-      // Cache de recursos estáticos
+      // Cache agressivo de recursos críticos
       caches.open(STATIC_CACHE).then((cache) => {
-        console.log('[SW] Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
+        console.log('[SW] Caching critical assets aggressively');
+        return cache.addAll(CRITICAL_ASSETS);
+      }),
+      // Pre-cache de recursos dinâmicos importantes
+      caches.open(DYNAMIC_CACHE).then((cache) => {
+        console.log('[SW] Pre-caching dynamic resources');
+        return Promise.allSettled([
+          cache.add('/').catch(() => {}),
+          cache.add('/?utm_source=pwa').catch(() => {})
+        ]);
       }),
       // Pular waiting para ativar imediatamente
       self.skipWaiting()
@@ -78,18 +111,26 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Interceptação de requests
+// Interceptação EXTREMA de requests
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   
-  // Ignorar requests não HTTP
-  if (!request.url.startsWith('http')) {
+  // Ignorar requests não HTTP e extensões do browser
+  if (!request.url.startsWith('http') || 
+      url.protocol === 'chrome-extension:' || 
+      url.protocol === 'moz-extension:') {
     return;
   }
   
-  // Estratégia baseada no tipo de recurso
-  if (isStaticAsset(url)) {
+  // Estratégia otimizada baseada no tipo de recurso
+  if (isFontRequest(url)) {
+    event.respondWith(handleFontRequest(request));
+  } else if (isCSSRequest(url)) {
+    event.respondWith(handleCSSRequest(request));
+  } else if (isJSRequest(url)) {
+    event.respondWith(handleJSRequest(request));
+  } else if (isStaticAsset(url)) {
     event.respondWith(handleStaticAsset(request));
   } else if (isAPIRequest(url)) {
     event.respondWith(handleAPIRequest(request));
@@ -129,29 +170,60 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// Funções auxiliares
+// Funções auxiliares otimizadas
+
+function isFontRequest(url) {
+  return url.pathname.match(/\.(woff|woff2|ttf|eot|otf)$/);
+}
+
+function isCSSRequest(url) {
+  return url.pathname.match(/\.css$/) || url.pathname.includes('/css/');
+}
+
+function isJSRequest(url) {
+  return url.pathname.match(/\.js$/) || url.pathname.includes('/js/');
+}
 
 function isStaticAsset(url) {
-  return url.pathname.match(/\.(js|css|html|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/);
+  return url.pathname.match(/\.(html|ico|png|jpg|jpeg|gif|svg|json|xml|txt|webmanifest)$/);
 }
 
 function isAPIRequest(url) {
   return url.pathname.startsWith('/api/') || 
          url.hostname.includes('supabase.co') ||
-         url.hostname.includes('localhost') && url.port === '3001';
+         (url.hostname.includes('localhost') && url.port === '3001');
 }
 
 function isImageRequest(url) {
-  return url.pathname.match(/\.(png|jpg|jpeg|gif|svg|webp|avif)$/) ||
+  return url.pathname.match(/\.(png|jpg|jpeg|gif|svg|webp|avif|bmp|tiff)$/) ||
          url.hostname.includes('trae-api-us.mchost.guru');
 }
 
+// Handlers otimizados para cada tipo de recurso
+
+async function handleFontRequest(request) {
+  return handleCacheFirst(request, FONT_CACHE);
+}
+
+async function handleCSSRequest(request) {
+  return handleCacheFirst(request, CSS_CACHE);
+}
+
+async function handleJSRequest(request) {
+  return handleCacheFirst(request, JS_CACHE);
+}
+
 async function handleStaticAsset(request) {
-  const cache = await caches.open(STATIC_CACHE);
+  return handleCacheFirst(request, STATIC_CACHE);
+}
+
+// Estratégia cache-first otimizada
+async function handleCacheFirst(request, cacheName) {
+  const cache = await caches.open(cacheName);
   const cachedResponse = await cache.match(request);
   
   if (cachedResponse) {
-    // Cache hit - retornar do cache
+    // Cache hit - retornar do cache imediatamente
     return cachedResponse;
   }
   
@@ -172,26 +244,35 @@ async function handleStaticAsset(request) {
 async function handleAPIRequest(request) {
   const cache = await caches.open(API_CACHE);
   
-  try {
-    // Network first para dados da API
-    const networkResponse = await fetch(request);
-    
-    if (networkResponse.ok) {
-      // Cachear apenas GET requests bem-sucedidos
-      if (request.method === 'GET') {
-        cache.put(request, networkResponse.clone());
-      }
+  // Estratégia FASTEST: cache e network em paralelo
+  const cachePromise = cache.match(request);
+  const networkPromise = fetch(request).then(response => {
+    if (response.ok && request.method === 'GET') {
+      // Cachear resposta bem-sucedida em background
+      cache.put(request, response.clone());
     }
+    return response;
+  }).catch(() => null);
+  
+  try {
+    // Retornar o primeiro que responder (cache ou network)
+    const cachedResponse = await cachePromise;
     
-    return networkResponse;
-  } catch (error) {
-    console.error('[SW] API request failed:', error);
-    
-    // Fallback para cache se disponível
-    const cachedResponse = await cache.match(request);
     if (cachedResponse) {
+      // Se tem cache, retorna imediatamente e atualiza em background
+      networkPromise.catch(() => {}); // Silenciar erros de network
       return cachedResponse;
     }
+    
+    // Se não tem cache, aguarda network
+    const networkResponse = await networkPromise;
+    if (networkResponse) {
+      return networkResponse;
+    }
+    
+    throw new Error('No cache and network failed');
+  } catch (error) {
+    console.error('[SW] API request failed:', error);
     
     // Retornar resposta de erro estruturada
     return new Response(
