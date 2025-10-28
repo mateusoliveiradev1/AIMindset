@@ -250,33 +250,33 @@ export const useArticles = (): UseArticlesReturn => {
 
   const fetchCategories = useCallback(async (forceRefresh: boolean = false) => {
     try {
-      // Try cache first if not forcing refresh
+      // Try cache first if not forcing refresh - usar cache rápido específico para categorias
       if (!forceRefresh) {
-        const cached = await hybridCache.get<Category[]>(CacheKeys.CATEGORIES_LIST);
+        const cached = await hybridCache.get<Category[]>(CacheKeys.CATEGORIES_FAST);
         if (cached.data) {
-          console.log(`🟢 [useArticles] Using cached categories from ${cached.source}`);
+          console.log(`🚀 [useArticles] Using FAST cached categories from ${cached.source}`);
           setCategories(cached.data);
           return;
         }
       }
 
-      console.log('🔄 [useArticles] Buscando categorias do Supabase...');
+      console.log('🔄 [useArticles] Buscando categorias do Supabase (otimizado)...');
       console.log('🔍 [DEBUG] Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
       console.log('🔍 [DEBUG] Supabase Key exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
       
-      // Função para buscar categorias com retry
+      // Função para buscar categorias com retry - QUERY OTIMIZADA
       const fetchWithRetry = async () => {
-        // Tentar primeiro com cliente normal
+        // Query otimizada - buscar apenas campos necessários
         const normalResult = await supabaseWithRetry(
           async () => {
             const response = await supabase
               .from('categories')
-              .select('*')
+              .select('id, name, slug, description') // Apenas campos necessários
               .order('name', { ascending: true });
             console.log('🔍 [DEBUG] Categories response (normal):', response);
             return response;
           },
-          'Fetch Categories (Normal Client)'
+          'Fetch Categories (Optimized)'
         );
 
         if (normalResult.success && normalResult.data) {
@@ -303,10 +303,13 @@ export const useArticles = (): UseArticlesReturn => {
 
       const categoriesData = data as Category[];
       
-      // Cache the results
-      await hybridCache.set(CacheKeys.CATEGORIES_LIST, categoriesData);
+      // Cache com TTL otimizado para categorias (2 minutos)
+      await hybridCache.set(CacheKeys.CATEGORIES_FAST, categoriesData, { 
+        accessCount: 10, // Marcar como popular para TTL maior
+        isAdminOperation: false 
+      });
 
-      console.log('✅ [useArticles] Categorias carregadas com sucesso:', categoriesData.length);
+      console.log('✅ [useArticles] Categorias carregadas com sucesso (otimizado):', categoriesData.length);
       setCategories(categoriesData);
     } catch (err) {
       console.error('❌ Error fetching categories:', err);

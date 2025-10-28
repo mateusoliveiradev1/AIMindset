@@ -597,6 +597,7 @@ class HybridCacheSystem {
 export const CacheKeys = {
   ARTICLES_LIST: 'articles_list',
   CATEGORIES_LIST: 'categories_list',
+  CATEGORIES_FAST: 'categories_fast', // Cache específico para categorias com TTL menor
   ARTICLE_BY_ID: (id: string) => `article_${id}`,
   CATEGORY_BY_ID: (id: string) => `category_${id}`,
   ARTICLES_BY_CATEGORY: (categoryId: string) => `articles_category_${categoryId}`,

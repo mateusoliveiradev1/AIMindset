@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Brain, Zap, Rocket, TrendingUp, BookOpen, Users, ArrowRight } from 'lucide-react';
 import { useArticles } from '../hooks/useArticles';
@@ -6,6 +6,7 @@ import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import SEOManager from '../components/SEO/SEOManager';
 import PreloadManager from '../components/Performance/PreloadManager';
+import CategorySkeleton from '../components/UI/CategorySkeleton';
 import { useSEO } from '../hooks/useSEO';
 
 const Categories: React.FC = () => {
@@ -20,33 +21,84 @@ const Categories: React.FC = () => {
 
   const metadata = seoHook.getMetadata();
 
+  // PREFETCH: Carregar dados imediatamente ao montar o componente
   useEffect(() => {
+    // Prefetch imediato sem aguardar
     refreshArticles();
+    
+    // Prefetch adicional para recursos críticos
+    const prefetchLinks = ['/artigos', '/'];
+    prefetchLinks.forEach(href => {
+      const link = document.createElement('link');
+      link.rel = 'prefetch';
+      link.href = href;
+      document.head.appendChild(link);
+    });
   }, [refreshArticles]);
 
-  // Ícones para cada categoria
-  const categoryIcons = {
+  // Ícones para cada categoria - memoizado para performance
+  const categoryIcons = useMemo(() => ({
     'ia-tecnologia': Brain,
     'produtividade': Zap,
     'futuro': Rocket,
     'inovacao': TrendingUp,
     'negocios': Users,
     'educacao': BookOpen,
-  };
+  }), []);
 
-  // Contar artigos por categoria
-  const getArticleCount = (categoryId: string) => {
-    return articles.filter(article => article.category_id === categoryId && article.published).length;
-  };
+  // Contar artigos por categoria - memoizado para evitar recálculos
+  const getArticleCount = useMemo(() => {
+    const countMap = new Map<string, number>();
+    articles.forEach(article => {
+      if (article.published) {
+        const count = countMap.get(article.category_id) || 0;
+        countMap.set(article.category_id, count + 1);
+      }
+    });
+    return (categoryId: string) => countMap.get(categoryId) || 0;
+  }, [articles]);
 
+  // SKELETON LOADING: Mostrar skeleton enquanto carrega
   if (loading) {
     return (
-      <div className="min-h-screen bg-dark-surface flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-green mx-auto mb-4"></div>
-          <p className="text-futuristic-gray">Carregando categorias...</p>
+      <>
+        <SEOManager metadata={metadata} />
+        <PreloadManager 
+          criticalResources={[
+            { href: '/fonts/orbitron.woff2', as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' },
+            { href: '/fonts/roboto.woff2', as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' }
+          ]}
+          prefetchResources={[
+            { href: '/artigos', as: 'document' },
+            { href: '/', as: 'document' }
+          ]}
+        />
+        <div className="min-h-screen bg-dark-surface">
+          {/* Header */}
+          <div className="bg-darker-surface border-b border-neon-purple/20">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+              <div className="text-center">
+                <h1 className="text-4xl md:text-5xl font-orbitron font-bold text-white mb-4">
+                  Todas as <span className="gradient-text">Categorias</span>
+                </h1>
+                <p className="text-xl text-futuristic-gray font-roboto max-w-3xl mx-auto">
+                  Explore nossos tópicos organizados por área de interesse. 
+                  Descubra conteúdos sobre IA, tecnologia, produtividade e muito mais.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8" role="list" aria-label="Carregando categorias">
+              {/* Mostrar 8 skeletons enquanto carrega */}
+              {Array.from({ length: 8 }).map((_, index) => (
+                <CategorySkeleton key={`skeleton-${index}`} />
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
