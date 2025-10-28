@@ -1,70 +1,19 @@
-import React from 'react';
+import React, { useMemo, useCallback, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Clock, ArrowRight, Tag } from 'lucide-react';
 import { useArticles } from '../../hooks/useArticles';
+import { useHomeOptimization } from '../../hooks/useHomeOptimization';
 import { useAutoFeedbackSync } from '../../hooks/useAutoFeedbackSync';
 import { Article } from '../../types';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
+import { FeaturedArticlesSkeleton } from '../UI/HomeSkeleton';
 // import LazyImage from '../Performance/LazyImage';
 
 const FeaturedArticles: React.FC = () => {
   const { articles, loading, refreshArticles } = useArticles();
-  
-  // Sistema 100% automático de sincronização de feedbacks
-  const { forceSyncNow, isActive } = useAutoFeedbackSync();
-  
-  // Função para ordenar artigos por rating/feedback (mesma lógica do usePerformanceOptimization)
-  const sortArticlesByRating = (articles: Article[]) => {
-    return [...articles].sort((a, b) => {
-      const getTotalFeedback = (article: Article): number => {
-        return (article.positive_feedback || 0) + (article.negative_feedback || 0);
-      };
-
-      const getRating = (article: Article): number => {
-        // Usar approval_rate se disponível
-        if (typeof article.approval_rate === 'number') {
-          return article.approval_rate;
-        }
-         
-        // Fallback para campos antigos se approval_rate não estiver disponível
-        const positive = article.positive_feedback || 0;
-        const negative = article.negative_feedback || 0;
-        const total = positive + negative;
-         
-        if (total === 0) {
-          return 0;
-        }
-         
-        return (positive / total) * 100;
-      };
-
-      const totalFeedbackA = getTotalFeedback(a);
-      const totalFeedbackB = getTotalFeedback(b);
-      const ratingA = getRating(a);
-      const ratingB = getRating(b);
-      
-      console.log(`🏆 [Featured] Comparando: "${a.title}" (${totalFeedbackA} feedback, ${ratingA.toFixed(1)}%) vs "${b.title}" (${totalFeedbackB} feedback, ${ratingB.toFixed(1)}%)`);
-      
-      // PRIORIDADE 1: Artigos com mais feedback primeiro
-      if (totalFeedbackA !== totalFeedbackB) {
-        return totalFeedbackB - totalFeedbackA;
-      }
-      
-      // PRIORIDADE 2: Se total de feedback igual, ordenar por approval rate
-      if (ratingA !== ratingB) {
-        return ratingB - ratingA;
-      }
-      
-      // PRIORIDADE 3: Se tudo igual, ordenar por data (mais recente primeiro)
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    });
-  };
-  
-  // Selecionar os 3 MELHORES artigos publicados (não aleatórios)
-  const featuredArticles = sortArticlesByRating(
-    articles.filter(article => article.published)
-  ).slice(0, 3);
+  const { featuredArticles } = useHomeOptimization();
+  const { syncFeedback, isActive } = useAutoFeedbackSync();
 
   // Debug logs - VERSÃO NOVA COM ORDENAÇÃO
   console.log('🔍 FeaturedArticles Debug - NOVA VERSÃO COM ORDENAÇÃO:', {
@@ -114,18 +63,40 @@ const FeaturedArticles: React.FC = () => {
     };
   }, [refreshArticles]);
 
-  // Forçar refresh para testar
-  React.useEffect(() => {
-    console.log('🔄 FeaturedArticles: Componente montado/atualizado - Sistema automático:', isActive);
-  }, [isActive]);
-
+  // Formatação de data
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: 'numeric',
-      month: 'long',
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'short',
       year: 'numeric'
     });
   };
+
+  // Se estiver carregando e não há artigos, mostrar skeleton
+  if (loading && featuredArticles.length === 0) {
+    return <FeaturedArticlesSkeleton />;
+  }
+
+  // Se não há artigos em destaque
+  if (featuredArticles.length === 0) {
+    return (
+      <section className="py-16 bg-gradient-to-br from-gray-50 to-white">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-12 text-gray-800">
+            Artigos em Destaque
+          </h2>
+          <div className="text-center text-gray-600">
+            <p>Nenhum artigo em destaque encontrado.</p>
+            <p className="text-sm mt-2">
+              Total de artigos: {articles.length} | 
+              Publicados: {articles.filter(a => a.published).length}
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-20 bg-darker-surface">
@@ -139,11 +110,8 @@ const FeaturedArticles: React.FC = () => {
           </p>
         </div>
 
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-green mx-auto mb-4"></div>
-            <p className="text-futuristic-gray">Carregando artigos...</p>
-          </div>
+        {loading && featuredArticles.length === 0 ? (
+          <FeaturedArticlesSkeleton />
         ) : featuredArticles.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-futuristic-gray text-lg">Nenhum artigo publicado ainda.</p>

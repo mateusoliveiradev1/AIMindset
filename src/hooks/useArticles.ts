@@ -93,6 +93,7 @@ export interface UseArticlesReturn {
   getArticlesByCategory: (categoryId: string) => Promise<Article[]>;
   searchArticles: (query: string) => Promise<Article[]>;
   refreshArticles: () => Promise<void>;
+  fetchHomeData: () => Promise<{ articles: Article[]; categories: Category[]; }>;
 }
 
 export const useArticles = (): UseArticlesReturn => {
@@ -314,6 +315,69 @@ export const useArticles = (): UseArticlesReturn => {
     } catch (err) {
       console.error('❌ Error fetching categories:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch categories');
+    }
+  }, []);
+
+  // Função otimizada para Home - busca única com cache específico
+  const fetchHomeData = useCallback(async (forceRefresh: boolean = false): Promise<{ articles: Article[], categories: Category[] }> => {
+    try {
+      // Tentar cache específico da Home primeiro
+      if (!forceRefresh) {
+        const cachedHomeData = await hybridCache.get<{ articles: Article[], categories: Category[] }>(CacheKeys.HOME_DATA);
+        if (cachedHomeData.data) {
+          console.log(`🚀 [fetchHomeData] Using HOME cache from ${cachedHomeData.source}`);
+          return cachedHomeData.data;
+        }
+      }
+
+      console.log('🔄 [fetchHomeData] Buscando dados da Home do Supabase (query única)...');
+      
+      // Query única otimizada para a Home
+      const [articlesResult, categoriesResult] = await Promise.all([
+        supabaseWithRetry(
+          async () => {
+            const response = await supabase
+              .from('articles')
+              .select('id, title, slug, excerpt, content, image_url, published, created_at, updated_at, category_id, positive_feedback, negative_feedback, approval_rate')
+              .eq('published', true)
+              .order('created_at', { ascending: false })
+              .limit(50); // Limitar para performance
+            return response;
+          },
+          'Fetch Home Articles'
+        ),
+        supabaseWithRetry(
+          async () => {
+            const response = await supabase
+              .from('categories')
+              .select('id, name, slug, description')
+              .order('name', { ascending: true });
+            return response;
+          },
+          'Fetch Home Categories'
+        )
+      ]);
+
+      if (!articlesResult.success || !categoriesResult.success) {
+        throw new Error('Falha ao buscar dados da Home');
+      }
+
+      const homeData = {
+        articles: articlesResult.data as Article[],
+        categories: categoriesResult.data as Category[]
+      };
+
+      // Cache específico da Home com TTL de 2 minutos
+      await hybridCache.set(CacheKeys.HOME_DATA, homeData, { 
+        accessCount: 15, // Marcar como muito popular
+        isAdminOperation: false 
+      });
+
+      console.log('✅ [fetchHomeData] Dados da Home carregados com sucesso');
+      return homeData;
+    } catch (err) {
+      console.error('❌ Error fetching home data:', err);
+      throw err;
     }
   }, []);
 
@@ -906,7 +970,8 @@ export const useArticles = (): UseArticlesReturn => {
     getPublishedArticles,
     getArticlesByCategory,
     searchArticles,
-    refreshArticles
+    refreshArticles,
+    fetchHomeData // Nova função otimizada para Home
   };
 
   // Sistema automático: escutar mudanças de feedback para invalidar cache
@@ -971,6 +1036,7 @@ export const useArticles = (): UseArticlesReturn => {
     getPublishedArticles,
     getArticlesByCategory,
     searchArticles,
-    refreshArticles
+    refreshArticles,
+    fetchHomeData // Nova função otimizada para Home
   };
 };

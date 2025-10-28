@@ -1,25 +1,14 @@
-import React from 'react';
+import React, { useMemo, Suspense } from 'react';
 import { Link } from 'react-router-dom';
-import { Brain, Zap, Rocket, ArrowRight } from 'lucide-react';
+import { Brain, Zap, Rocket, Lightbulb, Target, Cpu, ArrowRight } from 'lucide-react';
 import { useArticles } from '../../hooks/useArticles';
-import Card from '../UI/Card';
+import { useHomeOptimization } from '../../hooks/useHomeOptimization';
+import { Card, CardContent } from '../UI/Card';
+import { CategoriesSkeleton } from '../UI/HomeSkeleton';
 
 const Categories: React.FC = () => {
-  const { categories, loading, refreshArticles } = useArticles();
-
-  // Carregar categorias quando o componente montar
-  React.useEffect(() => {
-    console.log('🔍 [Categories] Componente montado, carregando categorias...');
-    refreshArticles();
-  }, [refreshArticles]);
-  
-  // Categorias principais do Header
-  const mainCategorySlugs = ['ia-tecnologia', 'produtividade', 'futuro'];
-  
-  // Filtrar apenas as categorias principais
-  const mainCategories = categories.filter(category => 
-    mainCategorySlugs.includes(category.slug)
-  );
+  const { categories, loading } = useArticles();
+  const { mainCategories } = useHomeOptimization();
 
   // Adicionar logs para debug
   React.useEffect(() => {
@@ -27,7 +16,6 @@ const Categories: React.FC = () => {
       loading,
       totalCategories: categories?.length || 0,
       categories: categories?.map(cat => ({ id: cat.id, name: cat.name, slug: cat.slug })),
-      mainCategorySlugs,
       mainCategories: mainCategories?.map(cat => ({ id: cat.id, name: cat.name, slug: cat.slug }))
     });
   }, [categories, loading, mainCategories]);
@@ -50,32 +38,15 @@ const Categories: React.FC = () => {
           </p>
         </div>
 
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-green mx-auto mb-4"></div>
-            <p className="text-futuristic-gray">Carregando categorias...</p>
-          </div>
+        {loading && mainCategories.length === 0 ? (
+          <CategoriesSkeleton />
         ) : mainCategories.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-red-400 text-lg font-semibold mb-4">❌ Categorias principais não encontradas!</p>
-            <div className="bg-dark-gray/50 p-6 rounded-lg max-w-2xl mx-auto">
-              <p className="text-futuristic-gray text-sm mb-2">
-                <strong>Total de categorias carregadas:</strong> {categories?.length || 0}
-              </p>
-              <p className="text-futuristic-gray text-sm mb-2">
-                <strong>Slugs procurados:</strong> {mainCategorySlugs.join(', ')}
-              </p>
-              {categories && categories.length > 0 && (
-                <div className="mt-4">
-                  <p className="text-futuristic-gray text-sm mb-2"><strong>Categorias disponíveis:</strong></p>
-                  <ul className="text-xs text-futuristic-gray space-y-1">
-                    {categories.map(cat => (
-                      <li key={cat.id}>• {cat.name} (slug: {cat.slug})</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
+          <div className="text-center text-gray-600">
+            <p>Nenhuma categoria principal encontrada.</p>
+            <p className="text-sm mt-2">
+              Debug: Total categorias: {categories.length} | 
+              Slugs encontrados: {categories.map(c => c.slug).join(', ')}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

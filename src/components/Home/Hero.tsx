@@ -1,24 +1,20 @@
-import React from 'react';
+import React, { useMemo, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Sparkles, Brain, Zap } from 'lucide-react';
 import Button from '../UI/Button';
 import { useArticles } from '../../hooks/useArticles';
+import { useHomeOptimization } from '../../hooks/useHomeOptimization';
+import { Card, CardContent } from '../UI/Card';
+import { HeroSkeleton } from '../UI/HomeSkeleton';
 
 const Hero: React.FC = () => {
-  const { articles, categories, loading, refreshArticles } = useArticles();
+  const { articles, loading } = useArticles();
+  const { heroMetrics } = useHomeOptimization();
 
-  // Carregar dados quando o componente montar
-  React.useEffect(() => {
-    refreshArticles();
-  }, [refreshArticles]);
-
-  // Calcular métricas reais baseadas nos dados do Supabase
-  const publishedArticles = articles.filter(article => article.published);
-  const totalArticles = publishedArticles.length;
-  const totalCategories = categories.length;
-  
-  // Estimativa de leitores baseada nos artigos (pode ser substituída por analytics reais)
-  const estimatedReaders = totalArticles > 0 ? Math.max(100, totalArticles * 50) : 100;
+  // Se estiver carregando, mostrar skeleton
+  if (loading && articles.length === 0) {
+    return <HeroSkeleton />;
+  }
 
   return (
     <section 
@@ -88,33 +84,33 @@ const Hero: React.FC = () => {
           <div className="text-center" role="group" aria-label="Estatística de artigos">
             <div 
               className="text-3xl md:text-4xl font-orbitron font-bold text-lime-green mb-2"
-              aria-label={`${loading ? 'Carregando' : totalArticles} ${totalArticles === 1 ? 'artigo publicado' : 'artigos publicados'}`}
+              aria-label={`${loading ? 'Carregando' : heroMetrics.totalArticles} ${heroMetrics.totalArticles === 1 ? 'artigo publicado' : 'artigos publicados'}`}
             >
-              {loading ? '...' : totalArticles}
+              {loading ? '...' : heroMetrics.totalArticles}
             </div>
             <div className="text-futuristic-gray font-montserrat">
-              {totalArticles === 1 ? 'Artigo Publicado' : 'Artigos Publicados'}
+              {heroMetrics.totalArticles === 1 ? 'Artigo Publicado' : 'Artigos Publicados'}
             </div>
           </div>
           
           <div className="text-center" role="group" aria-label="Estatística de categorias">
             <div 
               className="text-3xl md:text-4xl font-orbitron font-bold text-neon-purple mb-2"
-              aria-label={`${loading ? 'Carregando' : totalCategories} ${totalCategories === 1 ? 'categoria' : 'categorias'}`}
+              aria-label={`${loading ? 'Carregando' : heroMetrics.totalCategories} ${heroMetrics.totalCategories === 1 ? 'categoria' : 'categorias'}`}
             >
-              {loading ? '...' : totalCategories}
+              {loading ? '...' : heroMetrics.totalCategories}
             </div>
             <div className="text-futuristic-gray font-montserrat">
-              {totalCategories === 1 ? 'Categoria' : 'Categorias'}
+              {heroMetrics.totalCategories === 1 ? 'Categoria' : 'Categorias'}
             </div>
           </div>
           
           <div className="text-center" role="group" aria-label="Estatística de leitores">
             <div 
               className="text-3xl md:text-4xl font-orbitron font-bold text-lime-green mb-2"
-              aria-label={`${loading ? 'Carregando' : `Mais de ${estimatedReaders}`} leitores`}
+              aria-label={`${loading ? 'Carregando' : `Mais de ${heroMetrics.estimatedReaders}`} leitores`}
             >
-              {loading ? '...' : `${estimatedReaders}+`}
+              {loading ? '...' : `${heroMetrics.estimatedReaders}+`}
             </div>
             <div className="text-futuristic-gray font-montserrat">
               Leitores

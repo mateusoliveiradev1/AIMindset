@@ -111,6 +111,7 @@ export const useAutoFeedbackSync = () => {
 
   return {
     forceSyncNow,
+    syncFeedback: forceSyncNow, // Alias para compatibilidade
     isActive: isActiveRef.current
   };
 };

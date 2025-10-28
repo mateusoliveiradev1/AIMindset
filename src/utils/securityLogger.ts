@@ -300,6 +300,12 @@ export class SecurityLogger {
   private static isRealThreat(alert: SecurityAlert): boolean {
     const input = alert.events[0]?.details?.input || alert.events[0]?.message || '';
     const context = alert.events[0]?.details;
+    
+    // Validação de entrada
+    if (!input || typeof input !== 'string') {
+      return false;
+    }
+    
     // Whitelist de operações normais
     const normalOperations = [
       'article_content',

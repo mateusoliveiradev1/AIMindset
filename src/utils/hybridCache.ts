@@ -598,6 +598,9 @@ export const CacheKeys = {
   ARTICLES_LIST: 'articles_list',
   CATEGORIES_LIST: 'categories_list',
   CATEGORIES_FAST: 'categories_fast', // Cache específico para categorias com TTL menor
+  HOME_DATA: 'home_data_fast', // Cache específico para dados da Home com TTL de 2 minutos
+  HOME_METRICS: 'home_metrics_fast', // Cache para métricas calculadas da Home
+  HOME_FEATURED: 'home_featured_fast', // Cache para artigos em destaque da Home
   ARTICLE_BY_ID: (id: string) => `article_${id}`,
   CATEGORY_BY_ID: (id: string) => `category_${id}`,
   ARTICLES_BY_CATEGORY: (categoryId: string) => `articles_category_${categoryId}`,

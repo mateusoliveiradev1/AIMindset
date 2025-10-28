@@ -20,6 +20,11 @@ const purifyConfig = {
  * Verifica se o input é conteúdo normal (artigo, comentário, etc.)
  */
 export const isNormalContent = (input: string): boolean => {
+  // Validação de entrada
+  if (!input || typeof input !== 'string') {
+    return false;
+  }
+
   // Se é muito longo, provavelmente é conteúdo de artigo
   if (input.length > 200) {
     return true;

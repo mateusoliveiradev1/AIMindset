@@ -53,5 +53,11 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(({
   );
 });
 
+const CardContent: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
+  <div className={cn("p-6", className)}>
+    {children}
+  </div>
+);
+
 export default Card;
-export { Card };
+export { Card, CardContent };
