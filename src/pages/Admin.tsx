@@ -213,6 +213,22 @@ export const Admin: React.FC = () => {
         console.log('🔄 Chamando refreshArticles...');
         await refreshArticles();
         console.log('✅ refreshArticles concluído');
+        
+        // 🎯 INVALIDAR CACHE ESPECÍFICO DA HOME PARA ATUALIZAÇÃO EM TEMPO REAL
+        console.log('🏠 Invalidando cache da home para atualização em tempo real...');
+        const { hybridCache, CacheKeys } = await import('../utils/hybridCache');
+        
+        // Invalidar especificamente os caches da home
+        await hybridCache.invalidate(CacheKeys.HOME_DATA);
+        await hybridCache.invalidate(CacheKeys.HOME_METRICS);
+        await hybridCache.invalidate(CacheKeys.HOME_FEATURED);
+        
+        // Invalidar padrões relacionados à home
+        await hybridCache.invalidatePattern('home');
+        await hybridCache.invalidatePattern('featured');
+        
+        console.log('✅ Cache da home invalidado - métricas serão atualizadas em tempo real');
+        
       } else {
         console.error('❌ updateArticlePublished retornou false');
         toast.error('Erro ao atualizar status do artigo');
