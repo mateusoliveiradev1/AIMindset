@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { TrendingUp, MessageCircle, ThumbsUp, ThumbsDown, RefreshCw, Filter } from 'lucide-react';
+import { TrendingUp, MessageCircle, ThumbsUp, ThumbsDown, RefreshCw, Filter, Heart, Reply } from 'lucide-react';
 import { useArticles } from '../../hooks/useArticles';
 import { useRealTimeMetrics } from '../../hooks/useRealTimeMetrics';
 import { MetricsTable } from './MetricsTable';
@@ -8,11 +8,14 @@ import { Article } from '../../hooks/useArticles';
 import { RequestMonitor } from '../RequestMonitor';
 
 interface ArticleMetrics {
-  article_id: number;
+  article_id: string;  // Mudança: string em vez de number para compatibilidade com UUIDs
   positive_feedback: number;
   negative_feedback: number;
   total_comments: number;
   approval_rate: number;
+  total_likes?: number;      // NOVO: Total de curtidas nos comentários
+  total_replies?: number;    // NOVO: Total de respostas
+  engagement_rate?: number;  // NOVO: Taxa de engajamento
 }
 
 export const FeedbackDashboard: React.FC = () => {
@@ -21,12 +24,11 @@ export const FeedbackDashboard: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'draft'>('published');
   const [searchTerm, setSearchTerm] = useState('');
+  const [engagementFilter, setEngagementFilter] = useState<'all' | 'high_likes' | 'with_replies' | 'high_engagement' | 'active'>('all');
 
   // Extrair IDs dos artigos para o hook de métricas
   const articleIds = useMemo(() => {
     const ids = (articles || []).map(article => article.id.toString());
-    console.log('🔍 [FEEDBACK-DASHBOARD] Artigos disponíveis:', articles?.length || 0);
-    console.log('🔍 [FEEDBACK-DASHBOARD] IDs extraídos:', ids);
     return ids;
   }, [articles]);
 
@@ -35,73 +37,43 @@ export const FeedbackDashboard: React.FC = () => {
 
   // Memoizar métricas formatadas para evitar re-renders desnecessários
   const formattedMetrics = useMemo(() => {
-    console.log('🔍 [FEEDBACK-DASHBOARD] Iniciando formatação das métricas');
-    console.log('🔍 [FEEDBACK-DASHBOARD] Métricas recebidas:', metrics);
-    console.log('🔍 [FEEDBACK-DASHBOARD] Tipo das métricas:', typeof metrics);
-    console.log('🔍 [FEEDBACK-DASHBOARD] Keys das métricas:', Object.keys(metrics || {}));
-    
     if (!metrics || Object.keys(metrics).length === 0) {
-      console.log('⚠️ [FEEDBACK-DASHBOARD] Nenhuma métrica disponível');
       return [];
     }
     
-    const formatted = Object.entries(metrics).map(([articleId, metric], index) => {
-      console.log(`🔍 [FEEDBACK-DASHBOARD] Processando métrica ${index} para artigo ${articleId}:`, metric);
-      
+    const formatted = Object.entries(metrics).map(([articleId, metric]) => {
       // Validar e garantir valores seguros
       const positiveFeedback = Number(metric.positiveFeedback) || 0;
       const negativeFeedback = Number(metric.negativeFeedback) || 0;
-      const totalComments = Number(metric.comments) || 0; // Corrigir nome da propriedade
+      const totalComments = Number(metric.comments) || 0; // Usar 'comments' do hook
       const approvalRate = Number(metric.approvalRate) || 0;
       
-      console.log(`📊 [FEEDBACK-DASHBOARD] Valores extraídos para artigo ${articleId}:`, {
-        positiveFeedback,
-        negativeFeedback,
-        totalComments,
-        approvalRate,
-        originalMetric: metric
-      });
-      
-      // Verificar se há valores NaN
-      if (isNaN(positiveFeedback) || isNaN(negativeFeedback) || 
-          isNaN(totalComments) || isNaN(approvalRate)) {
-        console.warn('⚠️ [FEEDBACK-DASHBOARD] Valores NaN detectados:', {
-          articleId, positiveFeedback, negativeFeedback, totalComments, approvalRate
-        });
-      }
-      
-      const formattedMetric = {
-        article_id: articleId, // Usar o articleId como string
+      const formattedMetric: ArticleMetrics = {
+        article_id: articleId,  // Mudança: manter como string (UUID)
         positive_feedback: positiveFeedback,
         negative_feedback: negativeFeedback,
         total_comments: totalComments,
-        approval_rate: isNaN(approvalRate) ? 0 : approvalRate
+        approval_rate: isNaN(approvalRate) ? 0 : approvalRate,
+        total_likes: metric.total_likes || 0,
+        total_replies: metric.total_replies || 0,
+        engagement_rate: metric.engagement_rate || 0
       };
       
-      console.log(`✅ [FEEDBACK-DASHBOARD] Métrica formatada para artigo ${articleId}:`, formattedMetric);
       return formattedMetric;
     });
     
-    console.log('✅ [FEEDBACK-DASHBOARD] Todas as métricas formatadas:', formatted);
     return formatted;
   }, [metrics]);
 
   // Debug das métricas recebidas
   useEffect(() => {
-    console.log('🎯 [FEEDBACK-DASHBOARD] Artigos carregados:', articles?.length || 0);
-    console.log('📊 [FEEDBACK-DASHBOARD] Métricas recebidas:', metrics);
-    console.log('📊 [FEEDBACK-DASHBOARD] Métricas formatadas:', formattedMetrics);
-    console.log('⏳ [FEEDBACK-DASHBOARD] Loading states:', { articlesLoading, metricsLoading });
-    console.log('🔄 [FEEDBACK-DASHBOARD] Estado atual do dashboard:', {
-      totalArticles: articles?.length || 0,
-      totalMetrics: Object.keys(metrics || {}).length,
-      formattedMetricsCount: formattedMetrics?.length || 0,
-      lastUpdate: lastUpdate?.toLocaleTimeString()
-    });
-  }, [articles, metrics, formattedMetrics, articlesLoading, metricsLoading, lastUpdate]);
+    // Logs simplificados apenas para debug crítico
+    if (error) {
+      console.error('❌ [FEEDBACK-DASHBOARD] Erro:', error);
+    }
+  }, [articles, metrics, formattedMetrics, articlesLoading, metricsLoading, lastUpdate, error]);
 
   const handleRefresh = useCallback(async () => {
-    console.log('🔄 [DASHBOARD] Refresh manual iniciado');
     await refreshArticles();
     forceRefresh();
   }, [refreshArticles, forceRefresh]);
@@ -124,9 +96,34 @@ export const FeedbackDashboard: React.FC = () => {
       const matchesFilter = filterStatus === 'all' ||
                            (filterStatus === 'published' && article.published) ||
                            (filterStatus === 'draft' && !article.published);
-      return matchesSearch && matchesFilter;
+      
+      // Filtro de engajamento
+      let matchesEngagement = true;
+      if (engagementFilter !== 'all') {
+        const articleMetrics = formattedMetrics.find(m => m.article_id === Number(article.id));
+        if (articleMetrics) {
+          switch (engagementFilter) {
+            case 'high_likes':
+              matchesEngagement = (articleMetrics.total_likes || 0) >= 5;
+              break;
+            case 'with_replies':
+              matchesEngagement = (articleMetrics.total_replies || 0) > 0;
+              break;
+            case 'high_engagement':
+              matchesEngagement = (articleMetrics.engagement_rate || 0) >= 80;
+              break;
+            case 'active':
+              matchesEngagement = (articleMetrics.total_likes || 0) > 0 || (articleMetrics.total_replies || 0) > 0;
+              break;
+          }
+        } else {
+          matchesEngagement = false;
+        }
+      }
+      
+      return matchesSearch && matchesFilter && matchesEngagement;
     });
-  }, [articles, searchTerm, filterStatus]);
+  }, [articles, searchTerm, filterStatus, engagementFilter, formattedMetrics]);
 
   // Calcular estatísticas gerais
   const totalStats = useMemo(() => {
@@ -147,9 +144,30 @@ export const FeedbackDashboard: React.FC = () => {
       const value = Number(m?.total_comments) || 0;
       return sum + (isNaN(value) ? 0 : value);
     }, 0);
-    
+
+    // NOVO: Calcular estatísticas de curtidas e respostas
+    const totalLikes = safeMetrics.reduce((sum, m) => {
+      const value = Number(m?.total_likes) || 0;
+      return sum + (isNaN(value) ? 0 : value);
+    }, 0);
+
+    const totalReplies = safeMetrics.reduce((sum, m) => {
+      const value = Number(m?.total_replies) || 0;
+      return sum + (isNaN(value) ? 0 : value);
+    }, 0);
+
     const totalFeedback = totalPositiveFeedback + totalNegativeFeedback;
     const overallApprovalRate = totalFeedback > 0 ? (totalPositiveFeedback / totalFeedback) * 100 : 0;
+    
+    // NOVO: Calcular taxa de engajamento (curtidas + respostas / comentários)
+    const engagementRate = totalComments > 0 ? ((totalLikes + totalReplies) / totalComments) * 100 : 0;
+
+    // NOVO: Comentários ativos (com curtidas ou respostas)
+    const activeComments = safeMetrics.reduce((sum, m) => {
+      const likes = Number(m?.total_likes) || 0;
+      const replies = Number(m?.total_replies) || 0;
+      return sum + (likes > 0 || replies > 0 ? 1 : 0);
+    }, 0);
     
     // Verificar se há valores NaN nas estatísticas
     if (isNaN(overallApprovalRate)) {
@@ -163,21 +181,21 @@ export const FeedbackDashboard: React.FC = () => {
       totalNegativeFeedback: isNaN(totalNegativeFeedback) ? 0 : totalNegativeFeedback,
       totalComments: isNaN(totalComments) ? 0 : totalComments,
       totalFeedback: isNaN(totalFeedback) ? 0 : totalFeedback,
-      overallApprovalRate: isNaN(overallApprovalRate) ? 0 : overallApprovalRate
+      overallApprovalRate: isNaN(overallApprovalRate) ? 0 : overallApprovalRate,
+      totalLikes: isNaN(totalLikes) ? 0 : totalLikes,           // NOVO
+      totalReplies: isNaN(totalReplies) ? 0 : totalReplies,     // NOVO
+      engagementRate: isNaN(engagementRate) ? 0 : engagementRate, // NOVO
+      activeComments: isNaN(activeComments) ? 0 : activeComments  // NOVO
     };
   }, [formattedMetrics]);
 
   // Log de debug para monitoramento
   useEffect(() => {
-    console.log('📊 [DASHBOARD] Estado atual:', {
-      articles: articles?.length || 0,
-      metrics: Object.keys(metrics).length,
-      loading: { articles: articlesLoading, metrics: metricsLoading },
-      lastUpdate,
-      cacheSize,
-      error
-    });
-  }, [articles, metrics, articlesLoading, metricsLoading, lastUpdate, cacheSize, error]);
+    // Apenas logs críticos de erro
+    if (error) {
+      console.error('❌ [DASHBOARD] Erro crítico:', error);
+    }
+  }, [error]);
 
   return (
     <div className="space-y-6">
@@ -211,8 +229,8 @@ export const FeedbackDashboard: React.FC = () => {
          </button>
        </div>
 
-      {/* Estatísticas Gerais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Estatísticas Gerais - EXPANDIDO */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
         <div className="bg-darker-surface/30 rounded-lg p-6">
           <div className="flex items-center justify-between">
              <div>
@@ -262,6 +280,95 @@ export const FeedbackDashboard: React.FC = () => {
              </div>
            </div>
          </div>
+
+         {/* NOVO: Card de Total de Curtidas */}
+         <div className="bg-darker-surface/30 rounded-lg p-6">
+           <div className="flex items-center justify-between">
+             <div>
+               <p className="text-sm font-medium text-futuristic-gray">Total de Curtidas</p>
+               <p className="text-2xl font-bold text-pink-400">{totalStats.totalLikes}</p>
+               <p className="text-xs text-pink-300 mt-1">
+                 {totalStats.totalComments > 0 ? (totalStats.totalLikes / totalStats.totalComments).toFixed(1) : '0'} por comentário
+               </p>
+             </div>
+             <div className="p-3 bg-pink-400/20 rounded-full">
+               <Heart className="h-6 w-6 text-pink-400" />
+             </div>
+           </div>
+         </div>
+
+         {/* NOVO: Card de Total de Respostas */}
+         <div className="bg-darker-surface/30 rounded-lg p-6">
+           <div className="flex items-center justify-between">
+             <div>
+               <p className="text-sm font-medium text-futuristic-gray">Total de Respostas</p>
+               <p className="text-2xl font-bold text-cyan-400">{totalStats.totalReplies}</p>
+               <p className="text-xs text-cyan-300 mt-1">
+                 {totalStats.totalComments > 0 ? (totalStats.totalReplies / totalStats.totalComments).toFixed(1) : '0'} por comentário
+               </p>
+             </div>
+             <div className="p-3 bg-cyan-400/20 rounded-full">
+               <Reply className="h-6 w-6 text-cyan-400" />
+             </div>
+           </div>
+         </div>
+      </div>
+
+      {/* NOVO: Segunda linha de estatísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* NOVO: Card de Taxa de Engajamento */}
+        <div className="bg-darker-surface/30 rounded-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-futuristic-gray">Taxa de Engajamento</p>
+              <p className="text-2xl font-bold text-yellow-400">
+                {Math.round(totalStats.engagementRate)}%
+              </p>
+              <p className="text-xs text-yellow-300 mt-1">
+                Curtidas + Respostas / Comentários
+              </p>
+            </div>
+            <div className="p-3 bg-yellow-400/20 rounded-full">
+              <TrendingUp className="h-6 w-6 text-yellow-400" />
+            </div>
+          </div>
+        </div>
+
+        {/* NOVO: Card de Comentários Ativos */}
+        <div className="bg-darker-surface/30 rounded-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-futuristic-gray">Comentários Ativos</p>
+              <p className="text-2xl font-bold text-green-400">{totalStats.activeComments}</p>
+              <p className="text-xs text-green-300 mt-1">
+                Com curtidas ou respostas
+              </p>
+            </div>
+            <div className="p-3 bg-green-400/20 rounded-full">
+              <MessageCircle className="h-6 w-6 text-green-400" />
+            </div>
+          </div>
+        </div>
+
+        {/* NOVO: Card de Média de Engajamento por Artigo */}
+        <div className="bg-darker-surface/30 rounded-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-futuristic-gray">Engajamento Médio</p>
+              <p className="text-2xl font-bold text-orange-400">
+                {articles && articles.length > 0 ? 
+                  Math.round((totalStats.totalLikes + totalStats.totalReplies) / articles.length) : 0
+                }
+              </p>
+              <p className="text-xs text-orange-300 mt-1">
+                Por artigo publicado
+              </p>
+            </div>
+            <div className="p-3 bg-orange-400/20 rounded-full">
+              <TrendingUp className="h-6 w-6 text-orange-400" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -285,6 +392,20 @@ export const FeedbackDashboard: React.FC = () => {
             <option value="all">Todos os Status</option>
             <option value="published">Publicados</option>
             <option value="draft">Rascunhos</option>
+          </select>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Heart className="h-4 w-4 text-futuristic-gray" />
+          <select
+            value={engagementFilter}
+            onChange={(e) => setEngagementFilter(e.target.value as 'all' | 'high_likes' | 'with_replies' | 'high_engagement' | 'active')}
+            className="px-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple"
+          >
+            <option value="all">Todo Engajamento</option>
+            <option value="high_likes">Mais Curtidos (5+)</option>
+            <option value="with_replies">Com Respostas</option>
+            <option value="high_engagement">Alto Engajamento (80%+)</option>
+            <option value="active">Comentários Ativos</option>
           </select>
         </div>
       </div>

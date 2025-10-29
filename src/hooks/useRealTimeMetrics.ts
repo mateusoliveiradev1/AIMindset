@@ -8,6 +8,9 @@ interface ArticleMetrics {
   negativeFeedback: number;
   comments: number;
   approvalRate: number;
+  total_likes: number;
+  total_replies: number;
+  engagement_rate: number;
 }
 
 interface RealTimeMetricsState {
@@ -106,16 +109,18 @@ export function useRealTimeMetrics(articleIds: string[]) {
       const { data: rpcData, error: rpcError } = await supabase
         .rpc('get_article_metrics', { target_article_id: articleId });
 
-      if (!rpcError && rpcData && rpcData.length > 0) {
-        const rpcMetrics = rpcData[0];
-        console.log(`✅ [REALTIME-METRICS] Métricas obtidas para ${articleId}`);
+      if (!rpcError && rpcData) {
+        console.log(`✅ [REALTIME-METRICS] Métricas obtidas para ${articleId}:`, rpcData);
         
         const metrics: ArticleMetrics = {
           articleId,
-          positiveFeedback: Number(rpcMetrics.positive_feedback) || 0,
-          negativeFeedback: Number(rpcMetrics.negative_feedback) || 0,
-          comments: Number(rpcMetrics.total_comments) || 0,
-          approvalRate: Number(rpcMetrics.approval_rate) || 0
+          positiveFeedback: Number(rpcData.positive_feedback) || 0,
+          negativeFeedback: Number(rpcData.negative_feedback) || 0,
+          comments: Number(rpcData.total_comments) || 0,
+          approvalRate: Number(rpcData.approval_rate) || 0,
+          total_likes: Number(rpcData.total_likes) || 0,
+          total_replies: Number(rpcData.total_replies) || 0,
+          engagement_rate: Number(rpcData.engagement_rate) || 0
         };
 
         // Cache com TTL de 30 segundos
@@ -149,10 +154,10 @@ export function useRealTimeMetrics(articleIds: string[]) {
         throw feedbackError;
       }
 
-      // Buscar comentários
+      // Buscar comentários com likes e parent_id
       const { data: commentsData, error: commentsError } = await supabaseAdmin
         .from('comments')
-        .select('id')
+        .select('id, likes, parent_id')
         .eq('article_id', articleId);
 
       if (commentsError) {
@@ -160,9 +165,23 @@ export function useRealTimeMetrics(articleIds: string[]) {
         throw commentsError;
       }
 
+      // Calcular métricas de engajamento
+      const totalLikes = commentsData?.reduce((sum, comment) => sum + (Number(comment.likes) || 0), 0) || 0;
+      const totalReplies = commentsData?.filter(comment => comment.parent_id !== null).length || 0;
+      const commentsWithEngagement = commentsData?.filter(comment => 
+        (Number(comment.likes) || 0) > 0 || comment.parent_id !== null
+      ).length || 0;
+      
+      const engagementRate = commentsData && commentsData.length > 0 
+        ? (commentsWithEngagement / commentsData.length) * 100 
+        : 0;
+
       console.log(`📊 [REALTIME-METRICS] Dados brutos para ${articleId}:`, {
         feedbackData: feedbackData?.length || 0,
-        commentsData: commentsData?.length || 0
+        commentsData: commentsData?.length || 0,
+        totalLikes,
+        totalReplies,
+        engagementRate
       });
 
       const positiveFeedback = Number(feedbackData?.filter(f => f.useful === true).length) || 0;
@@ -173,13 +192,17 @@ export function useRealTimeMetrics(articleIds: string[]) {
 
       // Validar se approvalRate é um número válido
       const safeApprovalRate = isNaN(approvalRate) ? 0 : Math.round(approvalRate * 100) / 100;
+      const safeEngagementRate = isNaN(engagementRate) ? 0 : Math.round(engagementRate * 100) / 100;
 
       const metrics: ArticleMetrics = {
         articleId,
         positiveFeedback,
         negativeFeedback,
         comments,
-        approvalRate: safeApprovalRate
+        approvalRate: safeApprovalRate,
+        total_likes: totalLikes,
+        total_replies: totalReplies,
+        engagement_rate: safeEngagementRate
       };
 
       // Cache com TTL de 30 segundos
@@ -226,7 +249,10 @@ export function useRealTimeMetrics(articleIds: string[]) {
             positiveFeedback: Number(metrics.positiveFeedback) || 0,
             negativeFeedback: Number(metrics.negativeFeedback) || 0,
             comments: Number(metrics.comments) || 0,
-            approvalRate: Number(metrics.approvalRate) || 0
+            approvalRate: Number(metrics.approvalRate) || 0,
+            total_likes: Number(metrics.total_likes) || 0,
+            total_replies: Number(metrics.total_replies) || 0,
+            engagement_rate: Number(metrics.engagement_rate) || 0
           };
           newMetrics[metrics.articleId] = safeMetrics;
         } else {
@@ -280,7 +306,10 @@ export function useRealTimeMetrics(articleIds: string[]) {
         positiveFeedback: Number(metrics.positiveFeedback) || 0,
         negativeFeedback: Number(metrics.negativeFeedback) || 0,
         comments: Number(metrics.comments) || 0,
-        approvalRate: Number(metrics.approvalRate) || 0
+        approvalRate: Number(metrics.approvalRate) || 0,
+        total_likes: Number(metrics.total_likes) || 0,
+        total_replies: Number(metrics.total_replies) || 0,
+        engagement_rate: Number(metrics.engagement_rate) || 0
       };
       
       setState(prev => ({

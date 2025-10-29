@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, MessageCircle, ThumbsUp, ThumbsDown, Eye, RefreshCw } from 'lucide-react';
+import { TrendingUp, MessageCircle, ThumbsUp, ThumbsDown, Eye, RefreshCw, Heart, MessageSquare } from 'lucide-react';
 import { Article } from '../../hooks/useArticles';
 
 interface ArticleMetrics {
@@ -8,6 +8,9 @@ interface ArticleMetrics {
   negative_feedback: number;
   total_comments: number;
   approval_rate: number;
+  total_likes?: number;
+  total_replies?: number;
+  engagement_rate?: number;
 }
 
 interface MetricsTableProps {
@@ -26,21 +29,15 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
 
   // Detectar mudanças nas métricas para mostrar indicadores visuais
   useEffect(() => {
-    console.log('📊 [METRICS-TABLE] Métricas recebidas:', metrics);
-    console.log('📊 [METRICS-TABLE] Número de métricas:', metrics?.length || 0);
-    console.log('📊 [METRICS-TABLE] Artigos disponíveis:', articles?.length || 0);
-    
     setLastUpdate(new Date());
     
     // Simular indicador de atualização
     if (metrics && metrics.length > 0) {
       const articleIds = metrics.map(m => m.article_id);
-      console.log('🔄 [METRICS-TABLE] Atualizando indicadores para artigos:', articleIds);
       setUpdatingArticles(new Set(articleIds.map(id => typeof id === 'string' ? id : String(id))));
       
       // Remover indicador após 2 segundos
       const timer = setTimeout(() => {
-        console.log('✅ [METRICS-TABLE] Removendo indicadores de atualização');
         setUpdatingArticles(new Set());
       }, 2000);
       
@@ -52,18 +49,8 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
     // articleId já é string
     const articleIdStr = articleId;
     
-    console.log(`🔍 [METRICS-TABLE] Buscando métricas para artigo ${articleId} (string: ${articleIdStr})`);
-    console.log(`🔍 [METRICS-TABLE] Métricas disponíveis:`, metrics?.map(m => ({ 
-      id: m.article_id, 
-      type: typeof m.article_id,
-      positive: m.positive_feedback,
-      negative: m.negative_feedback,
-      comments: m.total_comments
-    })));
-    
     const found = metrics?.find(m => {
       const match = m.article_id === articleIdStr;
-      console.log(`🔍 [METRICS-TABLE] Comparando ${m.article_id} === ${articleIdStr}: ${match}`);
       return match;
     });
     
@@ -72,10 +59,12 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
       positive_feedback: 0,
       negative_feedback: 0,
       total_comments: 0,
-      approval_rate: 0
+      approval_rate: 0,
+      total_likes: 0,
+      total_replies: 0,
+      engagement_rate: 0
     };
     
-    console.log(`📊 [METRICS-TABLE] Resultado final para artigo ${articleId}:`, result);
     return result;
   };
 
@@ -124,6 +113,18 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
                 <div className="flex items-center">
                   <MessageCircle className="h-4 w-4 mr-1" />
                   Comentários
+                </div>
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-futuristic-gray uppercase tracking-wider">
+                <div className="flex items-center">
+                  <Heart className="h-4 w-4 mr-1" />
+                  Curtidas
+                </div>
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-futuristic-gray uppercase tracking-wider">
+                <div className="flex items-center">
+                  <MessageSquare className="h-4 w-4 mr-1" />
+                  Respostas
                 </div>
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-futuristic-gray uppercase tracking-wider">
@@ -195,6 +196,28 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
                           : 'text-blue-400'
                       }`}>
                         {articleMetrics.total_comments}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <span className={`text-sm font-medium transition-all duration-300 ${
+                        updatingArticles.has(article.id) 
+                          ? 'text-futuristic-blue animate-pulse' 
+                          : 'text-pink-400'
+                      }`}>
+                        {articleMetrics.total_likes || 0}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <span className={`text-sm font-medium transition-all duration-300 ${
+                        updatingArticles.has(article.id) 
+                          ? 'text-futuristic-blue animate-pulse' 
+                          : 'text-purple-400'
+                      }`}>
+                        {articleMetrics.total_replies || 0}
                       </span>
                     </div>
                   </td>

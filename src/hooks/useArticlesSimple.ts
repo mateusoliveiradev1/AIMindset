@@ -58,7 +58,7 @@ export const useArticlesSimple = () => {
           try {
             console.log(`🔍 [Simple] Buscando métricas para "${article.title}"`);
             const { data: metrics } = await supabase
-              .rpc('get_article_metrics', { article_id_param: article.id });
+              .rpc('get_article_metrics', { target_article_id: article.id });
             
             if (metrics && metrics.length > 0) {
               const metric = metrics[0];

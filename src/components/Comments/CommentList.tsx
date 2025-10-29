@@ -1,20 +1,26 @@
 import React from 'react';
 import { Loader2, MessageCircle, Sparkles } from 'lucide-react';
 import { CommentItem } from './CommentItem';
-import type { Comment } from '../../hooks/useComments';
+import type { Comment, CommentFormData } from '../../hooks/useComments';
 
 interface CommentListProps {
   comments: Comment[];
   loading: boolean;
   hasMore: boolean;
   onLoadMore: () => void;
+  onLike?: (commentId: string) => Promise<boolean>;
+  onReply?: (data: CommentFormData) => Promise<boolean>;
+  submitting?: boolean;
 }
 
 export const CommentList: React.FC<CommentListProps> = ({
   comments,
   loading,
   hasMore,
-  onLoadMore
+  onLoadMore,
+  onLike,
+  onReply,
+  submitting
 }) => {
   console.log('🔍 [DEBUG] CommentList - Props recebidas:', {
     commentsLength: comments.length,
@@ -70,7 +76,13 @@ export const CommentList: React.FC<CommentListProps> = ({
       
       <div className="space-y-4">
         {comments.map((comment) => (
-          <CommentItem key={comment.id} comment={comment} />
+          <CommentItem 
+            key={comment.id} 
+            comment={comment} 
+            onLike={onLike}
+            onReply={onReply}
+            submitting={submitting}
+          />
         ))}
       </div>
 

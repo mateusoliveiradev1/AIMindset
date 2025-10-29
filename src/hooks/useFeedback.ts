@@ -17,6 +17,14 @@ interface UseFeedbackReturn {
   error: string | null;
   submitFeedback: (useful: boolean) => Promise<boolean>;
   checkSubmissionStatus: () => boolean;
+  getEngagementMetrics: () => Promise<EngagementMetrics>;
+}
+
+interface EngagementMetrics {
+  total_likes: number;
+  total_replies: number;
+  engagement_rate: number;
+  active_comments: number;
 }
 
 export const useFeedback = (articleId: string): UseFeedbackReturn => {
@@ -101,11 +109,60 @@ export const useFeedback = (articleId: string): UseFeedbackReturn => {
     }
   }, [articleId]);
 
+  // Função para buscar métricas de engajamento globais
+  const getEngagementMetrics = useCallback(async (): Promise<EngagementMetrics> => {
+    try {
+      console.log('📊 [FEEDBACK] Buscando métricas de engajamento globais');
+      
+      // Buscar todos os comentários com likes e parent_id
+      const { data: commentsData, error: commentsError } = await supabase
+        .from('comments')
+        .select('id, likes, parent_id');
+
+      if (commentsError) {
+        console.error('❌ [FEEDBACK] Erro ao buscar comentários:', commentsError);
+        throw commentsError;
+      }
+
+      // Calcular métricas
+      const totalLikes = commentsData?.reduce((sum, comment) => sum + (Number(comment.likes) || 0), 0) || 0;
+      const totalReplies = commentsData?.filter(comment => comment.parent_id !== null).length || 0;
+      const activeComments = commentsData?.filter(comment => 
+        (Number(comment.likes) || 0) > 0 || comment.parent_id !== null
+      ).length || 0;
+      
+      const engagementRate = commentsData && commentsData.length > 0 
+        ? (activeComments / commentsData.length) * 100 
+        : 0;
+
+      const metrics: EngagementMetrics = {
+        total_likes: totalLikes,
+        total_replies: totalReplies,
+        engagement_rate: Math.round(engagementRate * 100) / 100,
+        active_comments: activeComments
+      };
+
+      console.log('✅ [FEEDBACK] Métricas de engajamento calculadas:', metrics);
+      return metrics;
+
+    } catch (error) {
+      console.error('❌ [FEEDBACK] Erro ao calcular métricas de engajamento:', error);
+      // Retornar métricas zeradas em caso de erro
+      return {
+        total_likes: 0,
+        total_replies: 0,
+        engagement_rate: 0,
+        active_comments: 0
+      };
+    }
+  }, []);
+
   return {
     submitting,
     hasSubmitted,
     error,
     submitFeedback,
-    checkSubmissionStatus
+    checkSubmissionStatus,
+    getEngagementMetrics
   };
 };

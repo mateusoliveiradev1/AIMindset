@@ -38,7 +38,7 @@ async function testGetArticleMetrics() {
       
       // Testar a função get_article_metrics
       const { data: metrics, error: metricsError } = await supabase
-        .rpc('get_article_metrics', { article_id_param: article.id });
+        .rpc('get_article_metrics', { target_article_id: article.id });
 
       if (metricsError) {
         console.error(`❌ Erro na função get_article_metrics:`, metricsError);

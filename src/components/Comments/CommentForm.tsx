@@ -6,12 +6,22 @@ import type { CommentFormData } from '../../hooks/useComments';
 interface CommentFormProps {
   onSubmit: (data: CommentFormData) => Promise<boolean>;
   submitting: boolean;
+  parentId?: string;
+  placeholder?: string;
+  compact?: boolean;
 }
 
-export const CommentForm: React.FC<CommentFormProps> = ({ onSubmit, submitting }) => {
+export const CommentForm: React.FC<CommentFormProps> = ({ 
+  onSubmit, 
+  submitting, 
+  parentId, 
+  placeholder = "Compartilhe sua opinião sobre este artigo...",
+  compact = false 
+}) => {
   const [formData, setFormData] = useState<CommentFormData>({
     user_name: '',
-    content: ''
+    content: '',
+    parent_id: parentId
   });
   const [errors, setErrors] = useState<Partial<CommentFormData>>({});
   const { isTouchDevice, addTouchFeedback } = useMobileUsability();
@@ -51,7 +61,7 @@ export const CommentForm: React.FC<CommentFormProps> = ({ onSubmit, submitting }
 
     const success = await onSubmit(formData);
     if (success) {
-      setFormData({ user_name: '', content: '' });
+      setFormData({ user_name: '', content: '', parent_id: parentId });
       setErrors({});
     }
   };
@@ -72,20 +82,22 @@ export const CommentForm: React.FC<CommentFormProps> = ({ onSubmit, submitting }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-darker-surface/30 backdrop-blur-sm border border-neon-purple/20 hover:border-neon-purple/40 transition-all duration-300 hover:shadow-lg hover:shadow-neon-purple/10 rounded-lg p-6 mobile-form">
-      <h3 className="text-lg font-semibold font-orbitron text-white mb-4 bg-gradient-to-r from-neon-purple to-lime-green bg-clip-text text-transparent">
-        Deixe seu comentário
-      </h3>
+    <form onSubmit={handleSubmit} className={`bg-darker-surface/30 backdrop-blur-sm border border-neon-purple/20 hover:border-neon-purple/40 transition-all duration-300 hover:shadow-lg hover:shadow-neon-purple/10 rounded-lg mobile-form ${compact ? 'p-4' : 'p-6'}`}>
+      {!compact && (
+        <h3 className="text-lg font-semibold font-orbitron text-white mb-4 bg-gradient-to-r from-neon-purple to-lime-green bg-clip-text text-transparent">
+          {parentId ? 'Responder comentário' : 'Deixe seu comentário'}
+        </h3>
+      )}
       
       <div className="space-y-4">
         {/* Campo Nome */}
         <div className="mobile-form-field">
-          <label htmlFor="user_name" className="block text-sm font-medium text-futuristic-gray mb-1">
+          <label htmlFor={`user_name_${parentId || 'main'}`} className="block text-sm font-medium text-futuristic-gray mb-1">
             Nome *
           </label>
           <input
             type="text"
-            id="user_name"
+            id={`user_name_${parentId || 'main'}`}
             value={formData.user_name}
             onChange={(e) => handleInputChange('user_name', e.target.value)}
             disabled={submitting}
@@ -110,15 +122,15 @@ export const CommentForm: React.FC<CommentFormProps> = ({ onSubmit, submitting }
 
         {/* Campo Comentário */}
         <div className="mobile-form-field">
-          <label htmlFor="content" className="block text-sm font-medium text-futuristic-gray mb-1">
-            Comentário *
+          <label htmlFor={`content_${parentId || 'main'}`} className="block text-sm font-medium text-futuristic-gray mb-1">
+            {parentId ? 'Resposta *' : 'Comentário *'}
           </label>
           <textarea
-            id="content"
+            id={`content_${parentId || 'main'}`}
             value={formData.content}
             onChange={(e) => handleInputChange('content', e.target.value)}
             disabled={submitting}
-            rows={4}
+            rows={compact ? 3 : 4}
             className={`
               w-full px-3 py-2 border rounded-md shadow-sm text-sm resize-vertical bg-darker-surface/50 text-white placeholder-futuristic-gray/60
               focus:outline-none focus:ring-2 focus:ring-neon-purple focus:border-neon-purple
@@ -129,7 +141,7 @@ export const CommentForm: React.FC<CommentFormProps> = ({ onSubmit, submitting }
                 : 'border-neon-purple/30 hover:border-neon-purple/50'
               }
             `}
-            placeholder="Compartilhe sua opinião sobre este artigo..."
+            placeholder={placeholder}
             maxLength={500}
           />
           <div className="flex justify-between items-center mt-1">
@@ -167,7 +179,7 @@ export const CommentForm: React.FC<CommentFormProps> = ({ onSubmit, submitting }
             ) : (
               <>
                 <Send className="w-4 h-4" />
-                Enviar Comentário
+                {parentId ? 'Enviar Resposta' : 'Enviar Comentário'}
               </>
             )}
           </button>

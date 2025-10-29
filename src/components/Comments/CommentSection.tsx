@@ -16,7 +16,8 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
     error,
     addComment, // Corrigido: usar addComment em vez de submitComment
     loadMoreComments,
-    refreshComments
+    refreshComments,
+    likeComment
   } = useComments(String(articleId));
 
   console.log('📊 [DEBUG] CommentSection - Estado atual:', {
@@ -63,6 +64,9 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
         loading={loading}
         hasMore={hasMore}
         onLoadMore={loadMoreComments}
+        onLike={likeComment}
+        onReply={addComment}
+        submitting={submitting}
       />
 
        {/* Formulário para novo comentário */}

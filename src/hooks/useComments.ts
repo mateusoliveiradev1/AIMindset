@@ -11,11 +11,15 @@ export interface Comment {
   user_name: string;
   content: string;
   created_at: string;
+  parent_id?: string | null;  // NOVO: ID do comentário pai para respostas
+  likes: number;              // NOVO: Contador de curtidas
+  replies?: Comment[];        // NOVO: Array de respostas (computed)
 }
 
 export interface CommentFormData {
   user_name: string;
   content: string;
+  parent_id?: string | null;  // NOVO: Para respostas
 }
 
 // Função para verificar se é um ID mock (não é UUID válido)
@@ -50,21 +54,40 @@ export const useComments = (articleId: string) => {
           article_id: articleId,
           user_name: 'João Silva',
           content: 'Excelente artigo! Muito esclarecedor sobre o futuro da IA.',
-          created_at: '2024-01-20T10:30:00Z'
+          created_at: '2024-01-20T10:30:00Z',
+          parent_id: null,
+          likes: 5,
+          replies: [
+            {
+              id: 'mock-1-reply-1',
+              article_id: articleId,
+              user_name: 'Ana Costa',
+              content: 'Concordo! Especialmente a parte sobre machine learning.',
+              created_at: '2024-01-20T10:45:00Z',
+              parent_id: 'mock-1',
+              likes: 2
+            }
+          ]
         },
         {
           id: 'mock-2',
           article_id: articleId,
           user_name: 'Maria Santos',
           content: 'Concordo plenamente. A IA realmente vai transformar nossa sociedade.',
-          created_at: '2024-01-20T11:15:00Z'
+          created_at: '2024-01-20T11:15:00Z',
+          parent_id: null,
+          likes: 3,
+          replies: []
         },
         {
           id: 'mock-3',
           article_id: articleId,
           user_name: 'Pedro Costa',
           content: 'Muito interessante a parte sobre ética em IA. Precisamos mesmo pensar nisso.',
-          created_at: '2024-01-20T12:00:00Z'
+          created_at: '2024-01-20T12:00:00Z',
+          parent_id: null,
+          likes: 8,
+          replies: []
         }
       ]);
       setHasMore(false);
@@ -97,8 +120,19 @@ export const useComments = (articleId: string) => {
 
       const { data, error: fetchError } = await supabase
         .from('comments')
-        .select('*')
+        .select(`
+          *,
+          replies:comments!parent_id(
+            id,
+            user_name,
+            content,
+            created_at,
+            likes,
+            parent_id
+          )
+        `)
         .eq('article_id', articleId)
+        .is('parent_id', null)
         .order('created_at', { ascending: false })
         .range(from, to);
 
@@ -160,7 +194,10 @@ export const useComments = (articleId: string) => {
         article_id: articleId,
         user_name: commentData.user_name,
         content: commentData.content,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        parent_id: commentData.parent_id || null,
+        likes: 0,
+        replies: []
       };
       setComments(prev => [newComment, ...prev]);
       toast.success('Comentário adicionado com sucesso!');
@@ -177,7 +214,8 @@ export const useComments = (articleId: string) => {
           {
             article_id: articleId,
             user_name: commentData.user_name.trim(),
-            content: commentData.content.trim()
+            content: commentData.content.trim(),
+            parent_id: commentData.parent_id || null
           }
         ]);
 
@@ -224,6 +262,76 @@ export const useComments = (articleId: string) => {
     };
   }, [articleId, loadComments]);
 
+  // Função para curtir comentário
+  const likeComment = useCallback(async (commentId: string) => {
+    if (!commentId || COMMENTS_DISABLED) return false;
+
+    // Se for um ID mock, simular curtida
+    if (isMockId(commentId)) {
+      console.log('💬 [COMMENTS] Simulando curtida para ID mock:', commentId);
+      setComments(prev => prev.map(comment => {
+        if (comment.id === commentId) {
+          return { ...comment, likes: comment.likes + 1 };
+        }
+        // Verificar nas respostas também
+        if (comment.replies) {
+          const updatedReplies = comment.replies.map(reply => 
+            reply.id === commentId ? { ...reply, likes: reply.likes + 1 } : reply
+          );
+          return { ...comment, replies: updatedReplies };
+        }
+        return comment;
+      }));
+      toast.success('Curtida adicionada!');
+      return true;
+    }
+
+    try {
+      // Verificar controle de spam via localStorage
+      const likedComments = JSON.parse(localStorage.getItem('likedComments') || '[]');
+      if (likedComments.includes(commentId)) {
+        toast.error('Você já curtiu este comentário');
+        return false;
+      }
+
+      const { data, error } = await supabase.rpc('increment_comment_likes', {
+        comment_id: commentId
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // Atualizar localStorage para controle de spam
+      likedComments.push(commentId);
+      localStorage.setItem('likedComments', JSON.stringify(likedComments));
+
+      // Atualizar estado local
+      setComments(prev => prev.map(comment => {
+        if (comment.id === commentId) {
+          return { ...comment, likes: data };
+        }
+        // Verificar nas respostas também
+        if (comment.replies) {
+          const updatedReplies = comment.replies.map(reply => 
+            reply.id === commentId ? { ...reply, likes: data } : reply
+          );
+          return { ...comment, replies: updatedReplies };
+        }
+        return comment;
+      }));
+
+      toast.success('Curtida adicionada!');
+      return true;
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+      console.error('❌ Erro ao curtir comentário:', err);
+      toast.error('Erro ao curtir comentário');
+      return false;
+    }
+  }, []);
+
   return {
     comments,
     loading,
@@ -232,6 +340,7 @@ export const useComments = (articleId: string) => {
     hasMore,
     addComment,
     loadMoreComments,
-    refreshComments
+    refreshComments,
+    likeComment
   };
 };
