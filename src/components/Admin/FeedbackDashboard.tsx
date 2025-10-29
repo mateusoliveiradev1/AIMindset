@@ -100,7 +100,7 @@ export const FeedbackDashboard: React.FC = () => {
       // Filtro de engajamento
       let matchesEngagement = true;
       if (engagementFilter !== 'all') {
-        const articleMetrics = formattedMetrics.find(m => m.article_id === Number(article.id));
+        const articleMetrics = formattedMetrics.find(m => m.article_id === article.id);
         if (articleMetrics) {
           switch (engagementFilter) {
             case 'high_likes':
