@@ -5,10 +5,18 @@ import { Article, Category } from '../types';
 
 // Hook especializado para otimizações da Home
 export const useHomeOptimization = () => {
-  const { fetchHomeData } = useArticles();
+  const { fetchHomeData, getFeaturedArticles } = useArticles();
   const [homeData, setHomeData] = useState<{ articles: Article[], categories: Category[] } | null>(null);
+  const [featuredArticlesData, setFeaturedArticlesData] = useState<Article[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // DEBUG: Log do estado inicial
+  console.log('🔍 [useHomeOptimization] Estado inicial:', {
+    featuredArticlesData: featuredArticlesData.length,
+    loading,
+    error
+  });
 
   // Debounce para pull-to-refresh em mobile
   const [refreshDebounce, setRefreshDebounce] = useState<NodeJS.Timeout | null>(null);
@@ -16,18 +24,32 @@ export const useHomeOptimization = () => {
   // Função otimizada para carregar dados da Home
   const loadHomeData = useCallback(async (forceRefresh: boolean = false) => {
     try {
+      console.log('🔄 [useHomeOptimization] Iniciando loadHomeData...');
       setLoading(true);
       setError(null);
 
-      const data = await fetchHomeData();
-      setHomeData(data);
+      // Carregar dados da home e artigos em destaque em paralelo
+      console.log('🔄 [useHomeOptimization] Chamando Promise.all...');
+      const [homeData, featuredArticles] = await Promise.all([
+        fetchHomeData(),
+        getFeaturedArticles()
+      ]);
+      
+      console.log('✅ [useHomeOptimization] Dados carregados:', {
+        homeDataArticles: homeData?.articles?.length || 0,
+        featuredArticlesCount: featuredArticles?.length || 0,
+        featuredArticlesTitles: featuredArticles?.map(a => a.title) || []
+      });
+      
+      setHomeData(homeData);
+      setFeaturedArticlesData(featuredArticles);
     } catch (err) {
-      console.error('❌ Error loading home data:', err);
+      console.error('❌ [useHomeOptimization] Error loading home data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load home data');
     } finally {
       setLoading(false);
     }
-  }, [fetchHomeData]);
+  }, [fetchHomeData, getFeaturedArticles]);
 
   // Refresh com debounce para mobile/tablet
   const debouncedRefresh = useCallback(async () => {
@@ -42,50 +64,11 @@ export const useHomeOptimization = () => {
     setRefreshDebounce(timeout);
   }, [loadHomeData, refreshDebounce]);
 
-  // Memoizar artigos em destaque com ordenação otimizada
+  // Artigos em destaque usando a nova função SQL híbrida
   const featuredArticles = useMemo(() => {
-    if (!homeData?.articles) return [];
-
-    return homeData.articles
-      .filter(article => article.published)
-      .sort((a, b) => {
-        const getTotalFeedback = (article: Article): number => {
-          return (article.positive_feedback || 0) + (article.negative_feedback || 0);
-        };
-
-        const getRating = (article: Article): number => {
-          if (typeof article.approval_rate === 'number') {
-            return article.approval_rate;
-          }
-          
-          const positive = article.positive_feedback || 0;
-          const negative = article.negative_feedback || 0;
-          const total = positive + negative;
-          
-          if (total === 0) return 0;
-          return (positive / total) * 100;
-        };
-
-        const totalFeedbackA = getTotalFeedback(a);
-        const totalFeedbackB = getTotalFeedback(b);
-        const ratingA = getRating(a);
-        const ratingB = getRating(b);
-        
-        // Prioridade: mais feedback primeiro
-        if (totalFeedbackA !== totalFeedbackB) {
-          return totalFeedbackB - totalFeedbackA;
-        }
-        
-        // Se feedback igual, ordenar por rating
-        if (ratingA !== ratingB) {
-          return ratingB - ratingA;
-        }
-        
-        // Se tudo igual, ordenar por data
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      })
-      .slice(0, 3);
-  }, [homeData?.articles]);
+    // Usar os dados da função SQL que já implementa o modo híbrido
+    return featuredArticlesData || [];
+  }, [featuredArticlesData]);
 
   // Memoizar métricas do Hero
   const heroMetrics = useMemo(() => {
@@ -137,17 +120,36 @@ export const useHomeOptimization = () => {
 
   // Prefetch inteligente de dados críticos
   useEffect(() => {
+    console.log('🔄 [useHomeOptimization] useEffect executado!');
+    
     const prefetchCriticalData = async () => {
+      console.log('🔄 [useHomeOptimization] prefetchCriticalData iniciado...');
       // Prefetch apenas se não tiver dados em cache
       const cached = await hybridCache.get(CacheKeys.HOME_DATA);
+      console.log('🔍 [useHomeOptimization] Cache verificado:', { hasData: !!cached.data });
+      
       if (!cached.data) {
-        loadHomeData();
+        console.log('🔄 [useHomeOptimization] Sem cache, chamando loadHomeData...');
+        await loadHomeData();
       } else {
+        console.log('✅ [useHomeOptimization] Usando dados do cache');
         setHomeData(cached.data as { articles: Article[]; categories: Category[]; });
+        
+        // SEMPRE carregar artigos em destaque, mesmo com cache
+        console.log('🔄 [useHomeOptimization] Carregando artigos em destaque...');
+        try {
+          const featuredArticles = await getFeaturedArticles();
+          console.log('✅ [useHomeOptimization] Artigos em destaque carregados:', featuredArticles.length);
+          setFeaturedArticlesData(featuredArticles);
+        } catch (err) {
+          console.error('❌ [useHomeOptimization] Erro ao carregar artigos em destaque:', err);
+        }
       }
     };
 
-    prefetchCriticalData();
+    prefetchCriticalData().catch(err => {
+      console.error('❌ [useHomeOptimization] Erro no prefetchCriticalData:', err);
+    });
   }, [loadHomeData]);
 
   // Cleanup do debounce

@@ -94,6 +94,7 @@ export interface UseArticlesReturn {
   searchArticles: (query: string) => Promise<Article[]>;
   refreshArticles: () => Promise<void>;
   fetchHomeData: () => Promise<{ articles: Article[]; categories: Category[]; }>;
+  getFeaturedArticles: () => Promise<Article[]>;
 }
 
 export const useArticles = (): UseArticlesReturn => {
@@ -940,6 +941,48 @@ export const useArticles = (): UseArticlesReturn => {
 
   // Initialize data on mount - removed duplicate useEffect
 
+  // Função para buscar artigos em destaque usando a função SQL híbrida
+  const getFeaturedArticles = useCallback(async (): Promise<Article[]> => {
+    try {
+      console.log('🔄 [getFeaturedArticles] Buscando artigos em destaque com função SQL híbrida...');
+      
+      // FORÇAR BUSCA FRESCA - IGNORAR CACHE TEMPORARIAMENTE PARA DEBUG
+      console.log('🚨 [DEBUG] Ignorando cache para forçar busca fresca dos artigos em destaque');
+      
+      // Tentar cache primeiro (DESABILITADO PARA DEBUG)
+      // const cached = await hybridCache.get<Article[]>('featured_articles');
+      // if (cached.data) {
+      //   console.log(`🟢 [getFeaturedArticles] Using cached featured articles from ${cached.source}`);
+      //   return cached.data;
+      // }
+
+      // Chamar a função SQL get_featured_articles() diretamente
+      const { data: featuredArticles, error } = await supabase.rpc('get_featured_articles');
+
+      if (error) {
+        console.error('❌ Erro na função SQL get_featured_articles:', error);
+        throw new Error(`Erro ao buscar artigos em destaque: ${error.message}`);
+      }
+
+      if (!featuredArticles) {
+        console.log('⚠️ Nenhum artigo em destaque retornado pela função SQL');
+        return [];
+      }
+      
+      // Cache com TTL de 2 minutos
+      await hybridCache.set('featured_articles', featuredArticles, { 
+        accessCount: 10,
+        isAdminOperation: false 
+      });
+
+      console.log('✅ [getFeaturedArticles] Artigos em destaque carregados com sucesso:', featuredArticles.length);
+      return featuredArticles;
+    } catch (err) {
+      console.error('❌ Error fetching featured articles:', err);
+      throw err;
+    }
+  }, []);
+
   return {
     articles,
     categories,
@@ -971,7 +1014,8 @@ export const useArticles = (): UseArticlesReturn => {
     getArticlesByCategory,
     searchArticles,
     refreshArticles,
-    fetchHomeData // Nova função otimizada para Home
+    fetchHomeData, // Nova função otimizada para Home
+    getFeaturedArticles // Nova função para artigos em destaque com modo híbrido
   };
 
   // Sistema automático: escutar mudanças de feedback para invalidar cache
@@ -1037,6 +1081,7 @@ export const useArticles = (): UseArticlesReturn => {
     getArticlesByCategory,
     searchArticles,
     refreshArticles,
-    fetchHomeData // Nova função otimizada para Home
+    fetchHomeData, // Nova função otimizada para Home
+    getFeaturedArticles // Nova função para artigos em destaque com modo híbrido
   };
 };

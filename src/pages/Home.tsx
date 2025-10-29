@@ -12,6 +12,8 @@ import { useHomeOptimization } from '../hooks/useHomeOptimization';
 import { usePerformanceMonitor } from '../hooks/usePerformanceMonitor';
 
 const Home: React.FC = () => {
+  console.log('🏠 [Home] Componente Home renderizado!');
+  
   const { categories } = useArticles();
   const { debouncedRefresh, observerRef } = useHomeOptimization();
   const { getMetadata, preloadCategorySEO } = useSEO({ 

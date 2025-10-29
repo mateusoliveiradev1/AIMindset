@@ -15,6 +15,13 @@ const FeaturedArticles: React.FC = () => {
   const { featuredArticles } = useHomeOptimization();
   const { syncFeedback, isActive } = useAutoFeedbackSync();
 
+  // Log específico para verificar renderização
+  console.log('🎯 [FeaturedArticles] COMPONENTE RENDERIZADO!', {
+    featuredArticlesLength: featuredArticles.length,
+    loading,
+    articlesLength: articles.length
+  });
+
   // Debug logs - VERSÃO NOVA COM ORDENAÇÃO
   console.log('🔍 FeaturedArticles Debug - NOVA VERSÃO COM ORDENAÇÃO:', {
     articles: articles.length,
