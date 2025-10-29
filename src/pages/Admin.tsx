@@ -544,37 +544,38 @@ export const Admin: React.FC = () => {
       {/* Admin Header */}
       <div className="bg-darker-surface/80 backdrop-blur-sm border-b border-neon-purple/20">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
+            <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="p-2 bg-neon-gradient rounded-lg">
-                <Brain className="w-8 h-8 text-white" />
+                <Brain className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-orbitron font-bold text-white">
+                <h1 className="text-lg sm:text-2xl font-orbitron font-bold text-white">
                   AIMindset Admin
                 </h1>
-                <p className="text-sm text-futuristic-gray">
+                <p className="text-xs sm:text-sm text-futuristic-gray">
                   Bem-vindo, {user?.email}
                 </p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4 w-full sm:w-auto">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => window.location.href = '/'}
-                className="flex items-center space-x-2 border-neon-purple/30 text-neon-purple hover:bg-neon-purple/10"
+                className="flex items-center space-x-1 sm:space-x-2 border-neon-purple/30 text-neon-purple hover:bg-neon-purple/10 flex-1 sm:flex-none justify-center sm:justify-start text-xs sm:text-sm px-2 sm:px-3"
               >
-                <Home className="w-4 h-4" />
-                <span>Voltar para Home</span>
+                <Home className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">Voltar para Home</span>
+                <span className="xs:hidden">Home</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleLogout}
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-1 sm:space-x-2 flex-1 sm:flex-none justify-center sm:justify-start text-xs sm:text-sm px-2 sm:px-3"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span>Sair</span>
               </Button>
             </div>
@@ -610,14 +611,14 @@ export const Admin: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center space-x-2 px-4 sm:px-6 py-3 rounded-md font-montserrat font-medium transition-all duration-300 whitespace-nowrap ${
+                className={`flex items-center space-x-1 sm:space-x-2 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 rounded-md font-montserrat font-medium transition-all duration-300 whitespace-nowrap min-w-0 ${
                   activeTab === tab.id
                     ? 'bg-neon-gradient text-white shadow-lg'
                     : 'text-futuristic-gray hover:text-white hover:bg-dark-surface/50'
                 }`}
               >
-                <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span className="text-sm sm:text-base">{tab.label}</span>
+                <Icon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                <span className="text-xs sm:text-sm lg:text-base truncate">{tab.label}</span>
               </button>
             );
           })}
@@ -659,7 +660,7 @@ export const Admin: React.FC = () => {
 
 
               {/* Stats Cards - Principais Métricas */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
                 <Card className="glass-effect hover-lift transition-all duration-300 hover:scale-105">
                   <div className="p-4 sm:p-6">
                     <div className="flex items-center justify-between">
@@ -764,7 +765,7 @@ export const Admin: React.FC = () => {
               </div>
 
               {/* Gráficos de Crescimento e Métricas Avançadas */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 <Card className="glass-effect">
                   <div className="p-4 sm:p-6">
                     <div className="flex items-center justify-between mb-4">
@@ -939,7 +940,7 @@ export const Admin: React.FC = () => {
               </div>
 
               {/* Últimas Atividades e Dados Recentes */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 <Card className="glass-effect">
                   <div className="p-4 sm:p-6">
                     <div className="flex items-center justify-between mb-4 gap-2">
@@ -1328,8 +1329,8 @@ export const Admin: React.FC = () => {
 
             {/* Articles List */}
             <Card className="glass-effect">
-              <div className="p-6">
-                <div className="space-y-4">
+              <div className="p-3 sm:p-6">
+                <div className="space-y-4 overflow-x-auto">
                   {articles.length > 0 ? articles
                     .filter(article => {
                       const matchesSearch = article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1366,31 +1367,31 @@ export const Admin: React.FC = () => {
                           <Button 
                             size="sm" 
                             variant="ghost" 
-                            className="text-blue-400 hover:text-blue-300 p-1 sm:p-2"
+                            className="text-blue-400 hover:text-blue-300 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2"
                             onClick={() => handleViewArticle(article)}
                             title="Visualizar artigo"
                           >
-                            <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <Eye className="w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                           </Button>
                           <Button 
                             size="sm" 
                             variant="ghost" 
-                            className="text-yellow-400 hover:text-yellow-300 p-1 sm:p-2"
+                            className="text-yellow-400 hover:text-yellow-300 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2"
                             onClick={() => handleEditArticle(article)}
                             title="Editar artigo"
                           >
-                            <Edit3 className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <Edit3 className="w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                           </Button>
                           <Button 
                             size="sm" 
                             variant="ghost" 
-                            className={`p-1 sm:p-2 ${article.published ? 'text-orange-400 hover:text-orange-300' : 'text-green-400 hover:text-green-300'}`}
+                            className={`min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2 ${article.published ? 'text-orange-400 hover:text-orange-300' : 'text-green-400 hover:text-green-300'}`}
                             onClick={() => handleTogglePublish(article)}
                             title={article.published ? 'Despublicar artigo' : 'Publicar artigo'}
                             disabled={isLoading}
                           >
                             {isLoading ? (
-                              <div className="animate-spin w-3 h-3 sm:w-4 sm:h-4 border-2 border-current border-t-transparent rounded-full" />
+                              <div className="animate-spin w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4 border-2 border-current border-t-transparent rounded-full" />
                             ) : (
                               <>
                                 <span className="text-xs sm:text-sm lg:inline hidden">{article.published ? 'Despublicar' : 'Publicar'}</span>
@@ -1403,11 +1404,11 @@ export const Admin: React.FC = () => {
                           <Button 
                             size="sm" 
                             variant="ghost" 
-                            className="text-red-400 hover:text-red-300 p-1 sm:p-2"
+                            className="text-red-400 hover:text-red-300 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2"
                             onClick={() => handleDeleteArticle(article.id.toString())}
                             title="Excluir artigo"
                           >
-                            <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <Trash2 className="w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                           </Button>
                         </div>
                       </div>
@@ -2013,8 +2014,8 @@ export const Admin: React.FC = () => {
 
                 {/* Subscribers List */}
                 <Card className="glass-effect">
-                  <div className="p-6">
-                    <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 sm:p-6">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3 sm:gap-0">
                       <h4 className="text-lg font-orbitron font-bold text-white">
                         Lista de Inscritos ({subscribersHook.totalCount})
                       </h4>
@@ -2069,7 +2070,7 @@ export const Admin: React.FC = () => {
                         <p className="text-futuristic-gray">Carregando inscritos...</p>
                       </div>
                     ) : (
-                      <div className="space-y-3">
+                      <div className="space-y-3 overflow-x-auto">
                         {subscribersHook.subscribers.length > 0 ? subscribersHook.subscribers.map((subscriber) => (
                           <div key={subscriber.id} className="flex items-center justify-between p-4 bg-darker-surface/30 rounded-lg">
                             <div className="flex-1 min-w-0">
@@ -2223,8 +2224,8 @@ export const Admin: React.FC = () => {
 
             {/* Users List */}
             <Card className="glass-effect">
-              <div className="p-6">
-                <div className="space-y-4">
+              <div className="p-3 sm:p-6">
+                <div className="space-y-4 overflow-x-auto">
                   {paginatedUsers.map((user) => (
                     <div key={user.id} className="flex items-center justify-between p-4 bg-darker-surface/30 rounded-lg">
                       <div className="flex-1">
@@ -2252,7 +2253,7 @@ export const Admin: React.FC = () => {
                           <Button
                             size="sm"
                             onClick={() => updateUserStatus(user.id, 'active')}
-                            className="bg-lime-green/20 text-lime-green hover:bg-lime-green/30"
+                            className="bg-lime-green/20 text-lime-green hover:bg-lime-green/30 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px]"
                             disabled={loadingUsers}
                           >
                             <UserCheck className="w-4 h-4" />
@@ -2262,7 +2263,7 @@ export const Admin: React.FC = () => {
                           <Button
                             size="sm"
                             onClick={() => updateUserStatus(user.id, 'inactive')}
-                            className="bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30"
+                            className="bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px]"
                             disabled={loadingUsers}
                           >
                             <UserX className="w-4 h-4" />
@@ -2272,7 +2273,7 @@ export const Admin: React.FC = () => {
                           <Button
                             size="sm"
                             onClick={() => updateUserStatus(user.id, 'banned')}
-                            className="bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                            className="bg-red-500/20 text-red-400 hover:bg-red-500/30 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px]"
                             disabled={loadingUsers}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -2504,19 +2505,19 @@ export const Admin: React.FC = () => {
                                       ...category,
                                       description: category.description || ''
                                     })}
-                                    className="text-yellow-400 hover:text-yellow-300 p-1 sm:p-2"
+                                    className="text-yellow-400 hover:text-yellow-300 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2"
                                     title="Editar categoria"
                                   >
-                                    <Edit3 className="w-3 h-3 sm:w-4 sm:h-4" />
+                                    <Edit3 className="w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                                   </Button>
                                   <Button
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => confirmDeleteCategory(category)}
-                                    className="text-red-400 hover:text-red-300 p-1 sm:p-2"
+                                    className="text-red-400 hover:text-red-300 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2"
                                     title="Excluir categoria"
                                   >
-                                    <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                                    <Trash2 className="w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                                   </Button>
                                 </div>
                               </div>
