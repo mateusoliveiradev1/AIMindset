@@ -1442,10 +1442,10 @@ export const Admin: React.FC = () => {
             </div>
 
             {/* Sub-tabs para Newsletter */}
-            <div className="flex space-x-1 bg-darker-surface/30 p-1 rounded-lg">
+            <div className="flex flex-wrap gap-1 bg-darker-surface/30 p-1 rounded-lg overflow-x-auto">
               <button
                 onClick={() => setNewsletterTab('overview')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                   newsletterTab === 'overview'
                     ? 'bg-neon-purple/20 text-neon-purple'
                     : 'text-futuristic-gray hover:text-white'
@@ -1455,7 +1455,7 @@ export const Admin: React.FC = () => {
               </button>
               <button
                 onClick={() => setNewsletterTab('subscribers')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                   newsletterTab === 'subscribers'
                     ? 'bg-neon-purple/20 text-neon-purple'
                     : 'text-futuristic-gray hover:text-white'
@@ -1465,7 +1465,7 @@ export const Admin: React.FC = () => {
               </button>
               <button
                 onClick={() => setNewsletterTab('campaigns')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                   newsletterTab === 'campaigns'
                     ? 'bg-neon-purple/20 text-neon-purple'
                     : 'text-futuristic-gray hover:text-white'
@@ -1475,7 +1475,7 @@ export const Admin: React.FC = () => {
               </button>
               <button
                 onClick={() => setNewsletterTab('automations')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                   newsletterTab === 'automations'
                     ? 'bg-neon-purple/20 text-neon-purple'
                     : 'text-futuristic-gray hover:text-white'
@@ -1485,7 +1485,7 @@ export const Admin: React.FC = () => {
               </button>
               <button
                 onClick={() => setNewsletterTab('templates')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                   newsletterTab === 'templates'
                     ? 'bg-neon-purple/20 text-neon-purple'
                     : 'text-futuristic-gray hover:text-white'
@@ -1495,7 +1495,7 @@ export const Admin: React.FC = () => {
               </button>
               <button
                 onClick={() => setNewsletterTab('logs')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                   newsletterTab === 'logs'
                     ? 'bg-neon-purple/20 text-neon-purple'
                     : 'text-futuristic-gray hover:text-white'
@@ -1505,21 +1505,21 @@ export const Admin: React.FC = () => {
               </button>
             </div>
 
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-6">
               <div></div>
-              <div className="flex space-x-3">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <Button
                   onClick={newsletterHook.exportSubscribers}
                   disabled={newsletterHook.loading}
                   variant="outline"
-                  className="flex items-center space-x-2"
+                  className="flex items-center justify-center space-x-2 min-h-[44px] text-xs sm:text-sm"
                 >
                   <Download className="w-4 h-4" />
                   <span>Exportar CSV</span>
                 </Button>
                 <Button
                   onClick={() => setShowCampaignEditor(true)}
-                  className="bg-neon-gradient hover:bg-neon-gradient/80"
+                  className="bg-neon-gradient hover:bg-neon-gradient/80 min-h-[44px] text-xs sm:text-sm"
                 >
                   <Send className="w-4 h-4 mr-2" />
                   Nova Campanha

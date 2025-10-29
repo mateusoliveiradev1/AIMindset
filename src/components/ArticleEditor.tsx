@@ -431,34 +431,35 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-montserrat font-bold text-white">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+        <h2 className="text-lg sm:text-2xl font-montserrat font-bold text-white">
           {showPreview ? 'Preview do Artigo' : 'Editor de Artigo'}
         </h2>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 sm:space-x-0">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowPreview(!showPreview)}
-            className="flex items-center space-x-2"
+            className="flex items-center justify-center space-x-2 min-h-[44px]"
           >
             <Eye className="w-4 h-4" />
-            <span>{showPreview ? 'Editor' : 'Preview'}</span>
+            <span className="text-xs sm:text-sm">{showPreview ? 'Editor' : 'Preview'}</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={onCancel}
+            className="min-h-[44px] text-xs sm:text-sm"
           >
             Cancelar
           </Button>
           <Button
             size="sm"
             onClick={handleSave}
-            className="flex items-center space-x-2"
+            className="flex items-center justify-center space-x-2 min-h-[44px]"
           >
             <Save className="w-4 h-4" />
-            <span>Salvar</span>
+            <span className="text-xs sm:text-sm">Salvar</span>
           </Button>
         </div>
       </div>
