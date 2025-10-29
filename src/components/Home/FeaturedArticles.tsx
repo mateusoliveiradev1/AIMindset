@@ -11,7 +11,7 @@ import { FeaturedArticlesSkeleton } from '../UI/HomeSkeleton';
 // import LazyImage from '../Performance/LazyImage';
 
 const FeaturedArticles: React.FC = () => {
-  const { articles, loading, refreshArticles } = useArticles();
+  const { articles, categories, loading, refreshArticles } = useArticles();
   const { featuredArticles } = useHomeOptimization();
   const { syncFeedback, isActive } = useAutoFeedbackSync();
 
@@ -145,7 +145,17 @@ const FeaturedArticles: React.FC = () => {
                 <div className="absolute top-4 left-4 z-10 pointer-events-none">
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-montserrat font-semibold bg-neon-purple/20 text-neon-purple border border-neon-purple/30">
                     <Tag className="h-3 w-3 mr-1" />
-                    {(article.category as any)?.name || 'Sem categoria'}
+                    {(() => {
+                      if (typeof article.category === 'string') {
+                        return article.category;
+                      }
+                      if (article.category?.name) {
+                        return article.category.name;
+                      }
+                      // Buscar categoria pelo category_id
+                      const category = categories.find(cat => cat.id === article.category_id);
+                      return category?.name || 'Sem categoria';
+                    })()}
                   </span>
                 </div>
               </div>
