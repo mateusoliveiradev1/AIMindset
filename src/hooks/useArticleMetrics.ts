@@ -36,8 +36,8 @@ export const useArticleMetrics = () => {
 
       // Carregar feedbacks
       const { data: feedbacks, error: feedbackError } = await supabase
-        .from('feedback')
-        .select('article_id, useful')
+        .from('feedbacks')
+        .select('article_id, type')
         .in('article_id', articleIds);
 
       if (feedbackError) throw feedbackError;
@@ -55,8 +55,8 @@ export const useArticleMetrics = () => {
         const articleFeedbacks = feedbacks?.filter(f => f.article_id === article.id.toString()) || [];
         const articleComments = comments?.filter(c => c.article_id === article.id.toString()) || [];
 
-        const positiveFeedback = articleFeedbacks.filter(f => f.useful === true).length;
-        const negativeFeedback = articleFeedbacks.filter(f => f.useful === false).length;
+        const positiveFeedback = articleFeedbacks.filter(f => f.type === 'positive').length;
+        const negativeFeedback = articleFeedbacks.filter(f => f.type === 'negative').length;
         const totalFeedback = positiveFeedback + negativeFeedback;
         const approvalRate = totalFeedback > 0 ? (positiveFeedback / totalFeedback) * 100 : 0;
 

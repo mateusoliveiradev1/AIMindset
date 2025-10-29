@@ -19,7 +19,7 @@ interface Comment {
 interface Feedback {
   id: string;
   article_id: string;
-  useful: boolean;
+  type: 'positive' | 'negative';
   created_at: string;
 }
 
@@ -67,7 +67,7 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
           .order('created_at', { ascending: false }),
         
         supabase
-          .from('feedback')
+          .from('feedbacks')
           .select('*')
           .eq('article_id', article.id)
           .order('created_at', { ascending: false })
@@ -153,7 +153,7 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
         {
           event: '*',
           schema: 'public',
-          table: 'feedback',
+          table: 'feedbacks',
           filter: `article_id=eq.${article.id}`
         },
         (payload) => {
@@ -252,8 +252,8 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
     }
   };
 
-  const positiveFeedbacks = Array.isArray(feedbacks) ? feedbacks.filter(f => f?.useful).length : 0;
-  const negativeFeedbacks = Array.isArray(feedbacks) ? feedbacks.filter(f => !f?.useful).length : 0;
+  const positiveFeedbacks = Array.isArray(feedbacks) ? feedbacks.filter(f => f?.type === 'positive').length : 0;
+  const negativeFeedbacks = Array.isArray(feedbacks) ? feedbacks.filter(f => f?.type === 'negative').length : 0;
   const totalFeedbacks = Array.isArray(feedbacks) ? feedbacks.length : 0;
   const approvalRate = totalFeedbacks > 0 ? (positiveFeedbacks / totalFeedbacks) * 100 : 0;
 
@@ -446,18 +446,18 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-3">
                               <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                feedback.useful ? 'bg-green-500/20' : 'bg-red-500/20'
+                                feedback.type === 'positive' ? 'bg-green-500/20' : 'bg-red-500/20'
                               }`}>
-                                {feedback.useful ? (
+                                {feedback.type === 'positive' ? (
                                   <ThumbsUp className="h-4 w-4 text-green-400" />
                                 ) : (
                                   <ThumbsDown className="h-4 w-4 text-red-400" />
                                 )}
                               </div>
                               <span className={`text-sm font-medium ${
-                                feedback.useful ? 'text-green-400' : 'text-red-400'
+                                feedback.type === 'positive' ? 'text-green-400' : 'text-red-400'
                               }`}>
-                                {feedback.useful ? 'Útil' : 'Não útil'}
+                                {feedback.type === 'positive' ? 'Útil' : 'Não útil'}
                               </span>
                             </div>
                             <div className="flex items-center text-xs text-gray-400">

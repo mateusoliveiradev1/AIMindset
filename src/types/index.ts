@@ -22,6 +22,7 @@ export interface Article {
   image_url: string;
   slug: string;
   published: boolean;
+  is_featured_manual?: boolean;
   category_id: string;
   author_id: string;
   created_at: string;

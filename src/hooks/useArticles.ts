@@ -156,15 +156,16 @@ export const useArticles = (): UseArticlesReturn => {
               articlesResult.data.map(async (article) => {
                 try {
                   const { data: metrics } = await supabase
-                    .rpc('get_article_metrics', { target_article_id: article.id });
+                    .rpc('get_article_metrics', { article_uuid: article.id });
                   
                   if (metrics && metrics.length > 0) {
                     const metric = metrics[0];
                     return {
                       ...article,
-                      positive_feedback: metric.positive_feedback || 0,
-                      negative_feedback: metric.negative_feedback || 0,
-                      total_comments: metric.total_comments || 0,
+                      positive_feedbacks: metric.positive_count || 0,
+                      negative_feedbacks: metric.negative_count || 0,
+                      likes_count: metric.likes_count || 0,
+                      comments_count: metric.comments_count || 0,
                       approval_rate: metric.approval_rate || 0
                     };
                   }
@@ -172,9 +173,10 @@ export const useArticles = (): UseArticlesReturn => {
                   // Se não há métricas, usar valores padrão
                   return {
                     ...article,
-                    positive_feedback: 0,
-                    negative_feedback: 0,
-                    total_comments: 0,
+                    positive_feedbacks: 0,
+                    negative_feedbacks: 0,
+                    likes_count: 0,
+                    comments_count: 0,
                     approval_rate: 0
                   };
                 } catch (error) {
@@ -182,9 +184,10 @@ export const useArticles = (): UseArticlesReturn => {
                   // Em caso de erro, usar valores padrão
                   return {
                     ...article,
-                    positive_feedback: 0,
-                    negative_feedback: 0,
-                    total_comments: 0,
+                    positive_feedbacks: 0,
+                    negative_feedbacks: 0,
+                    likes_count: 0,
+                    comments_count: 0,
                     approval_rate: 0
                   };
                 }
@@ -478,36 +481,16 @@ export const useArticles = (): UseArticlesReturn => {
       const startTime = Date.now();
       // console.log('⏱️ Timestamp de início:', new Date(startTime).toISOString());
       
-      // SOLUÇÃO DEFINITIVA: Separar published da inserção principal
-      const { published, ...articleDataWithoutPublished } = articleWithSlug;
-      
-      // PRIMEIRA INSERÇÃO - Todos os campos EXCETO published
+      // SOLUÇÃO DEFINITIVA: Inserir todos os campos incluindo published
       const { data, error: insertError } = await supabase
         .from('articles')
-        .insert([articleDataWithoutPublished])
+        .insert([articleWithSlug])
         .select()
         .single();
 
       if (insertError) {
         console.error('❌ ERRO na inserção principal:', insertError);
         throw insertError;
-      }
-
-      // SEGUNDA QUERY - Atualizar APENAS o campo published se necessário
-      if (published !== undefined && data?.id) {
-        console.log('🔧 Atualizando campo published no artigo criado:', published);
-        
-        const { error: publishedError } = await supabase
-          .from('articles')
-          .update({ published: Boolean(published) })
-          .eq('id', data.id);
-
-        if (publishedError) {
-          console.error('❌ ERRO na atualização do published:', publishedError);
-          throw publishedError;
-        }
-        
-        console.log('✅ Campo published atualizado com sucesso no artigo criado');
       }
 
       const endTime = Date.now();
@@ -598,6 +581,7 @@ export const useArticles = (): UseArticlesReturn => {
       if (articleData.author_id !== undefined) updateData.author_id = articleData.author_id;
       if (articleData.slug !== undefined) updateData.slug = articleData.slug;
       if (articleData.tags !== undefined) updateData.tags = articleData.tags;
+      if (articleData.is_featured_manual !== undefined) updateData.is_featured_manual = articleData.is_featured_manual;
       
       // 🚨 EMERGÊNCIA: REMOVER PUBLISHED COMPLETAMENTE DA FUNÇÃO PRINCIPAL
       // O campo published será tratado em função separada para evitar erro 42883

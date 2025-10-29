@@ -7,7 +7,7 @@ import { invalidateFeedbackMetrics } from '../utils/forceCacheCleanup';
 export interface Feedback {
   id: string;
   article_id: string;
-  useful: boolean;
+  type: 'positive' | 'negative';
   created_at: string;
 }
 
@@ -65,10 +65,11 @@ export const useFeedback = (articleId: string): UseFeedbackReturn => {
       // Inserir no banco
       // console.log('📝 [FEEDBACK] Enviando feedback:', { articleId, useful });
       const { error: insertError } = await supabase
-        .from('feedback')
+        .from('feedbacks')
         .insert({
           article_id: articleId,
-          useful: useful
+          type: useful ? 'positive' : 'negative',
+          user_id: null // Usuário anônimo por enquanto
         });
       
       console.log('📝 [DEBUG] Resultado da inserção:', { insertError });
@@ -99,7 +100,7 @@ export const useFeedback = (articleId: string): UseFeedbackReturn => {
       return true;
       
     } catch (err) {
-      console.error('❌ [FEEDBACK] Erro ao enviar feedback:', error);
+      console.error('❌ [FEEDBACK] Erro ao enviar feedback:', err);
       const errorMessage = err instanceof Error ? err.message : 'Erro ao enviar feedback';
       setError(errorMessage);
       toast.error('Erro ao enviar feedback. Tente novamente.');

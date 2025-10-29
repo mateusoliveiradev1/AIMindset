@@ -14,6 +14,7 @@ import { useDashboardStats } from '../hooks/useDashboardStats';
 import { useSEO } from '../hooks/useSEO';
 import SEOManager from '../components/SEO/SEOManager';
 import { toast } from 'sonner';
+import { supabase } from '../lib/supabase';
 import { 
   PlusCircle, 
   Edit3, 
@@ -42,7 +43,8 @@ import {
   Bell,
   MousePointer,
   AlertTriangle,
-  Home
+  Home,
+  Star
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import ArticleEditor from '../components/ArticleEditor';
@@ -254,6 +256,68 @@ export const Admin: React.FC = () => {
     console.log('🌐 Abrindo URL:', url);
     window.open(url, '_blank', 'noopener,noreferrer');
     toast.success(`Abrindo artigo: ${article.title}`);
+  };
+
+  const handleToggleFeaturedManual = async (article: any) => {
+    console.log('⭐ handleToggleFeaturedManual chamada para:', article.title);
+    
+    try {
+      const newFeaturedStatus = !article.is_featured_manual;
+      console.log('📝 Novo status is_featured_manual:', newFeaturedStatus);
+      
+      // Se estamos marcando como destaque, primeiro desmarcar todos os outros
+      if (newFeaturedStatus) {
+        console.log('🔄 Desmarcando outros artigos fixados...');
+        const { error: clearError } = await supabase
+          .from('articles')
+          .update({ is_featured_manual: false })
+          .neq('id', article.id)
+          .eq('is_featured_manual', true);
+          
+        if (clearError) {
+          console.error('❌ Erro ao desmarcar outros artigos:', clearError);
+          toast.error('Erro ao desmarcar outros artigos fixados');
+          return;
+        }
+        console.log('✅ Outros artigos desmarcados com sucesso');
+      }
+      
+      // Atualizar o artigo atual
+      const { error: updateError } = await supabase
+        .from('articles')
+        .update({ is_featured_manual: newFeaturedStatus })
+        .eq('id', article.id);
+        
+      if (updateError) {
+        console.error('❌ Erro ao atualizar destaque manual:', updateError);
+        toast.error('Erro ao atualizar destaque do artigo');
+        return;
+      }
+      
+      console.log('✅ Destaque manual atualizado com sucesso');
+      toast.success(newFeaturedStatus ? 
+        `🌟 "${article.title}" marcado como destaque fixo!` : 
+        `📝 "${article.title}" removido do destaque fixo`
+      );
+      
+      // Atualizar lista de artigos
+      await refreshArticles();
+      
+      // Invalidar cache da home para atualização em tempo real
+      console.log('🏠 Invalidando cache da home...');
+      try {
+        const { hybridCache, CacheKeys } = await import('../utils/hybridCache');
+        await hybridCache.invalidate(CacheKeys.HOME_FEATURED);
+        await hybridCache.invalidatePattern('featured');
+        console.log('✅ Cache invalidado');
+      } catch (cacheError) {
+        console.warn('⚠️ Erro ao invalidar cache:', cacheError);
+      }
+      
+    } catch (error) {
+      console.error('❌ Erro geral ao alternar destaque manual:', error);
+      toast.error('Erro ao alterar destaque do artigo');
+    }
   };
 
   // Função memoizada para carregar dados
@@ -1356,13 +1420,21 @@ export const Admin: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-2 lg:gap-3">
-                        <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
-                          article.published 
-                            ? 'bg-lime-green/20 text-lime-green' 
-                            : 'bg-yellow-500/20 text-yellow-400'
-                        }`}>
-                          {article.published ? 'Publicado' : 'Rascunho'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                            article.published 
+                              ? 'bg-lime-green/20 text-lime-green' 
+                              : 'bg-yellow-500/20 text-yellow-400'
+                          }`}>
+                            {article.published ? 'Publicado' : 'Rascunho'}
+                          </span>
+                          {article.is_featured_manual && (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-neon-purple/20 text-neon-purple border border-neon-purple/30 flex items-center gap-1">
+                              <Star className="w-3 h-3 fill-current" />
+                              Hero
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center space-x-2 sm:space-x-1 lg:space-x-2">
                           <Button 
                             size="sm" 
@@ -1372,6 +1444,19 @@ export const Admin: React.FC = () => {
                             title="Visualizar artigo"
                           >
                             <Eye className="w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className={`min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2 ${
+                              article.is_featured_manual 
+                                ? 'text-neon-purple hover:text-neon-purple/80 bg-neon-purple/10' 
+                                : 'text-futuristic-gray hover:text-neon-purple'
+                            }`}
+                            onClick={() => handleToggleFeaturedManual(article)}
+                            title={article.is_featured_manual ? 'Remover do destaque fixo' : 'Marcar como destaque fixo (Hero)'}
+                          >
+                            <Star className={`w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4 ${article.is_featured_manual ? 'fill-current' : ''}`} />
                           </Button>
                           <Button 
                             size="sm" 

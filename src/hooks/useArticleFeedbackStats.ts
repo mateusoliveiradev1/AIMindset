@@ -57,8 +57,8 @@ export const useArticleFeedbackStats = (articleId: string): UseFeedbackStatsRetu
       console.log('📊 [FEEDBACK-STATS] Buscando estatísticas para artigo:', articleId);
 
       const { data: feedbacks, error: fetchError } = await supabase
-        .from('feedback')
-        .select('useful')
+        .from('feedbacks')
+        .select('type')
         .eq('article_id', articleId);
 
       if (fetchError) {
@@ -67,8 +67,8 @@ export const useArticleFeedbackStats = (articleId: string): UseFeedbackStatsRetu
       }
 
       const totalFeedbacks = feedbacks?.length || 0;
-      const positiveFeedbacks = feedbacks?.filter(f => f.useful === true).length || 0;
-      const negativeFeedbacks = feedbacks?.filter(f => f.useful === false).length || 0;
+      const positiveFeedbacks = feedbacks?.filter(f => f.type === 'positive').length || 0;
+      const negativeFeedbacks = feedbacks?.filter(f => f.type === 'negative').length || 0;
       const approvalRate = totalFeedbacks > 0 ? Math.round((positiveFeedbacks / totalFeedbacks) * 100) : 0;
 
       setStats({

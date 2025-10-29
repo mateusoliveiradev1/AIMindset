@@ -109,35 +109,44 @@ Democratizar o conhecimento sobre IA através de uma plataforma acessível, segu
 
 ```
 AIMindset/
-├── 📁 docs/                    # Documentação do projeto
-│   ├── DEPLOY.md              # Guia de deploy
-│   ├── INSTRUCOES_RLS_STORAGE.md
-│   └── header_original.txt
-├── 📁 scripts/                # Scripts de teste e utilitários
-│   ├── check_dom.js
-│   ├── check_rls.js
-│   ├── create-admin.js
-│   └── fix-rls-*.js
-├── 📁 debug/                  # Arquivos de debug
+├── 📁 .trae/                   # Documentação técnica
+│   └── documents/             # Análises e arquitetura
+├── 📁 docs/                   # Documentação do projeto
+│   ├── DEPLOY.md             # Guia de deploy
+│   └── INSTRUCOES_RLS_STORAGE.md
+├── 📁 scripts/               # Scripts organizados por categoria
+│   ├── 📁 database/         # Scripts SQL e banco de dados
+│   ├── 📁 debug/           # Scripts de diagnóstico e debug
+│   ├── 📁 test/            # Scripts de teste e validação
+│   ├── 📁 maintenance/     # Scripts de manutenção e correção
+│   ├── 📁 migration/       # Scripts de migração de dados
+│   ├── 📁 backup/          # Scripts de backup e restauração
+│   └── README.md           # Documentação dos scripts
+
+├── 📁 debug/               # Arquivos de debug HTML
 │   ├── page_content.html
 │   └── page_debug.html
-├── 📁 database/               # Scripts de banco de dados
+├── 📁 database/            # Configurações de banco (Supabase)
 │   ├── create_sql_function.sql
 │   └── test_queries.sql
-├── 📁 src/
-│   ├── 📁 components/         # Componentes React
-│   │   ├── 📁 Admin/         # Componentes administrativos
-│   │   ├── 📁 Layout/        # Layout e navegação
-│   │   ├── 📁 Articles/      # Componentes de artigos
-│   │   └── 📁 UI/           # Componentes de interface
-│   ├── 📁 hooks/             # Custom hooks
-│   ├── 📁 contexts/          # Contextos React
-│   ├── 📁 lib/              # Configurações e utilitários
-│   ├── 📁 pages/            # Páginas da aplicação
-│   ├── 📁 utils/            # Funções utilitárias
-│   └── 📁 types/            # Definições TypeScript
-├── 📁 public/               # Arquivos estáticos
-└── 📁 supabase/            # Configurações Supabase
+├── 📁 src/                 # Código fonte da aplicação
+│   ├── 📁 components/      # Componentes React
+│   │   ├── 📁 Admin/      # Componentes administrativos
+│   │   ├── 📁 Layout/     # Layout e navegação
+│   │   ├── 📁 Articles/   # Componentes de artigos
+│   │   └── 📁 UI/        # Componentes de interface
+│   ├── 📁 hooks/          # Custom hooks
+│   ├── 📁 contexts/       # Contextos React
+│   ├── 📁 lib/           # Configurações e utilitários
+│   ├── 📁 pages/         # Páginas da aplicação
+│   ├── 📁 utils/         # Funções utilitárias
+│   └── 📁 types/         # Definições TypeScript
+├── 📁 public/             # Arquivos estáticos
+├── 📁 supabase/          # Configurações Supabase
+│   └── migrations/       # Migrações do banco
+└── 📁 api/               # Backend Express.js
+    ├── server.ts         # Servidor principal
+    └── sitemap.ts        # Geração de sitemap
 ```
 
 ---

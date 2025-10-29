@@ -106,21 +106,21 @@ export function useRealTimeMetrics(articleIds: string[]) {
       // PRIMEIRO: Tentar usar a função get_article_metrics do Supabase
       console.log(`🎯 [REALTIME-METRICS] Tentando função get_article_metrics para ${articleId}`);
       
-      const { data: rpcData, error: rpcError } = await supabase
-        .rpc('get_article_metrics', { target_article_id: articleId });
+      const { data: metricsData, error: metricsError } = await supabase
+        .rpc('get_article_metrics', { article_uuid: articleId });
 
-      if (!rpcError && rpcData) {
-        console.log(`✅ [REALTIME-METRICS] Métricas obtidas para ${articleId}:`, rpcData);
+      if (!metricsError && metricsData) {
+        console.log(`✅ [REALTIME-METRICS] Métricas obtidas para ${articleId}:`, metricsData);
         
         const metrics: ArticleMetrics = {
           articleId,
-          positiveFeedback: Number(rpcData.positive_feedback) || 0,
-          negativeFeedback: Number(rpcData.negative_feedback) || 0,
-          comments: Number(rpcData.total_comments) || 0,
-          approvalRate: Number(rpcData.approval_rate) || 0,
-          total_likes: Number(rpcData.total_likes) || 0,
-          total_replies: Number(rpcData.total_replies) || 0,
-          engagement_rate: Number(rpcData.engagement_rate) || 0
+          positiveFeedback: Number(metricsData.positive_feedback) || 0,
+          negativeFeedback: Number(metricsData.negative_feedback) || 0,
+          comments: Number(metricsData.total_comments) || 0,
+          approvalRate: Number(metricsData.approval_rate) || 0,
+          total_likes: Number(metricsData.total_likes) || 0,
+          total_replies: Number(metricsData.total_replies) || 0,
+          engagement_rate: Number(metricsData.engagement_rate) || 0
         };
 
         // Cache com TTL de 30 segundos
@@ -131,7 +131,7 @@ export function useRealTimeMetrics(articleIds: string[]) {
       } else {
         console.warn(`⚠️ [REALTIME-METRICS] Função RPC falhou para ${articleId}:`, {
           error: rpcError,
-          data: rpcData,
+          data: data,
           errorMessage: rpcError?.message,
           errorDetails: rpcError?.details
         });
@@ -145,8 +145,8 @@ export function useRealTimeMetrics(articleIds: string[]) {
       
       // Buscar feedback
       const { data: feedbackData, error: feedbackError } = await supabaseAdmin
-        .from('feedback')
-        .select('useful')
+        .from('feedbacks')
+        .select('type')
         .eq('article_id', articleId);
 
       if (feedbackError) {
@@ -184,8 +184,8 @@ export function useRealTimeMetrics(articleIds: string[]) {
         engagementRate
       });
 
-      const positiveFeedback = Number(feedbackData?.filter(f => f.useful === true).length) || 0;
-      const negativeFeedback = Number(feedbackData?.filter(f => f.useful === false).length) || 0;
+      const positiveFeedback = Number(feedbackData?.filter(f => f.type === 'positive').length) || 0;
+      const negativeFeedback = Number(feedbackData?.filter(f => f.type === 'negative').length) || 0;
       const comments = Number(commentsData?.length) || 0;
       const totalFeedback = positiveFeedback + negativeFeedback;
       const approvalRate = totalFeedback > 0 ? (positiveFeedback / totalFeedback) * 100 : 0;

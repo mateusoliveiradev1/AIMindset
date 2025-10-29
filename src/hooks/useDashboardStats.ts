@@ -97,8 +97,8 @@ export function useDashboardStats() {
           .select('id, article_id, created_at'),
         
         supabaseAdmin
-          .from('feedback')
-          .select('id, article_id, useful, created_at'),
+          .from('feedbacks')
+          .select('id, article_id, type, created_at'),
         
         supabaseAdmin
           .from('contacts')
@@ -146,7 +146,7 @@ export function useDashboardStats() {
       // Calcular estatísticas
       const publishedArticles = articles.filter(a => a.published);
       const activeSubscribers = subscribers.filter(s => s.status === 'active');
-      const positiveFeedback = feedback.filter(f => f.useful);
+      const positiveFeedback = feedback.filter(f => f.type === 'positive');
       
       // Calcular crescimento semanal
       const oneWeekAgo = new Date();
