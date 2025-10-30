@@ -1488,7 +1488,7 @@ export const Admin: React.FC = () => {
                           }`}>
                             {article.published ? 'Publicado' : 'Rascunho'}
                           </span>
-                          {article.is_featured_manual && (
+                          {article.is_featured_manual === true && (
                             <span className="px-2 py-1 rounded-full text-xs font-medium bg-neon-purple/20 text-neon-purple border border-neon-purple/30 flex items-center gap-1">
                               <Star className="w-3 h-3 fill-current" />
                               Hero
@@ -1509,14 +1509,14 @@ export const Admin: React.FC = () => {
                             size="sm" 
                             variant="ghost" 
                             className={`min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2 ${
-                              article.is_featured_manual 
+                              article.is_featured_manual === true
                                 ? 'text-neon-purple hover:text-neon-purple/80 bg-neon-purple/10' 
                                 : 'text-futuristic-gray hover:text-neon-purple'
                             }`}
                             onClick={() => handleToggleFeaturedManual(article)}
-                            title={article.is_featured_manual ? 'Remover do destaque fixo' : 'Marcar como destaque fixo (Hero)'}
+                            title={article.is_featured_manual === true ? 'Remover do destaque fixo' : 'Marcar como destaque fixo (Hero)'}
                           >
-                            <Star className={`w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4 ${article.is_featured_manual ? 'fill-current' : ''}`} />
+                            <Star className={`w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4 ${article.is_featured_manual === true ? 'fill-current' : ''}`} />
                           </Button>
                           <Button 
                             size="sm" 

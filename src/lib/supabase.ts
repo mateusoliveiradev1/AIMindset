@@ -170,6 +170,7 @@ export type Database = {
           image_url: string | null;
           slug: string;
           published: boolean;
+          is_featured_manual?: boolean | null;
           category_id: string;
           author_id: string;
           created_at: string;
@@ -187,6 +188,7 @@ export type Database = {
           image_url?: string | null;
           slug: string;
           published?: boolean;
+          is_featured_manual?: boolean | null;
           category_id: string;
           author_id: string;
           created_at?: string;
@@ -204,6 +206,7 @@ export type Database = {
           image_url?: string | null;
           slug?: string;
           published?: boolean;
+          is_featured_manual?: boolean | null;
           category_id?: string;
           author_id?: string;
           created_at?: string;

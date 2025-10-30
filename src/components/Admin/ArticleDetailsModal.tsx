@@ -41,7 +41,7 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'comments' | 'feedback'>('feedback');
+  const [activeTab, setActiveTab] = useState<'comments' | 'feedback' | 'stats'>('feedback');
   const [deletingCommentId, setDeletingCommentId] = useState<string | null>(null);
 
   // Memoizar articleIds para evitar re-renders desnecessários
