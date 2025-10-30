@@ -45,7 +45,8 @@ import {
   AlertTriangle,
   Home,
   Star,
-  RefreshCw
+  RefreshCw,
+  Shield
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import ArticleEditor from '../components/ArticleEditor';
@@ -57,11 +58,12 @@ import { EmailTemplates } from '../components/Admin/EmailTemplates';
 import { NotificationCenter } from '../components/Admin/NotificationCenter';
 import NewsletterLogs from '../components/Admin/NewsletterLogs';
 import { SEODashboard } from '../components/Admin/SEODashboard';
+import { BackupTab } from '../components/Admin/BackupTab';
 import { resetForFeedbackTesting, getLocalStorageInfo } from '../utils/localStorageReset';
 
 
 export const Admin: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'articles' | 'categories' | 'editor' | 'newsletter' | 'users' | 'feedback' | 'seo'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'articles' | 'categories' | 'editor' | 'newsletter' | 'users' | 'feedback' | 'seo' | 'backup'>('dashboard');
   const { logout, user } = useAuth();
   
   // Hook para SEO
@@ -728,7 +730,8 @@ export const Admin: React.FC = () => {
             { id: 'users', label: 'Usuários', icon: Users },
             { id: 'categories', label: 'Categorias', icon: TrendingUp },
             { id: 'feedback', label: 'Feedback', icon: MessageSquare },
-            { id: 'seo', label: 'SEO', icon: Search }
+            { id: 'seo', label: 'SEO', icon: Search },
+            { id: 'backup', label: 'Backup', icon: Shield }
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -2752,6 +2755,13 @@ export const Admin: React.FC = () => {
         {activeTab === 'seo' && (
           <div>
             <SEODashboard />
+          </div>
+        )}
+
+        {/* Backup Tab */}
+        {activeTab === 'backup' && (
+          <div>
+            <BackupTab />
           </div>
         )}
 
