@@ -57,3 +57,4 @@ coverage/
 .env.test.local
 .env.production.local
 .cache/
+.vercel
