@@ -193,7 +193,7 @@ export default function AlertsManagement({ className = '' }: AlertsManagementPro
       } else {
         console.warn('⚠️ [ALERT-TEST] Teste executado mas sem sucesso:', data);
         setMessage({ 
-          type: 'warning', 
+          type: 'error', 
           text: `Teste executado mas com problemas. Dados: ${JSON.stringify(data)}` 
         });
       }

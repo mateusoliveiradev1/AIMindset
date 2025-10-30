@@ -458,7 +458,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('💥 ERRO CRÍTICO NO LOGIN:', error);
       
       // Log de erro no login
-      await logError('login_error', error, {
+      await logError(error, 'AuthContext', 'login_error', {
         email,
         context: 'AuthContext.login'
       });

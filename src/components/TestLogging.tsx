@@ -107,7 +107,7 @@ const TestLogging: React.FC = () => {
         
         // System Logs
         logSystem('general', 'Sistema iniciado com sucesso', { version: '1.0.0', timestamp }),
-        logSystem('performance', 'Uso de memória alto detectado', { memory_usage: '85%', timestamp }),
+        logSystem('performance', 'Uso de memória alto detectado', { memory_usage: 85, timestamp }),
         logSystem('api', 'Falha na conexão com serviço externo', { service: 'email-api', timestamp }),
         logSystem('backup', 'Backup automático concluído', { backup_size: '2.5GB', timestamp })
       ];

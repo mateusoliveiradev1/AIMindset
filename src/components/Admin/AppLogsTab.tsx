@@ -190,7 +190,7 @@ export const AppLogsTab: React.FC = () => {
             {/* Botão Auto-Refresh */}
             <Button
               onClick={() => setAutoRefresh(!autoRefresh)}
-              variant={autoRefresh ? "default" : "outline"}
+              variant={autoRefresh ? "primary" : "outline"}
               size="sm"
               className={autoRefresh ? "bg-green-600 hover:bg-green-700" : ""}
             >

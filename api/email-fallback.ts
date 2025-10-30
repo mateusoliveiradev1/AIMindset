@@ -16,7 +16,7 @@ interface EmailData {
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Configuração do Gmail como fallback
-const gmailTransporter = nodemailer.createTransporter({
+const gmailTransporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.GMAIL_USER || 'seu-email@gmail.com',

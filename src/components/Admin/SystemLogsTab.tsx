@@ -285,7 +285,7 @@ export const SystemLogsTab: React.FC = () => {
           <div className="flex space-x-2">
             <Button
               onClick={() => setAutoRefresh(!autoRefresh)}
-              variant={autoRefresh ? "default" : "outline"}
+              variant={autoRefresh ? "primary" : "outline"}
               size="sm"
               className={autoRefresh ? "bg-green-600 hover:bg-green-700" : ""}
             >
