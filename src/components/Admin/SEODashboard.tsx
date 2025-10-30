@@ -100,6 +100,9 @@ export const SEODashboard: React.FC = () => {
   const [selectedPage, setSelectedPage] = useState<SEODataWithAnalysis | null>(null);
   const [activePreviewTab, setActivePreviewTab] = useState<'google' | 'social'>('google');
   
+  // Estado para controlar a aba ativa (Dashboard ou Relatórios)
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'reports'>('dashboard');
+  
   // Estados para bulk operations
   const [selectedPages, setSelectedPages] = useState<Set<string>>(new Set());
   const [bulkOperationInProgress, setBulkOperationInProgress] = useState(false);
@@ -121,6 +124,11 @@ export const SEODashboard: React.FC = () => {
   const [pageTypeFilter, setPageTypeFilter] = useState<'all' | 'article' | 'category' | 'static'>('all');
   const [problemFilter, setProblemFilter] = useState<'all' | 'duplicate-title' | 'short-description' | 'no-keywords' | 'long-url' | 'no-og-image' | 'no-schema'>('all');
   const [sortBy, setSortBy] = useState<'score-desc' | 'score-asc' | 'updated-desc' | 'updated-asc' | 'type-asc' | 'title-asc'>('score-desc');
+
+  // Estados para correções automáticas
+  const [autoFixInProgress, setAutoFixInProgress] = useState<{[key: string]: boolean}>({});
+  const [fixProgress, setFixProgress] = useState<{current: number, total: number, type: string}>({current: 0, total: 0, type: ''});
+  const [fixResults, setFixResults] = useState<{[key: string]: {success: number, failed: number, details: string[]}}>({});
 
   // Carregar dados SEO
   const loadSEOData = async () => {
@@ -1399,6 +1407,413 @@ export const SEODashboard: React.FC = () => {
     return templates[pageType as keyof typeof templates] || templates.article;
   };
 
+  // Funções específicas de correção automática
+  const fixDuplicateTitles = async () => {
+    if (autoFixInProgress['duplicateTitles']) return;
+    
+    setAutoFixInProgress(prev => ({ ...prev, duplicateTitles: true }));
+    
+    try {
+      // Encontrar páginas com títulos duplicados
+      const titleGroups = seoDataWithAnalysis.reduce((acc, page) => {
+        const title = page.title?.toLowerCase().trim();
+        if (title) {
+          if (!acc[title]) acc[title] = [];
+          acc[title].push(page);
+        }
+        return acc;
+      }, {} as {[key: string]: SEODataWithAnalysis[]});
+
+      const duplicateGroups = Object.values(titleGroups).filter(group => group.length > 1);
+      const totalPages = duplicateGroups.reduce((sum, group) => sum + group.length - 1, 0);
+
+      if (totalPages === 0) {
+        toast.info('Nenhum título duplicado encontrado!');
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `Encontrados ${totalPages} títulos duplicados em ${duplicateGroups.length} grupos.\n\nDeseja corrigir automaticamente adicionando sufixos únicos?`
+      );
+
+      if (!confirmed) return;
+
+      setFixProgress({ current: 0, total: totalPages, type: 'Títulos Duplicados' });
+
+      const suffixes = [
+        '- Guia Completo',
+        '- Dicas Essenciais', 
+        '- Tutorial Prático',
+        '- Estratégias Avançadas',
+        '- Passo a Passo',
+        '- Métodos Eficazes',
+        '- Técnicas Comprovadas'
+      ];
+
+      let current = 0;
+      const results = { success: 0, failed: 0, details: [] as string[] };
+
+      for (const group of duplicateGroups) {
+        // Manter o primeiro, corrigir os demais
+        for (let i = 1; i < group.length; i++) {
+          const page = group[i];
+          const suffix = suffixes[(i - 1) % suffixes.length];
+          const newTitle = `${page.title} ${suffix}`;
+
+          try {
+            const { error } = await supabase
+              .from('seo_metadata')
+              .update({ title: newTitle })
+              .eq('id', page.id);
+
+            if (error) throw error;
+
+            results.success++;
+            results.details.push(`✅ ${page.title} → ${newTitle}`);
+          } catch (error) {
+            results.failed++;
+            results.details.push(`❌ Erro ao corrigir: ${page.title}`);
+          }
+
+          current++;
+          setFixProgress({ current, total: totalPages, type: 'Títulos Duplicados' });
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      }
+
+      setFixResults(prev => ({ ...prev, duplicateTitles: results }));
+      
+      if (results.failed === 0) {
+        toast.success(`🔧 ${results.success} títulos duplicados corrigidos com sucesso!`);
+      } else {
+        toast.warning(`⚠️ Correção concluída: ${results.success} sucessos, ${results.failed} falhas`);
+      }
+
+      await loadSEOData();
+    } catch (error) {
+      console.error('Erro ao corrigir títulos duplicados:', error);
+      toast.error('Erro ao corrigir títulos duplicados');
+    } finally {
+      setAutoFixInProgress(prev => ({ ...prev, duplicateTitles: false }));
+      setFixProgress({ current: 0, total: 0, type: '' });
+    }
+  };
+
+  const fixShortDescriptions = async () => {
+    if (autoFixInProgress['shortDescriptions']) return;
+    
+    setAutoFixInProgress(prev => ({ ...prev, shortDescriptions: true }));
+    
+    try {
+      const pagesWithShortDesc = seoDataWithAnalysis.filter(page => 
+        !page.description || (page.description?.length || 0) < 120
+      );
+
+      if (pagesWithShortDesc.length === 0) {
+        toast.info('Nenhuma descrição curta encontrada!');
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `Encontradas ${pagesWithShortDesc.length} páginas com descrições curtas ou ausentes.\n\nDeseja expandir automaticamente?`
+      );
+
+      if (!confirmed) return;
+
+      setFixProgress({ current: 0, total: pagesWithShortDesc.length, type: 'Descrições Curtas' });
+
+      const results = { success: 0, failed: 0, details: [] as string[] };
+
+      for (let i = 0; i < pagesWithShortDesc.length; i++) {
+        const page = pagesWithShortDesc[i];
+        
+        try {
+          const baseDesc = page.description || `Descubra tudo sobre ${page.title || 'este tópico importante'}`;
+          const expandedDesc = baseDesc.length < 120 
+            ? `${baseDesc}. Aprenda estratégias práticas, dicas essenciais e métodos comprovados para alcançar resultados excepcionais. Transforme seu conhecimento em ação com nosso guia completo e detalhado.`
+            : baseDesc;
+
+          const { error } = await supabase
+            .from('seo_metadata')
+            .update({ description: expandedDesc.substring(0, 160) })
+            .eq('id', page.id);
+
+          if (error) throw error;
+
+          results.success++;
+          results.details.push(`✅ ${page.title}: Descrição expandida`);
+        } catch (error) {
+          results.failed++;
+          results.details.push(`❌ Erro ao expandir: ${page.title}`);
+        }
+
+        setFixProgress({ current: i + 1, total: pagesWithShortDesc.length, type: 'Descrições Curtas' });
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      setFixResults(prev => ({ ...prev, shortDescriptions: results }));
+      
+      if (results.failed === 0) {
+        toast.success(`🔧 ${results.success} descrições expandidas com sucesso!`);
+      } else {
+        toast.warning(`⚠️ Correção concluída: ${results.success} sucessos, ${results.failed} falhas`);
+      }
+
+      await loadSEOData();
+    } catch (error) {
+      console.error('Erro ao expandir descrições:', error);
+      toast.error('Erro ao expandir descrições');
+    } finally {
+      setAutoFixInProgress(prev => ({ ...prev, shortDescriptions: false }));
+      setFixProgress({ current: 0, total: 0, type: '' });
+    }
+  };
+
+  const fixMissingKeywords = async () => {
+    if (autoFixInProgress['missingKeywords']) return;
+    
+    setAutoFixInProgress(prev => ({ ...prev, missingKeywords: true }));
+    
+    try {
+      const pagesWithoutKeywords = seoDataWithAnalysis.filter(page => 
+        !page.keywords || page.keywords.length === 0
+      );
+
+      if (pagesWithoutKeywords.length === 0) {
+        toast.info('Todas as páginas já possuem palavras-chave!');
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `Encontradas ${pagesWithoutKeywords.length} páginas sem palavras-chave.\n\nDeseja gerar automaticamente baseado no título e tipo?`
+      );
+
+      if (!confirmed) return;
+
+      setFixProgress({ current: 0, total: pagesWithoutKeywords.length, type: 'Palavras-chave' });
+
+      const results = { success: 0, failed: 0, details: [] as string[] };
+
+      for (let i = 0; i < pagesWithoutKeywords.length; i++) {
+        const page = pagesWithoutKeywords[i];
+        
+        try {
+          // Gerar keywords baseadas no título
+          const titleWords = (page.title || '').toLowerCase()
+            .replace(/[^\w\s]/g, '')
+            .split(' ')
+            .filter(word => word.length > 3);
+
+          // Keywords base por tipo de página
+          const baseKeywords = {
+            article: ['guia', 'tutorial', 'dicas', 'estratégias'],
+            category: ['categoria', 'conteúdos', 'artigos'],
+            home: ['mindset', 'desenvolvimento', 'produtividade'],
+            static: ['informações', 'sobre', 'contato']
+          };
+
+          const typeKeywords = baseKeywords[page.page_type as keyof typeof baseKeywords] || baseKeywords.article;
+          const generatedKeywords = [...new Set([...titleWords.slice(0, 3), ...typeKeywords])].slice(0, 5);
+
+          const { error } = await supabase
+            .from('seo_metadata')
+            .update({ keywords: generatedKeywords })
+            .eq('id', page.id);
+
+          if (error) throw error;
+
+          results.success++;
+          results.details.push(`✅ ${page.title}: ${generatedKeywords.length} keywords adicionadas`);
+        } catch (error) {
+          results.failed++;
+          results.details.push(`❌ Erro ao adicionar keywords: ${page.title}`);
+        }
+
+        setFixProgress({ current: i + 1, total: pagesWithoutKeywords.length, type: 'Palavras-chave' });
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      setFixResults(prev => ({ ...prev, missingKeywords: results }));
+      
+      if (results.failed === 0) {
+        toast.success(`🔧 Keywords adicionadas em ${results.success} páginas!`);
+      } else {
+        toast.warning(`⚠️ Correção concluída: ${results.success} sucessos, ${results.failed} falhas`);
+      }
+
+      await loadSEOData();
+    } catch (error) {
+      console.error('Erro ao adicionar keywords:', error);
+      toast.error('Erro ao adicionar keywords');
+    } finally {
+      setAutoFixInProgress(prev => ({ ...prev, missingKeywords: false }));
+      setFixProgress({ current: 0, total: 0, type: '' });
+    }
+  };
+
+  const fixLongUrls = async () => {
+    if (autoFixInProgress['longUrls']) return;
+    
+    setAutoFixInProgress(prev => ({ ...prev, longUrls: true }));
+    
+    try {
+      const pagesWithLongUrls = seoDataWithAnalysis.filter(page => 
+        (page.page_url?.length || 0) > 60
+      );
+
+      if (pagesWithLongUrls.length === 0) {
+        toast.info('Nenhuma URL longa encontrada!');
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `Encontradas ${pagesWithLongUrls.length} URLs longas (>60 caracteres).\n\nDeseja otimizar automaticamente?`
+      );
+
+      if (!confirmed) return;
+
+      setFixProgress({ current: 0, total: pagesWithLongUrls.length, type: 'URLs Longas' });
+
+      const results = { success: 0, failed: 0, details: [] as string[] };
+
+      for (let i = 0; i < pagesWithLongUrls.length; i++) {
+        const page = pagesWithLongUrls[i];
+        
+        try {
+          // Otimizar URL
+          const optimizedUrl = (page.page_url || '')
+            .toLowerCase()
+            .replace(/[^\w\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .substring(0, 50)
+            .replace(/-$/, '');
+
+          const { error } = await supabase
+            .from('seo_metadata')
+            .update({ page_url: optimizedUrl })
+            .eq('id', page.id);
+
+          if (error) throw error;
+
+          results.success++;
+          results.details.push(`✅ ${page.title}: URL otimizada`);
+        } catch (error) {
+          results.failed++;
+          results.details.push(`❌ Erro ao otimizar URL: ${page.title}`);
+        }
+
+        setFixProgress({ current: i + 1, total: pagesWithLongUrls.length, type: 'URLs Longas' });
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      setFixResults(prev => ({ ...prev, longUrls: results }));
+      
+      if (results.failed === 0) {
+        toast.success(`🔧 ${results.success} URLs otimizadas com sucesso!`);
+      } else {
+        toast.warning(`⚠️ Correção concluída: ${results.success} sucessos, ${results.failed} falhas`);
+      }
+
+      await loadSEOData();
+    } catch (error) {
+      console.error('Erro ao otimizar URLs:', error);
+      toast.error('Erro ao otimizar URLs');
+    } finally {
+      setAutoFixInProgress(prev => ({ ...prev, longUrls: false }));
+      setFixProgress({ current: 0, total: 0, type: '' });
+    }
+  };
+
+  const fixMissingSchema = async () => {
+    if (autoFixInProgress['missingSchema']) return;
+    
+    setAutoFixInProgress(prev => ({ ...prev, missingSchema: true }));
+    
+    try {
+      const pagesWithoutSchema = seoDataWithAnalysis.filter(page => 
+        !page.schema_data || Object.keys(page.schema_data).length === 0
+      );
+
+      if (pagesWithoutSchema.length === 0) {
+        toast.info('Todas as páginas já possuem Schema.org!');
+        return;
+      }
+
+      const confirmed = window.confirm(
+        `Encontradas ${pagesWithoutSchema.length} páginas sem dados estruturados Schema.org.\n\nDeseja adicionar automaticamente?`
+      );
+
+      if (!confirmed) return;
+
+      setFixProgress({ current: 0, total: pagesWithoutSchema.length, type: 'Schema.org' });
+
+      const results = { success: 0, failed: 0, details: [] as string[] };
+
+      for (let i = 0; i < pagesWithoutSchema.length; i++) {
+        const page = pagesWithoutSchema[i];
+        
+        try {
+          // Gerar schema básico baseado no tipo de página
+          const baseSchema = {
+            "@context": "https://schema.org",
+            "@type": page.page_type === 'article' ? 'Article' : 'WebPage',
+            "name": page.title,
+            "description": page.description,
+            "url": page.page_url,
+            "publisher": {
+              "@type": "Organization",
+              "name": "AIMindset"
+            }
+          };
+
+          if (page.page_type === 'article') {
+            Object.assign(baseSchema, {
+              "author": {
+                "@type": "Organization",
+                "name": "AIMindset"
+              },
+              "datePublished": page.created_at,
+              "dateModified": page.updated_at
+            });
+          }
+
+          const { error } = await supabase
+            .from('seo_metadata')
+            .update({ schema_data: baseSchema })
+            .eq('id', page.id);
+
+          if (error) throw error;
+
+          results.success++;
+          results.details.push(`✅ ${page.title}: Schema.org adicionado`);
+        } catch (error) {
+          results.failed++;
+          results.details.push(`❌ Erro ao adicionar Schema: ${page.title}`);
+        }
+
+        setFixProgress({ current: i + 1, total: pagesWithoutSchema.length, type: 'Schema.org' });
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      setFixResults(prev => ({ ...prev, missingSchema: results }));
+      
+      if (results.failed === 0) {
+        toast.success(`🔧 Schema.org adicionado em ${results.success} páginas!`);
+      } else {
+        toast.warning(`⚠️ Correção concluída: ${results.success} sucessos, ${results.failed} falhas`);
+      }
+
+      await loadSEOData();
+    } catch (error) {
+      console.error('Erro ao adicionar Schema.org:', error);
+      toast.error('Erro ao adicionar Schema.org');
+    } finally {
+      setAutoFixInProgress(prev => ({ ...prev, missingSchema: false }));
+      setFixProgress({ current: 0, total: 0, type: '' });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -1428,8 +1843,37 @@ export const SEODashboard: React.FC = () => {
         </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* Sistema de Abas */}
+      <div className="flex space-x-1 bg-dark-gray/30 p-1 rounded-lg border border-futuristic-gray/20">
+        <button
+          onClick={() => setActiveTab('dashboard')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${
+            activeTab === 'dashboard'
+              ? 'bg-neon-purple text-white shadow-lg shadow-neon-purple/25'
+              : 'text-futuristic-gray hover:text-white hover:bg-futuristic-gray/10'
+          }`}
+        >
+          <BarChart3 className="w-4 h-4" />
+          Dashboard
+        </button>
+        <button
+          onClick={() => setActiveTab('reports')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${
+            activeTab === 'reports'
+              ? 'bg-neon-purple text-white shadow-lg shadow-neon-purple/25'
+              : 'text-futuristic-gray hover:text-white hover:bg-futuristic-gray/10'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          Relatórios
+        </button>
+      </div>
+
+      {/* Conteúdo da Aba Dashboard */}
+      {activeTab === 'dashboard' && (
+        <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {loadingSkeleton ? (
           // Loading Skeletons
           <>
@@ -2321,6 +2765,325 @@ export const SEODashboard: React.FC = () => {
           <p className="text-futuristic-gray">
             Tente ajustar os filtros de busca
           </p>
+        </div>
+      )}
+        </>
+      )}
+
+      {/* Conteúdo da Aba Relatórios */}
+      {activeTab === 'reports' && (
+        <div className="space-y-6">
+          {/* Métricas Gerais */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {stats && (
+              <>
+                <Card className="glass-effect hover-lift">
+                  <div className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-futuristic-gray text-sm">Total de Páginas</p>
+                        <p className="text-2xl font-orbitron font-bold text-white">
+                          {stats.totalPages}
+                        </p>
+                      </div>
+                      <Globe className="w-8 h-8 text-neon-purple" />
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="glass-effect hover-lift">
+                  <div className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-futuristic-gray text-sm">Score Médio</p>
+                        <p className="text-2xl font-orbitron font-bold text-white">
+                          {stats.averageScore}
+                        </p>
+                      </div>
+                      <TrendingUp className="w-8 h-8 text-lime-green" />
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="glass-effect hover-lift">
+                  <div className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-futuristic-gray text-sm">Páginas Excelentes</p>
+                        <p className="text-2xl font-orbitron font-bold text-white">
+                          {stats.excellentPages}
+                        </p>
+                      </div>
+                      <CheckCircle className="w-8 h-8 text-lime-green" />
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="glass-effect hover-lift">
+                  <div className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-futuristic-gray text-sm">Precisam Melhorar</p>
+                        <p className="text-2xl font-orbitron font-bold text-white">
+                          {stats.needsImprovementPages + stats.poorPages}
+                        </p>
+                      </div>
+                      <AlertTriangle className="w-8 h-8 text-yellow-500" />
+                    </div>
+                  </div>
+                </Card>
+              </>
+            )}
+          </div>
+
+          {/* Distribuição por Status */}
+          <Card className="glass-effect">
+            <div className="p-6">
+              <h3 className="text-xl font-orbitron font-bold text-white mb-4">
+                Distribuição por Status SEO
+              </h3>
+              {stats && (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-lime-green/20 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-lime-green">{stats.excellentPages}</span>
+                    </div>
+                    <p className="text-sm text-futuristic-gray">Excelente</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-green-400">{stats.goodPages}</span>
+                    </div>
+                    <p className="text-sm text-futuristic-gray">Bom</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-yellow-400">{stats.needsImprovementPages}</span>
+                    </div>
+                    <p className="text-sm text-futuristic-gray">Precisa Melhorar</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-red-500/20 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-red-400">{stats.poorPages}</span>
+                    </div>
+                    <p className="text-sm text-futuristic-gray">Ruim</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Problemas Identificados */}
+          <Card className="glass-effect">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-orbitron font-bold text-white">
+                  Problemas Identificados
+                </h3>
+                {fixProgress.total > 0 && (
+                  <div className="text-sm text-neon-purple">
+                    {fixProgress.type}: {fixProgress.current}/{fixProgress.total}
+                  </div>
+                )}
+              </div>
+              
+              {stats && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    {/* Títulos Duplicados */}
+                    <div className="flex items-center justify-between p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <span className="text-red-400">Títulos Duplicados</span>
+                        <span className="font-bold text-white">{stats.duplicatedTitles}</span>
+                      </div>
+                      {stats.duplicatedTitles > 0 && (
+                        <Button
+                          onClick={fixDuplicateTitles}
+                          disabled={autoFixInProgress['duplicateTitles']}
+                          className="bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs px-2 py-1 h-auto"
+                        >
+                          {autoFixInProgress['duplicateTitles'] ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <>🔧 Corrigir</>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Descrições Curtas */}
+                    <div className="flex items-center justify-between p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <span className="text-yellow-400">Descrições Curtas</span>
+                        <span className="font-bold text-white">{stats.shortDescriptions}</span>
+                      </div>
+                      {stats.shortDescriptions > 0 && (
+                        <Button
+                          onClick={fixShortDescriptions}
+                          disabled={autoFixInProgress['shortDescriptions']}
+                          className="bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 text-xs px-2 py-1 h-auto"
+                        >
+                          {autoFixInProgress['shortDescriptions'] ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <>🔧 Corrigir</>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Sem Palavras-chave */}
+                    <div className="flex items-center justify-between p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <span className="text-orange-400">Sem Palavras-chave</span>
+                        <span className="font-bold text-white">{stats.withoutKeywords}</span>
+                      </div>
+                      {stats.withoutKeywords > 0 && (
+                        <Button
+                          onClick={fixMissingKeywords}
+                          disabled={autoFixInProgress['missingKeywords']}
+                          className="bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 text-xs px-2 py-1 h-auto"
+                        >
+                          {autoFixInProgress['missingKeywords'] ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <>🔧 Corrigir</>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {/* URLs Longas */}
+                    <div className="flex items-center justify-between p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <span className="text-blue-400">URLs Longas</span>
+                        <span className="font-bold text-white">{stats.longUrls}</span>
+                      </div>
+                      {stats.longUrls > 0 && (
+                        <Button
+                          onClick={fixLongUrls}
+                          disabled={autoFixInProgress['longUrls']}
+                          className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-xs px-2 py-1 h-auto"
+                        >
+                          {autoFixInProgress['longUrls'] ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <>🔧 Corrigir</>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Sem Schema.org */}
+                    <div className="flex items-center justify-between p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <span className="text-purple-400">Sem Schema.org</span>
+                        <span className="font-bold text-white">{stats.withoutSchema}</span>
+                      </div>
+                      {stats.withoutSchema > 0 && (
+                        <Button
+                          onClick={fixMissingSchema}
+                          disabled={autoFixInProgress['missingSchema']}
+                          className="bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-xs px-2 py-1 h-auto"
+                        >
+                          {autoFixInProgress['missingSchema'] ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <>🔧 Corrigir</>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* URLs Não Otimizadas */}
+                    <div className="flex items-center justify-between p-3 bg-gray-500/10 border border-gray-500/20 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <span className="text-gray-400">URLs Não Otimizadas</span>
+                        <span className="font-bold text-white">{stats.unoptimizedUrls}</span>
+                      </div>
+                      {stats.unoptimizedUrls > 0 && (
+                        <Button
+                          onClick={fixLongUrls} // Usa a mesma função de URLs longas
+                          disabled={autoFixInProgress['longUrls']}
+                          className="bg-gray-500/20 hover:bg-gray-500/30 text-gray-400 text-xs px-2 py-1 h-auto"
+                        >
+                          {autoFixInProgress['longUrls'] ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <>🔧 Corrigir</>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Barra de Progresso Global */}
+              {fixProgress.total > 0 && (
+                <div className="mt-4 p-3 bg-neon-purple/10 border border-neon-purple/20 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-neon-purple font-medium">
+                      Corrigindo {fixProgress.type}...
+                    </span>
+                    <span className="text-xs text-futuristic-gray">
+                      {Math.round((fixProgress.current / fixProgress.total) * 100)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-dark-gray/50 rounded-full h-2">
+                    <div 
+                      className="bg-neon-gradient h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(fixProgress.current / fixProgress.total) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Resultados das Correções */}
+              {Object.keys(fixResults).length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <h4 className="text-sm font-medium text-white">Últimas Correções:</h4>
+                  {Object.entries(fixResults).map(([type, result]) => (
+                    <div key={type} className="text-xs p-2 bg-dark-gray/30 rounded border border-futuristic-gray/20">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-neon-purple font-medium">{type}</span>
+                        <span className="text-green-400">
+                          ✅ {result.success} | ❌ {result.failed}
+                        </span>
+                      </div>
+                      {result.details.slice(0, 3).map((detail, idx) => (
+                        <div key={idx} className="text-futuristic-gray truncate">
+                          {detail}
+                        </div>
+                      ))}
+                      {result.details.length > 3 && (
+                        <div className="text-futuristic-gray/60">
+                          +{result.details.length - 3} mais...
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Placeholder para Gráficos Futuros */}
+          <Card className="glass-effect">
+            <div className="p-6">
+              <h3 className="text-xl font-orbitron font-bold text-white mb-4">
+                Análise Temporal
+              </h3>
+              <div className="flex items-center justify-center h-64 border-2 border-dashed border-futuristic-gray/30 rounded-lg">
+                <div className="text-center">
+                  <BarChart3 className="w-16 h-16 text-futuristic-gray mx-auto mb-4" />
+                  <p className="text-futuristic-gray">Gráficos de evolução temporal serão implementados em breve</p>
+                </div>
+              </div>
+            </div>
+          </Card>
         </div>
       )}
 
