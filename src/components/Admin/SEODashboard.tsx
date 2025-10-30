@@ -116,6 +116,12 @@ export const SEODashboard: React.FC = () => {
   const [cachedData, setCachedData] = useState<Map<string, any>>(new Map());
   const [loadingSkeleton, setLoadingSkeleton] = useState(false);
 
+  // Estados para filtros avançados
+  const [scoreFilter, setScoreFilter] = useState<'all' | 'excellent' | 'good' | 'needs-improvement' | 'poor'>('all');
+  const [pageTypeFilter, setPageTypeFilter] = useState<'all' | 'article' | 'category' | 'static'>('all');
+  const [problemFilter, setProblemFilter] = useState<'all' | 'duplicate-title' | 'short-description' | 'no-keywords' | 'long-url' | 'no-og-image' | 'no-schema'>('all');
+  const [sortBy, setSortBy] = useState<'score-desc' | 'score-asc' | 'updated-desc' | 'updated-asc' | 'type-asc' | 'title-asc'>('score-desc');
+
   // Carregar dados SEO
   const loadSEOData = async () => {
     try {
@@ -938,14 +944,79 @@ export const SEODashboard: React.FC = () => {
         if (!textMatch) return false;
       }
     } else if (debouncedSearchTerm) {
-      // Busca normal
+      // Busca normal por texto
       const matchesSearch = page.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                           page.description?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+                           page.keywords?.some(keyword => keyword.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) ||
                            page.page_type.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
                            page.page_url.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
       if (!matchesSearch) return false;
     }
 
-    // Aplicar filtros de tipo
+    // Aplicar filtro por Score SEO
+    if (scoreFilter !== 'all') {
+      const score = page.analysis.score;
+      switch (scoreFilter) {
+        case 'excellent':
+          if (score < 90) return false;
+          break;
+        case 'good':
+          if (score < 70 || score >= 90) return false;
+          break;
+        case 'needs-improvement':
+          if (score < 50 || score >= 70) return false;
+          break;
+        case 'poor':
+          if (score >= 50) return false;
+          break;
+      }
+    }
+
+    // Aplicar filtro por Tipo de Página
+    if (pageTypeFilter !== 'all') {
+      switch (pageTypeFilter) {
+        case 'article':
+          if (page.page_type !== 'article') return false;
+          break;
+        case 'category':
+          if (page.page_type !== 'category') return false;
+          break;
+        case 'static':
+          if (!['home', 'about', 'contact', 'newsletter', 'privacy'].includes(page.page_type)) return false;
+          break;
+      }
+    }
+
+    // Aplicar filtro por Problemas Específicos
+    if (problemFilter !== 'all') {
+      const alerts = getSEOAlerts(page, seoDataWithAnalysis);
+      let hasProblem = false;
+      
+      switch (problemFilter) {
+        case 'duplicate-title':
+          hasProblem = alerts.some(alert => alert.type.includes('title') && alert.message.includes('duplicado'));
+          break;
+        case 'short-description':
+          hasProblem = !page.description || page.description.length < 120;
+          break;
+        case 'no-keywords':
+          hasProblem = !page.keywords || page.keywords.length === 0;
+          break;
+        case 'long-url':
+          hasProblem = page.page_url.length > 100;
+          break;
+        case 'no-og-image':
+          hasProblem = !page.og_image;
+          break;
+        case 'no-schema':
+          hasProblem = !page.schema_data || Object.keys(page.schema_data).length === 0;
+          break;
+      }
+      
+      if (!hasProblem) return false;
+    }
+
+    // Aplicar filtros de tipo legados (manter compatibilidade)
     if (filterType === 'all') return true;
     
     // Filtros baseados na análise SEO
@@ -964,16 +1035,36 @@ export const SEODashboard: React.FC = () => {
     return true;
   });
 
+  // Aplicar ordenação
+  const sortedData = [...filteredData].sort((a, b) => {
+    switch (sortBy) {
+      case 'score-desc':
+        return b.analysis.score - a.analysis.score;
+      case 'score-asc':
+        return a.analysis.score - b.analysis.score;
+      case 'updated-desc':
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      case 'updated-asc':
+        return new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+      case 'type-asc':
+        return a.page_type.localeCompare(b.page_type);
+      case 'title-asc':
+        return a.title.localeCompare(b.title);
+      default:
+        return b.analysis.score - a.analysis.score;
+    }
+  });
+
   // Paginação
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedData = filteredData.slice(startIndex, endIndex);
+  const paginatedData = sortedData.slice(startIndex, endIndex);
 
   // Reset da página quando filtros mudam
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchTerm, filterType]);
+  }, [debouncedSearchTerm, filterType, scoreFilter, pageTypeFilter, problemFilter, sortBy]);
 
   // Função para obter status da página
   const getPageStatus = (page: SEOData) => {
@@ -1059,10 +1150,10 @@ export const SEODashboard: React.FC = () => {
   };
 
   const toggleSelectAll = () => {
-    if (selectedPages.size === filteredData.length) {
+    if (selectedPages.size === sortedData.length) {
       setSelectedPages(new Set());
     } else {
-      setSelectedPages(new Set(filteredData.map(page => page.id)));
+      setSelectedPages(new Set(sortedData.map(page => page.id)));
     }
   };
 
@@ -1071,14 +1162,14 @@ export const SEODashboard: React.FC = () => {
   };
 
   const selectPagesByScore = (maxScore: number) => {
-    const lowScorePages = filteredData
+    const lowScorePages = sortedData
       .filter(page => page.analysis.score < maxScore)
       .map(page => page.id);
     setSelectedPages(new Set(lowScorePages));
   };
 
   const selectPagesWithIssues = () => {
-    const pagesWithIssues = filteredData
+    const pagesWithIssues = sortedData
       .filter(page => page.analysis.issues.length > 0)
       .map(page => page.id);
     setSelectedPages(new Set(pagesWithIssues));
@@ -1771,20 +1862,110 @@ export const SEODashboard: React.FC = () => {
             </select>
           </div>
 
+          {/* Filtros Avançados */}
+          <div className="flex flex-col sm:flex-row gap-4 mt-4 pt-4 border-t border-neon-purple/20">
+            {/* Filtro por Score SEO */}
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-futuristic-gray mb-2">
+                Score SEO
+              </label>
+              <select
+                value={scoreFilter}
+                onChange={(e) => {
+                  console.log('🎯 Score filter changed:', e.target.value);
+                  setScoreFilter(e.target.value);
+                }}
+                className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
+              >
+                <option value="all">Todos os Scores</option>
+                <option value="excellent">🟢 Excelente (90-100)</option>
+                <option value="good">🟡 Bom (70-89)</option>
+                <option value="needs-improvement">🟠 Precisa Melhorar (50-69)</option>
+                <option value="poor">🔴 Ruim (0-49)</option>
+              </select>
+            </div>
+
+            {/* Filtro por Tipo de Página */}
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-futuristic-gray mb-2">
+                Tipo de Página
+              </label>
+              <select
+                value={pageTypeFilter}
+                onChange={(e) => {
+                  console.log('📄 Page type filter changed:', e.target.value);
+                  setPageTypeFilter(e.target.value);
+                }}
+                className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
+              >
+                <option value="all">Todos os Tipos</option>
+                <option value="article">📝 Artigos</option>
+                <option value="category">📂 Categorias</option>
+                <option value="page">📄 Páginas Estáticas</option>
+                <option value="home">🏠 Página Inicial</option>
+              </select>
+            </div>
+
+            {/* Filtro por Problemas Específicos */}
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-futuristic-gray mb-2">
+                Problemas Específicos
+              </label>
+              <select
+                value={problemFilter}
+                onChange={(e) => {
+                  console.log('⚠️ Problem filter changed:', e.target.value);
+                  setProblemFilter(e.target.value);
+                }}
+                className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
+              >
+                <option value="all">Todos os Problemas</option>
+                <option value="duplicate-title">🔄 Título Duplicado</option>
+                <option value="short-description">📏 Descrição Muito Curta</option>
+                <option value="no-keywords">🔑 Sem Keywords</option>
+                <option value="long-url">🔗 URL Muito Longa</option>
+                <option value="no-og-image">🖼️ Sem Imagem OG</option>
+                <option value="no-schema">📋 Sem Schema.org</option>
+              </select>
+            </div>
+
+            {/* Sistema de Ordenação */}
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-futuristic-gray mb-2">
+                Ordenar Por
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => {
+                  console.log('🔄 Sort changed:', e.target.value);
+                  setSortBy(e.target.value);
+                }}
+                className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
+              >
+                <option value="score-desc">📊 Score (Maior → Menor)</option>
+                <option value="score-asc">📊 Score (Menor → Maior)</option>
+                <option value="updated-desc">📅 Mais Recente</option>
+                <option value="updated-asc">📅 Mais Antiga</option>
+                <option value="type-asc">📂 Tipo (A-Z)</option>
+                <option value="title-asc">📝 Título (A-Z)</option>
+              </select>
+            </div>
+          </div>
+
           {/* Resultados e Seleção */}
           <div className="flex items-center justify-between mt-4 pt-4 border-t border-neon-purple/20">
             <div className="flex items-center gap-4">
               <span className="text-futuristic-gray text-sm">
-                {filteredData.length} página{filteredData.length !== 1 ? 's' : ''} encontrada{filteredData.length !== 1 ? 's' : ''}
+                {sortedData.length} página{sortedData.length !== 1 ? 's' : ''} encontrada{sortedData.length !== 1 ? 's' : ''}
               </span>
               
-              {filteredData.length > 0 && (
+              {sortedData.length > 0 && (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={toggleSelectAll}
                     className="flex items-center gap-2 text-sm text-neon-purple hover:text-lime-green transition-colors"
                   >
-                    {selectedPages.size === filteredData.length ? (
+                    {selectedPages.size === sortedData.length ? (
                       <CheckSquare className="w-4 h-4" />
                     ) : (
                       <Square className="w-4 h-4" />
@@ -1802,7 +1983,7 @@ export const SEODashboard: React.FC = () => {
             </div>
 
             {/* Filtros Avançados de Seleção */}
-            {filteredData.length > 0 && (
+            {sortedData.length > 0 && (
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
@@ -2071,7 +2252,7 @@ export const SEODashboard: React.FC = () => {
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-6">
           <div className="text-sm text-futuristic-gray">
-            Mostrando {startIndex + 1}-{Math.min(endIndex, filteredData.length)} de {filteredData.length} páginas
+            Mostrando {startIndex + 1}-{Math.min(endIndex, sortedData.length)} de {sortedData.length} páginas
           </div>
           
           <div className="flex items-center gap-2">
@@ -2131,7 +2312,7 @@ export const SEODashboard: React.FC = () => {
         </div>
       )}
 
-      {filteredData.length === 0 && (
+      {sortedData.length === 0 && (
         <div className="text-center py-12">
           <BarChart3 className="w-16 h-16 text-futuristic-gray mx-auto mb-4" />
           <h3 className="text-xl font-orbitron font-bold text-white mb-2">
