@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Activity, Search, Filter, RefreshCw, User, AlertCircle, Info, CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
-import { Card } from '../ui/card';
-import { Button } from '../ui/button';
+import Card from '../UI/Card';
+import Button from '../UI/Button';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 

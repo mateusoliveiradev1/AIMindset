@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Database, Search, Filter, RefreshCw, Calendar, User, FileText, Eye, Clock } from 'lucide-react';
-import { Card } from '../ui/card';
-import { Button } from '../ui/button';
+import Card from '../UI/Card';
+import Button from '../UI/Button';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 

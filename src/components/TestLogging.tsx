@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Button } from './ui/button';
-import { Card } from './ui/card';
+import Button from './UI/Button';
+import Card from './UI/Card';
 import { TestTube, Activity, AlertTriangle, Database, User, Mail, ShoppingCart, FileText } from 'lucide-react';
 import { logEvent, logAuth, logError, logSystem } from '../lib/logging';
 import { toast } from "sonner";
