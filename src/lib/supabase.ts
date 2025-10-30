@@ -94,6 +94,8 @@ export const supabase = (() => {
   // Armazenar a instância globalmente
   if (typeof window !== 'undefined') {
     window.__supabase_singleton__ = supabaseInstance;
+    // Expor também como window.supabase para facilitar testes
+    (window as any).supabase = supabaseInstance;
   } else if (typeof global !== 'undefined') {
     global.__supabase_singleton__ = supabaseInstance;
   }

@@ -75,7 +75,24 @@ export class ForceCacheCleanup {
       // Forçar invalidação via sistema de invalidação
       await cacheInvalidation.invalidateAfterCRUD('update', 'article', undefined, 'system');
       
-      console.log('✅ [Force Cache Cleanup] Métricas de feedback invalidadas');
+      // NOVO: Disparar evento global para forçar re-render dos componentes
+      window.dispatchEvent(new CustomEvent('realtime-cache-invalidate', {
+        detail: { 
+          type: 'feedback-metrics',
+          timestamp: Date.now(),
+          source: 'feedback-submission'
+        }
+      }));
+      
+      // NOVO: Disparar evento específico para métricas de feedback
+      window.dispatchEvent(new CustomEvent('feedback-metrics-updated', {
+        detail: { 
+          timestamp: Date.now(),
+          action: 'invalidate-cache'
+        }
+      }));
+      
+      console.log('✅ [Force Cache Cleanup] Métricas de feedback invalidadas e eventos disparados');
       
     } catch (error) {
       console.error('❌ [Force Cache Cleanup] Erro ao invalidar métricas:', error);

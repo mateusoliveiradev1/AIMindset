@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { TrendingUp, MessageCircle, ThumbsUp, ThumbsDown, RefreshCw, Filter, Heart, Reply } from 'lucide-react';
+import { TrendingUp, MessageCircle, ThumbsUp, ThumbsDown, RefreshCw, Filter, Heart, Reply, Zap } from 'lucide-react';
 import { useArticles } from '../../hooks/useArticles';
 import { useRealTimeMetrics } from '../../hooks/useRealTimeMetrics';
+import { useRealTimeInteractions } from '../../hooks/useRealTimeInteractions';
+import { useRealTimeSync } from '../../hooks/useRealTimeSync';
 import { MetricsTable } from './MetricsTable';
 import { ArticleDetailsModal } from './ArticleDetailsModal';
 import { Article } from '../../hooks/useArticles';
@@ -35,6 +37,36 @@ export const FeedbackDashboard: React.FC = () => {
   // Hook para métricas em tempo real
   const { metrics, loading: metricsLoading, error, lastUpdate, forceRefresh, cacheSize } = useRealTimeMetrics(articleIds);
 
+  // 🚀 NOVO: Hook para interações em tempo real com notificações
+  const { 
+    interactions, 
+    stats: realTimeStats, 
+    isConnected, 
+    error: realTimeError,
+    totalInteractions,
+    lastInteraction,
+    forceStatsUpdate
+  } = useRealTimeInteractions({
+    articleIds,
+    enableNotifications: true, // Habilitar notificações no painel admin
+    debounceMs: 300 // Resposta mais rápida para admin
+  });
+
+  // 🔄 Hook de sincronização global para garantir atualização automática
+  const { invalidateAllCaches } = useRealTimeSync({
+    onFeedbackChange: () => {
+      console.log('🔄 [FEEDBACK-DASHBOARD] Feedback change detected - forcing refresh');
+      forceRefresh();
+      forceStatsUpdate();
+    },
+    onCommentChange: () => {
+      console.log('🔄 [FEEDBACK-DASHBOARD] Comment change detected - forcing refresh');
+      forceRefresh();
+      forceStatsUpdate();
+    },
+    enableGlobalSync: true
+  });
+
   // Memoizar métricas formatadas para evitar re-renders desnecessários
   const formattedMetrics = useMemo(() => {
     if (!metrics || Object.keys(metrics).length === 0) {
@@ -56,7 +88,7 @@ export const FeedbackDashboard: React.FC = () => {
         approval_rate: isNaN(approvalRate) ? 0 : approvalRate,
         total_likes: metric.total_likes || 0,
         total_replies: metric.total_replies || 0,
-        engagement_rate: metric.engagement_rate || 0
+        engagement_rate: totalComments > 0 ? ((metric.total_likes || 0) + (metric.total_replies || 0)) / totalComments * 100 : 0
       };
       
       return formattedMetric;
@@ -229,6 +261,39 @@ export const FeedbackDashboard: React.FC = () => {
          </button>
        </div>
 
+      {/* 🚀 NOVO: Status de Tempo Real */}
+      <div className="bg-darker-surface/30 rounded-lg p-4 mb-6 border border-neon-purple/20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className={`p-2 rounded-full ${isConnected ? 'bg-lime-green/20' : 'bg-red-400/20'}`}>
+              <Zap className={`h-5 w-5 ${isConnected ? 'text-lime-green' : 'text-red-400'}`} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-futuristic-gray">
+                Status do Tempo Real
+              </p>
+              <p className={`text-lg font-bold ${isConnected ? 'text-lime-green' : 'text-red-400'}`}>
+                {isConnected ? 'Conectado' : 'Desconectado'}
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-futuristic-gray">Interações</p>
+            <p className="text-xl font-bold text-neon-purple">{totalInteractions}</p>
+            {lastInteraction && (
+              <p className="text-xs text-futuristic-gray">
+                Última: {new Date(lastInteraction.timestamp).toLocaleTimeString()}
+              </p>
+            )}
+          </div>
+        </div>
+        {realTimeError && (
+          <div className="mt-3 p-2 bg-red-400/10 border border-red-400/20 rounded text-red-400 text-sm">
+            Erro: {realTimeError}
+          </div>
+        )}
+      </div>
+
       {/* Estatísticas Gerais - EXPANDIDO */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
         <div className="bg-darker-surface/30 rounded-lg p-6">
@@ -356,12 +421,21 @@ export const FeedbackDashboard: React.FC = () => {
             <div>
               <p className="text-sm font-medium text-futuristic-gray">Engajamento Médio</p>
               <p className="text-2xl font-bold text-orange-400">
-                {articles && articles.length > 0 ? 
-                  Math.round((totalStats.totalLikes + totalStats.totalReplies) / articles.length) : 0
-                }
+                {(() => {
+                  // Calcular apenas artigos com engajamento real (curtidas > 0 ou respostas > 0)
+                  const articlesWithEngagement = formattedMetrics?.filter(metric => 
+                    (metric.total_likes || 0) > 0 || (metric.total_replies || 0) > 0
+                  ).length || 0;
+                  
+                  // Se não há artigos com engajamento, retornar 0
+                  if (articlesWithEngagement === 0) return 0;
+                  
+                  // Calcular engajamento médio apenas para artigos ativos
+                  return Math.round((totalStats.totalLikes + totalStats.totalReplies) / articlesWithEngagement);
+                })()}
               </p>
               <p className="text-xs text-orange-300 mt-1">
-                Por artigo publicado
+                Por artigo ativo
               </p>
             </div>
             <div className="p-3 bg-orange-400/20 rounded-full">

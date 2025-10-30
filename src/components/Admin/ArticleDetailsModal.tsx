@@ -14,6 +14,9 @@ interface Comment {
   user_name: string;
   content: string;
   created_at: string;
+  parent_id?: string | null;
+  likes: number;
+  replies?: Comment[];
 }
 
 interface Feedback {
@@ -62,7 +65,7 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
       const [commentsResult, feedbacksResult] = await Promise.allSettled([
         supabase
           .from('comments')
-          .select('*')
+          .select('id, article_id, user_name, content, created_at, parent_id, likes')
           .eq('article_id', article.id)
           .order('created_at', { ascending: false }),
         
@@ -257,6 +260,36 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
   const totalFeedbacks = Array.isArray(feedbacks) ? feedbacks.length : 0;
   const approvalRate = totalFeedbacks > 0 ? (positiveFeedbacks / totalFeedbacks) * 100 : 0;
 
+  // Métricas de comentários aprimoradas
+  const totalComments = Array.isArray(comments) ? comments.length : 0;
+  const totalLikes = Array.isArray(comments) ? comments.reduce((sum, comment) => sum + (comment.likes || 0), 0) : 0;
+  const repliesCount = Array.isArray(comments) ? comments.filter(comment => comment.parent_id).length : 0;
+  const mainCommentsCount = totalComments - repliesCount;
+  const averageLikesPerComment = totalComments > 0 ? (totalLikes / totalComments).toFixed(1) : '0';
+  
+  // Organizar comentários em estrutura hierárquica
+  const organizedComments = useMemo(() => {
+    if (!Array.isArray(comments)) return [];
+    
+    const mainComments = comments.filter(comment => !comment.parent_id);
+    const repliesMap = new Map<string, Comment[]>();
+    
+    // Agrupar respostas por comentário pai
+    comments.filter(comment => comment.parent_id).forEach(reply => {
+      const parentId = reply.parent_id!;
+      if (!repliesMap.has(parentId)) {
+        repliesMap.set(parentId, []);
+      }
+      repliesMap.get(parentId)!.push(reply);
+    });
+    
+    // Adicionar respostas aos comentários principais
+    return mainComments.map(comment => ({
+      ...comment,
+      replies: repliesMap.get(comment.id) || []
+    }));
+  }, [comments]);
+
   if (!isOpen || !article) {
     console.log('🚫 Modal não renderizado - isOpen:', isOpen, 'article:', !!article);
     return null;
@@ -320,7 +353,7 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
           )}
 
           {/* Métricas Resumo */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 m-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 m-6">
             <div className="bg-gray-800/50 rounded-lg p-4 text-center border border-purple-500/20">
               <div className="flex items-center justify-center mb-2">
                 <ThumbsUp className="h-5 w-5 text-green-400" />
@@ -339,17 +372,29 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
               <div className="flex items-center justify-center mb-2">
                 <MessageCircle className="h-5 w-5 text-blue-400" />
               </div>
-              <p className="text-2xl font-bold text-blue-400">{comments.length}</p>
+              <p className="text-2xl font-bold text-blue-400">{totalComments}</p>
               <p className="text-xs text-gray-400">Comentários</p>
+            </div>
+            <div className="bg-gray-800/50 rounded-lg p-4 text-center border border-purple-500/20">
+              <div className="flex items-center justify-center mb-2">
+                <ThumbsUp className="h-5 w-5 text-yellow-400" />
+              </div>
+              <p className="text-2xl font-bold text-yellow-400">{totalLikes}</p>
+              <p className="text-xs text-gray-400">Curtidas</p>
+            </div>
+            <div className="bg-gray-800/50 rounded-lg p-4 text-center border border-purple-500/20">
+              <div className="flex items-center justify-center mb-2">
+                <MessageCircle className="h-5 w-5 text-cyan-400" />
+              </div>
+              <p className="text-2xl font-bold text-cyan-400">{repliesCount}</p>
+              <p className="text-xs text-gray-400">Respostas</p>
             </div>
             <div className="bg-gray-800/50 rounded-lg p-4 text-center border border-purple-500/20">
               <div className="flex items-center justify-center mb-2">
                 <TrendingUp className="h-5 w-5 text-purple-400" />
               </div>
-              <p className="text-2xl font-bold text-purple-400">
-                {isNaN(approvalRate) ? '0' : Math.round(approvalRate)}%
-              </p>
-              <p className="text-xs text-gray-400">Aprovação</p>
+              <p className="text-2xl font-bold text-purple-400">{averageLikesPerComment}</p>
+              <p className="text-xs text-gray-400">Média Curtidas</p>
             </div>
           </div>
 
@@ -363,7 +408,7 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
                   : 'text-gray-400 hover:text-white hover:bg-purple-500/5'
               }`}
             >
-              Comentários ({comments.length})
+              Comentários ({totalComments})
             </button>
             <button
               onClick={() => setActiveTab('feedback')}
@@ -374,6 +419,16 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
               }`}
             >
               Feedbacks ({feedbacks.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('stats')}
+              className={`px-4 py-3 text-sm font-medium transition-all duration-200 ${
+                activeTab === 'stats'
+                  ? 'text-purple-400 border-b-2 border-purple-400 bg-purple-500/10'
+                  : 'text-gray-400 hover:text-white hover:bg-purple-500/5'
+              }`}
+            >
+              Estatísticas
             </button>
           </div>
 
@@ -388,44 +443,103 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
               <>
                 {activeTab === 'comments' && (
                   <div className="space-y-4">
-                    {comments.length > 0 ? (
-                      comments.map((comment) => (
-                        <div key={comment.id} className="bg-gray-800/30 rounded-lg p-4 border border-purple-500/10">
-                          <div className="flex items-start space-x-3">
-                            <div className="flex-shrink-0">
-                              <div className="w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center">
-                                <User className="h-4 w-4 text-purple-400" />
-                              </div>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center space-x-2 mb-1">
-                                <p className="text-sm font-medium text-white">
-                                  {comment.user_name}
-                                </p>
-                                <div className="flex items-center text-xs text-gray-400">
-                                  <Calendar className="h-3 w-3 mr-1" />
-                                  {format(new Date(comment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                    {organizedComments.length > 0 ? (
+                      organizedComments.map((comment) => (
+                        <div key={comment.id} className="space-y-3">
+                          {/* Comentário Principal */}
+                          <div className="bg-gray-800/30 rounded-lg p-4 border border-purple-500/10">
+                            <div className="flex items-start space-x-3">
+                              <div className="flex-shrink-0">
+                                <div className="w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center">
+                                  <User className="h-4 w-4 text-purple-400" />
                                 </div>
                               </div>
-                              <p className="text-sm text-gray-300">
-                                {comment.content}
-                              </p>
-                            </div>
-                            <div className="flex-shrink-0">
-                              <button
-                                onClick={() => handleDeleteComment(comment.id)}
-                                disabled={deletingCommentId === comment.id}
-                                className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Excluir comentário"
-                              >
-                                {deletingCommentId === comment.id ? (
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-400"></div>
-                                ) : (
-                                  <Trash2 className="h-4 w-4" />
-                                )}
-                              </button>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center space-x-2 mb-1">
+                                  <p className="text-sm font-medium text-white">
+                                    {comment.user_name}
+                                  </p>
+                                  <div className="flex items-center text-xs text-gray-400">
+                                    <Calendar className="h-3 w-3 mr-1" />
+                                    {format(new Date(comment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                                  </div>
+                                  <div className="flex items-center text-xs text-yellow-400 bg-yellow-500/10 px-2 py-1 rounded">
+                                    <ThumbsUp className="h-3 w-3 mr-1" />
+                                    {comment.likes || 0}
+                                  </div>
+                                </div>
+                                <p className="text-sm text-gray-300">
+                                  {comment.content}
+                                </p>
+                              </div>
+                              <div className="flex-shrink-0">
+                                <button
+                                  onClick={() => handleDeleteComment(comment.id)}
+                                  disabled={deletingCommentId === comment.id}
+                                  className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="Excluir comentário"
+                                >
+                                  {deletingCommentId === comment.id ? (
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-400"></div>
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                </button>
+                              </div>
                             </div>
                           </div>
+
+                          {/* Respostas (indentadas) */}
+                          {comment.replies && comment.replies.length > 0 && (
+                            <div className="ml-8 space-y-2">
+                              {comment.replies.map((reply) => (
+                                <div key={reply.id} className="bg-gray-800/20 rounded-lg p-3 border border-cyan-500/20 border-l-4 border-l-cyan-400">
+                                  <div className="flex items-start space-x-3">
+                                    <div className="flex-shrink-0">
+                                      <div className="w-6 h-6 bg-cyan-500/20 rounded-full flex items-center justify-center">
+                                        <User className="h-3 w-3 text-cyan-400" />
+                                      </div>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center space-x-2 mb-1">
+                                        <p className="text-xs font-medium text-white">
+                                          {reply.user_name}
+                                        </p>
+                                        <span className="text-xs text-cyan-400 bg-cyan-500/10 px-1 py-0.5 rounded text-[10px]">
+                                          RESPOSTA
+                                        </span>
+                                        <div className="flex items-center text-xs text-gray-400">
+                                          <Calendar className="h-2.5 w-2.5 mr-1" />
+                                          {format(new Date(reply.created_at), 'dd/MM HH:mm', { locale: ptBR })}
+                                        </div>
+                                        <div className="flex items-center text-xs text-yellow-400 bg-yellow-500/10 px-1.5 py-0.5 rounded">
+                                          <ThumbsUp className="h-2.5 w-2.5 mr-1" />
+                                          {reply.likes || 0}
+                                        </div>
+                                      </div>
+                                      <p className="text-xs text-gray-300">
+                                        {reply.content}
+                                      </p>
+                                    </div>
+                                    <div className="flex-shrink-0">
+                                      <button
+                                        onClick={() => handleDeleteComment(reply.id)}
+                                        disabled={deletingCommentId === reply.id}
+                                        className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title="Excluir resposta"
+                                      >
+                                        {deletingCommentId === reply.id ? (
+                                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-400"></div>
+                                        ) : (
+                                          <Trash2 className="h-3 w-3" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))
                     ) : (
@@ -474,6 +588,124 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
                         <p className="text-xs text-gray-500 mt-2">Este artigo ainda não recebeu avaliações</p>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {activeTab === 'stats' && (
+                  <div className="space-y-6">
+                    {/* Estatísticas de Engajamento */}
+                    <div className="bg-gray-800/30 rounded-lg p-6 border border-purple-500/10">
+                      <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+                        <TrendingUp className="h-5 w-5 text-purple-400 mr-2" />
+                        Estatísticas de Engajamento
+                      </h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Estatísticas de Comentários */}
+                        <div className="space-y-4">
+                          <h5 className="text-sm font-medium text-gray-300 uppercase tracking-wide">Comentários</h5>
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-400">Total de comentários:</span>
+                              <span className="text-sm font-medium text-blue-400">{totalComments}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-400">Comentários principais:</span>
+                              <span className="text-sm font-medium text-purple-400">{mainCommentsCount}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-400">Respostas:</span>
+                              <span className="text-sm font-medium text-cyan-400">{repliesCount}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-400">Taxa de resposta:</span>
+                              <span className="text-sm font-medium text-green-400">
+                                {mainCommentsCount > 0 ? ((repliesCount / mainCommentsCount) * 100).toFixed(1) : '0'}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Estatísticas de Curtidas */}
+                        <div className="space-y-4">
+                          <h5 className="text-sm font-medium text-gray-300 uppercase tracking-wide">Curtidas</h5>
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-400">Total de curtidas:</span>
+                              <span className="text-sm font-medium text-yellow-400">{totalLikes}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-400">Média por comentário:</span>
+                              <span className="text-sm font-medium text-yellow-400">{averageLikesPerComment}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-400">Comentários com curtidas:</span>
+                              <span className="text-sm font-medium text-orange-400">
+                                {comments.filter(c => (c.likes || 0) > 0).length}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-400">Taxa de engajamento:</span>
+                              <span className="text-sm font-medium text-green-400">
+                                {totalComments > 0 ? ((comments.filter(c => (c.likes || 0) > 0).length / totalComments) * 100).toFixed(1) : '0'}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Estatísticas de Feedback */}
+                    <div className="bg-gray-800/30 rounded-lg p-6 border border-purple-500/10">
+                      <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
+                        <ThumbsUp className="h-5 w-5 text-green-400 mr-2" />
+                        Análise de Feedback
+                      </h4>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          <h5 className="text-sm font-medium text-gray-300 uppercase tracking-wide">Distribuição</h5>
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-400">Total de feedbacks:</span>
+                              <span className="text-sm font-medium text-white">{totalFeedbacks}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-400">Feedbacks positivos:</span>
+                              <span className="text-sm font-medium text-green-400">{positiveFeedbacks}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-400">Feedbacks negativos:</span>
+                              <span className="text-sm font-medium text-red-400">{negativeFeedbacks}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <h5 className="text-sm font-medium text-gray-300 uppercase tracking-wide">Métricas</h5>
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-400">Taxa de aprovação:</span>
+                              <span className="text-sm font-medium text-purple-400">
+                                {isNaN(approvalRate) ? '0' : Math.round(approvalRate)}%
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-400">Ratio positivo/negativo:</span>
+                              <span className="text-sm font-medium text-blue-400">
+                                {negativeFeedbacks > 0 ? (positiveFeedbacks / negativeFeedbacks).toFixed(1) : positiveFeedbacks > 0 ? '∞' : '0'}:1
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-400">Engajamento total:</span>
+                              <span className="text-sm font-medium text-cyan-400">
+                                {totalComments + totalFeedbacks}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </>

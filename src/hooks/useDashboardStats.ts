@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { supabaseAdmin } from '../lib/supabase-admin';
+import { useRealTimeSync } from './useRealTimeSync';
 
 interface DashboardStats {
   // Estatísticas principais
@@ -69,6 +70,19 @@ export function useDashboardStats() {
 
   const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+
+  // Hook de sincronização em tempo real para atualização automática das estatísticas
+  const { invalidateAllCaches } = useRealTimeSync({
+    onFeedbackChange: () => {
+      console.log('🔄 [DASHBOARD-STATS] Feedback change detected - refreshing stats');
+      fetchDashboardStats();
+    },
+    onCommentChange: () => {
+      console.log('🔄 [DASHBOARD-STATS] Comment change detected - refreshing stats');
+      fetchDashboardStats();
+    },
+    enableGlobalSync: true
+  });
 
   const fetchDashboardStats = useCallback(async () => {
     try {
@@ -345,8 +359,27 @@ export function useDashboardStats() {
     fetchDashboardStats();
     
     const interval = setInterval(fetchDashboardStats, 30000);
+
+    // Listener para invalidação global de cache
+    const handleCacheInvalidation = () => {
+      console.log('🔄 [DASHBOARD-STATS] Global cache invalidation triggered');
+      fetchDashboardStats();
+    };
+
+    // NOVO: Listener específico para atualizações de feedback
+    const handleFeedbackMetricsUpdate = (event: CustomEvent) => {
+      console.log('🔄 [DASHBOARD-STATS] Feedback metrics update triggered:', event.detail);
+      fetchDashboardStats();
+    };
+
+    window.addEventListener('realtime-cache-invalidate', handleCacheInvalidation);
+    window.addEventListener('feedback-metrics-updated', handleFeedbackMetricsUpdate as EventListener);
     
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('realtime-cache-invalidate', handleCacheInvalidation);
+      window.removeEventListener('feedback-metrics-updated', handleFeedbackMetricsUpdate as EventListener);
+    };
   }, [fetchDashboardStats]);
 
   // Função para refresh manual

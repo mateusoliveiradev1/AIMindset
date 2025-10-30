@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { Zap } from 'lucide-react';
 import { CommentList } from './CommentList';
 import { CommentForm } from './CommentForm';
 import { useComments } from '../../hooks/useComments';
+import { useRealTimeInteractions } from '../../hooks/useRealTimeInteractions';
 
 interface CommentSectionProps {
   articleId: string | number;
@@ -14,18 +16,67 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
     submitting,
     hasMore,
     error,
-    addComment, // Corrigido: usar addComment em vez de submitComment
+    addComment,
     loadMoreComments,
     refreshComments,
     likeComment
   } = useComments(String(articleId));
+
+  // 🚀 NOVO: Hook para tempo real de comentários
+  const { 
+    stats: realTimeStats, 
+    isConnected,
+    forceStatsUpdate,
+    interactions
+  } = useRealTimeInteractions({
+    articleIds: [String(articleId)],
+    enableNotifications: false, // Sem notificações para não incomodar
+    debounceMs: 500 // Resposta rápida para comentários
+  });
+
+  // Atualizar comentários quando houver mudanças em tempo real
+  useEffect(() => {
+    const articleStats = realTimeStats[String(articleId)];
+    if (articleStats) {
+      // Verificar se há novos comentários
+      const lastCommentInteraction = interactions.find(
+        interaction => 
+          interaction.type === 'comment' && 
+          interaction.articleId === String(articleId) &&
+          interaction.action === 'insert'
+      );
+      
+      if (lastCommentInteraction) {
+        refreshComments();
+      }
+    }
+  }, [realTimeStats, interactions, articleId, refreshComments]);
+
+  const handleAddComment = async (commentData: any) => {
+    const success = await addComment(commentData);
+    if (success) {
+      // Forçar atualização das stats em tempo real
+      forceStatsUpdate(String(articleId));
+    }
+    return success;
+  };
+
+  const handleLikeComment = async (commentId: string) => {
+    const success = await likeComment(commentId);
+    if (success) {
+      // Forçar atualização das stats em tempo real
+      forceStatsUpdate(String(articleId));
+    }
+    return success;
+  };
 
   console.log('📊 [DEBUG] CommentSection - Estado atual:', {
     commentsCount: comments.length,
     loading,
     submitting,
     hasMore,
-    error
+    error,
+    realTimeConnected: isConnected
   });
 
   return (
@@ -34,6 +85,14 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
       data-comments-section="true"
       id="comments"
     >
+      {/* 🚀 NOVO: Indicador de tempo real para comentários */}
+      {isConnected && (
+        <div className="flex items-center justify-center gap-2 text-xs text-lime-green bg-darker-surface/20 rounded-lg p-2 border border-lime-green/20">
+          <Zap className="h-3 w-3" />
+          <span>Comentários em tempo real ativo</span>
+        </div>
+      )}
+
       {/* Mostrar erro de conectividade se houver */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -50,7 +109,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
             </div>
             <button
               onClick={refreshComments}
-              className="bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded text-sm font-medium transition-colors"
+              className="text-sm text-red-600 hover:text-red-800 font-medium"
             >
               Tentar novamente
             </button>
@@ -58,22 +117,22 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
         </div>
       )}
 
-      {/* Seção de comentários existentes */}
+      {/* Lista de comentários */}
       <CommentList
         comments={comments}
         loading={loading}
         hasMore={hasMore}
         onLoadMore={loadMoreComments}
-        onLike={likeComment}
-        onReply={addComment}
+        onLike={handleLikeComment}
+        onReply={handleAddComment}
         submitting={submitting}
       />
 
-       {/* Formulário para novo comentário */}
-       <CommentForm
-         onSubmit={addComment}
-         submitting={submitting}
-       />
-     </div>
-   );
- };
+      {/* Formulário para adicionar comentário */}
+      <CommentForm
+        onSubmit={handleAddComment}
+        submitting={submitting}
+      />
+    </div>
+  );
+};

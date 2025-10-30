@@ -2,7 +2,6 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { SecureStorage, ClientRateLimit } from '../utils/securityHeaders';
-import { supabase } from '../lib/supabase';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -15,30 +14,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const [realTimeAuthCheck, setRealTimeAuthCheck] = useState(true);
   const sessionTimeoutRef = useRef<NodeJS.Timeout>();
 
-  // 🔥 VERIFICAÇÃO DE AUTENTICAÇÃO EM TEMPO REAL
+  // 🔥 VERIFICAÇÃO DE AUTENTICAÇÃO EM TEMPO REAL - USANDO APENAS AUTHCONTEXT
   useEffect(() => {
-    const checkRealTimeAuth = async () => {
+    const checkRealTimeAuth = () => {
       try {
-        // Verificar se a sessão do Supabase ainda é válida
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error || !session) {
-          console.warn('🚫 Sessão Supabase inválida ou expirada');
+        // Usar apenas o estado do AuthContext para evitar múltiplas instâncias do Supabase
+        if (isAuthenticated && user) {
+          setRealTimeAuthCheck(true);
+          console.log('✅ Verificação de autenticação em tempo real passou via AuthContext');
+        } else {
+          console.warn('🚫 Usuário não autenticado via AuthContext');
           setRealTimeAuthCheck(false);
-          return;
         }
-
-        // Verificar se o token ainda é válido
-        const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser();
-        
-        if (userError || !supabaseUser) {
-          console.warn('🚫 Token de usuário inválido');
-          setRealTimeAuthCheck(false);
-          return;
-        }
-
-        setRealTimeAuthCheck(true);
-        console.log('✅ Verificação de autenticação em tempo real passou');
       } catch (error) {
         console.error('❌ Erro na verificação de autenticação em tempo real:', error);
         setRealTimeAuthCheck(false);

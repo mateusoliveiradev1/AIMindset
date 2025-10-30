@@ -3,7 +3,18 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { devSecurityTest } from './utils/securityTest'
+import { autoReset } from './utils/localStorageReset'
 // import { initServiceWorker } from './utils/serviceWorker'
+
+// 🔄 RESET AUTOMÁTICO DO LOCALSTORAGE
+// Executar reset automático antes de qualquer coisa
+autoReset().then((resetResult) => {
+  if (resetResult) {
+    console.log('🚀 [MAIN] Reset automático executado:', resetResult);
+  }
+}).catch((error) => {
+  console.error('❌ [MAIN] Erro no reset automático:', error);
+});
 
 // Executar testes de segurança em desenvolvimento
 if (import.meta.env.DEV) {
@@ -14,6 +25,17 @@ if (import.meta.env.DEV) {
 }
 
 // Desabilitar Service Worker temporariamente para corrigir erros no preview
+// Desregistrar qualquer Service Worker ativo
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for(let registration of registrations) {
+      registration.unregister().then(() => {
+        console.log('🔄 [MAIN] Service Worker desregistrado:', registration.scope);
+      });
+    }
+  });
+}
+
 // Inicializar Service Worker para cache offline e performance
 // if (import.meta.env.PROD) {
 //   initServiceWorker({

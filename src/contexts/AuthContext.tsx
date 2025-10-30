@@ -140,9 +140,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }, 5000);
 
       try {
-        console.log('🔍 BUSCANDO ADMIN NO DB:', email);
-        console.log('📡 Executando query na tabela admin_users...');
-        
         // 🔥 USAR SERVICE ROLE PARA BYPASS RLS
         const { supabaseServiceClient } = await import('../lib/supabase-admin');
         
@@ -155,33 +152,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Limpar timeout se a query completou
         clearTimeout(timeoutId);
 
-        console.log('📊 RESULTADO QUERY COMPLETO (SERVICE ROLE):', { 
-          adminUser, 
-          error: error?.message,
-          hasData: !!adminUser,
-          dataType: typeof adminUser
-        });
-
         if (error) {
           console.log('❌ ERRO NA QUERY:', error.message);
-          console.log('🔄 Retornando null devido ao erro');
           resolve(null);
           return;
         }
 
         if (!adminUser) {
-          console.log('❌ ADMIN NÃO ENCONTRADO - Query retornou null/undefined');
-          console.log('🔄 Retornando null - usuário não é admin');
           resolve(null);
           return;
         }
-
-        console.log('✅ ADMIN ENCONTRADO (BYPASS RLS):', {
-          email: adminUser.email,
-          role: adminUser.role,
-          id: adminUser.id,
-          name: adminUser.name
-        });
         
         const userResult = {
           id: adminUser.id,
@@ -190,7 +170,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: adminUser.role
         };
         
-        console.log('🎯 RETORNANDO USUÁRIO ADMIN:', userResult);
         resolve(userResult);
         
       } catch (error) {
@@ -302,43 +281,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     initAuth();
 
-    // Listener para mudanças de auth com tratamento de erros
+    // Listener para mudanças de auth com tratamento de erros e debounce
+    let authChangeTimeout: NodeJS.Timeout;
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!isMounted) return;
+        if (!isMounted || !initializationComplete) return;
         
-        console.log('🔄 AUTH STATE CHANGE:', event, session?.user?.email);
-        
-        // 🔥 TRATAMENTO ESPECIAL PARA TOKEN_REFRESHED COM ERRO
-        if (event === 'TOKEN_REFRESHED' && !session) {
-          console.log('⚠️ TOKEN REFRESH FALHOU - LIMPANDO DADOS...');
-          saveSupabaseUserToStorage(null);
-          saveUserToStorage(null);
-          return;
-        }
-        
-        if (session?.user) {
-          saveSupabaseUserToStorage(session.user);
-          setSupabaseUser(session.user);
+        // Debounce para evitar múltiplas execuções rápidas
+        clearTimeout(authChangeTimeout);
+        authChangeTimeout = setTimeout(async () => {
+          console.log('🔄 AUTH STATE CHANGE:', event, session?.user?.email);
           
-          // Verificar admin apenas se necessário
-          try {
-            const adminUser = await checkAdminUser(session.user.email!);
-            if (adminUser && isMounted) {
-              saveUserToStorage(adminUser);
-              setUser(adminUser);
-            }
-          } catch (adminError) {
-            console.log('⚠️ ERRO AO VERIFICAR ADMIN:', adminError);
-            // Em caso de erro na verificação de admin, mantém apenas o supabaseUser
+          // Ignorar eventos iniciais para evitar loops
+          if (event === 'INITIAL_SESSION') {
+            console.log('⚠️ IGNORANDO INITIAL_SESSION - JÁ INICIALIZADO');
+            return;
           }
-        } else {
-          console.log('🚪 LOGOUT DETECTADO - LIMPANDO STORAGE...');
-          saveSupabaseUserToStorage(null);
-          saveUserToStorage(null);
-          setUser(null);
-          setSupabaseUser(null);
-        }
+          
+          // 🔥 TRATAMENTO ESPECIAL PARA TOKEN_REFRESHED COM ERRO
+          if (event === 'TOKEN_REFRESHED' && !session) {
+            console.log('⚠️ TOKEN REFRESH FALHOU - LIMPANDO DADOS...');
+            saveSupabaseUserToStorage(null);
+            saveUserToStorage(null);
+            return;
+          }
+          
+          if (session?.user) {
+            saveSupabaseUserToStorage(session.user);
+            setSupabaseUser(session.user);
+            
+            // Verificar admin apenas se necessário
+            try {
+              const adminUser = await checkAdminUser(session.user.email!);
+              if (adminUser && isMounted) {
+                saveUserToStorage(adminUser);
+                setUser(adminUser);
+              }
+            } catch (adminError) {
+              console.log('⚠️ ERRO AO VERIFICAR ADMIN:', adminError);
+              // Em caso de erro na verificação de admin, mantém apenas o supabaseUser
+            }
+          } else if (event === 'SIGNED_OUT') {
+            console.log('🚪 LOGOUT DETECTADO - LIMPANDO STORAGE...');
+            saveSupabaseUserToStorage(null);
+            saveUserToStorage(null);
+            setUser(null);
+            setSupabaseUser(null);
+          }
+        }, 100); // Debounce de 100ms
       }
     );
 
@@ -352,7 +342,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      console.log('🚀 INICIANDO LOGIN:', email);
       setIsLoading(true);
       
       // 🧹 LIMPEZA FORÇADA DO LOCALSTORAGE ANTES DO LOGIN

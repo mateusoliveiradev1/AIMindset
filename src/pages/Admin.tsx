@@ -44,7 +44,8 @@ import {
   MousePointer,
   AlertTriangle,
   Home,
-  Star
+  Star,
+  RefreshCw
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import ArticleEditor from '../components/ArticleEditor';
@@ -56,6 +57,7 @@ import { EmailTemplates } from '../components/Admin/EmailTemplates';
 import { NotificationCenter } from '../components/Admin/NotificationCenter';
 import NewsletterLogs from '../components/Admin/NewsletterLogs';
 import { SEODashboard } from '../components/Admin/SEODashboard';
+import { resetForFeedbackTesting, getLocalStorageInfo } from '../utils/localStorageReset';
 
 
 export const Admin: React.FC = () => {
@@ -472,6 +474,53 @@ export const Admin: React.FC = () => {
     logout();
   };
 
+  // 🔄 Função para resetar localStorage
+  const handleResetLocalStorage = () => {
+    const confirmed = window.confirm(
+      '⚠️ RESET DO LOCALSTORAGE\n\n' +
+      'Isso irá limpar todos os dados de cache, feedback e interações armazenados localmente.\n\n' +
+      'Útil para resolver problemas de teste de feedback.\n\n' +
+      'Deseja continuar?'
+    );
+
+    if (confirmed) {
+      try {
+        // Obter informações antes do reset
+        const info = getLocalStorageInfo();
+        console.log('📊 [ADMIN-RESET] Estado antes do reset:', info);
+
+        // Executar reset específico para feedback
+        const result = resetForFeedbackTesting();
+        
+        if (result.success) {
+          toast.success(
+            `✅ Reset concluído!\n\n` +
+            `Chaves limpas: ${result.clearedKeys.length}\n` +
+            `Versão anterior: ${result.previousVersion || 'N/A'}\n` +
+            `Nova versão: ${result.newVersion}`,
+            { duration: 5000 }
+          );
+          
+          console.log('✅ [ADMIN-RESET] Reset bem-sucedido:', result);
+          
+          // Recarregar página após 2 segundos para aplicar mudanças
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        } else {
+          toast.error(
+            `❌ Erro no reset:\n${result.errors.join('\n')}`,
+            { duration: 8000 }
+          );
+          console.error('❌ [ADMIN-RESET] Erro:', result);
+        }
+      } catch (error) {
+        console.error('💥 [ADMIN-RESET] Erro inesperado:', error);
+        toast.error(`💥 Erro inesperado: ${error}`);
+      }
+    }
+  };
+
   // Função para exportar CSV (removida - agora usa o hook)
   const exportCSV = () => {
     // Esta função foi movida para o hook useNewsletter
@@ -632,6 +681,17 @@ export const Admin: React.FC = () => {
                 <Home className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="hidden xs:inline">Voltar para Home</span>
                 <span className="xs:hidden">Home</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleResetLocalStorage}
+                className="flex items-center space-x-1 sm:space-x-2 border-orange-500/30 text-orange-400 hover:bg-orange-500/10 flex-1 sm:flex-none justify-center sm:justify-start text-xs sm:text-sm px-2 sm:px-3"
+                title="Resetar localStorage para resolver problemas de cache"
+              >
+                <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">Reset Cache</span>
+                <span className="xs:hidden">Reset</span>
               </Button>
               <Button
                 variant="outline"

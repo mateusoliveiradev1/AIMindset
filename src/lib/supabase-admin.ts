@@ -34,7 +34,9 @@ export const supabaseAdmin = (() => {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
-      storage: undefined
+      storage: undefined,
+      // 🔥 DESABILITAR COMPLETAMENTE O GOTRUECLIENT PARA EVITAR MÚLTIPLAS INSTÂNCIAS
+      detectSessionInUrl: false
     },
     global: {
       headers: {

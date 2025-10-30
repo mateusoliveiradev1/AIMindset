@@ -315,10 +315,20 @@ async function handleAPIRequest(request) {
 }
 
 async function handleSupabaseRequest(request) {
+  // Se for método que modifica dados (POST, PUT, PATCH, DELETE), passar direto para rede
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
+    try {
+      return await fetch(request);
+    } catch (error) {
+      console.error('[SW] Supabase write request failed:', error);
+      throw error; // Re-throw para não mascarar o erro real
+    }
+  }
+
   const cache = await caches.open(SUPABASE_CACHE);
   
   try {
-    // Estratégia Stale-While-Revalidate para Supabase
+    // Estratégia Stale-While-Revalidate apenas para requisições GET
     const cachedResponse = await cache.match(request);
     
     if (cachedResponse) {

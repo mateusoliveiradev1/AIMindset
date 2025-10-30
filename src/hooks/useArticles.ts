@@ -156,17 +156,16 @@ export const useArticles = (): UseArticlesReturn => {
               articlesResult.data.map(async (article) => {
                 try {
                   const { data: metrics } = await supabase
-                    .rpc('get_article_metrics', { article_uuid: article.id });
+                    .rpc('get_article_metrics', { target_article_id: article.id });
                   
-                  if (metrics && metrics.length > 0) {
-                    const metric = metrics[0];
+                  if (metrics) {
                     return {
                       ...article,
-                      positive_feedbacks: metric.positive_count || 0,
-                      negative_feedbacks: metric.negative_count || 0,
-                      likes_count: metric.likes_count || 0,
-                      comments_count: metric.comments_count || 0,
-                      approval_rate: metric.approval_rate || 0
+                      positive_feedbacks: metrics.positive_feedback || 0,
+                      negative_feedbacks: metrics.negative_feedback || 0,
+                      likes_count: metrics.total_likes || 0,
+                      comments_count: metrics.total_comments || 0,
+                      approval_rate: metrics.approval_rate || 0
                     };
                   }
                   

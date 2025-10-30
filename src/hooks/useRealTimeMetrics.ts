@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import { useRealTimeSync } from './useRealTimeSync';
 
 interface ArticleMetrics {
   articleId: string;
@@ -77,6 +78,21 @@ export function useRealTimeMetrics(articleIds: string[]) {
     lastUpdate: null
   });
 
+  // Hook de sincronização em tempo real com invalidação automática de cache
+  const { invalidateAllCaches } = useRealTimeSync({
+    onFeedbackChange: () => {
+      console.log('🔄 [REALTIME-METRICS] Feedback change detected - invalidating cache');
+      cache.clear();
+      loadAllMetrics(stableArticleIds);
+    },
+    onCommentChange: () => {
+      console.log('🔄 [REALTIME-METRICS] Comment change detected - invalidating cache');
+      cache.clear();
+      loadAllMetrics(stableArticleIds);
+    },
+    enableGlobalSync: true
+  });
+
   // Refs para controle
   const channelsRef = useRef<RealtimeChannel[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -104,23 +120,23 @@ export function useRealTimeMetrics(articleIds: string[]) {
 
     try {
       // PRIMEIRO: Tentar usar a função get_article_metrics do Supabase
-      console.log(`🎯 [REALTIME-METRICS] Tentando função get_article_metrics para ${articleId}`);
-      
-      const { data: metricsData, error: metricsError } = await supabase
-        .rpc('get_article_metrics', { article_uuid: articleId });
+    console.log(`🎯 [REALTIME-METRICS] Tentando função get_article_metrics para ${articleId}`);
+    
+    const { data: rpcData, error: rpcError } = await supabase
+        .rpc('get_article_metrics', { target_article_id: articleId });
 
-      if (!metricsError && metricsData) {
-        console.log(`✅ [REALTIME-METRICS] Métricas obtidas para ${articleId}:`, metricsData);
+      if (!rpcError && rpcData) {
+        console.log(`✅ [REALTIME-METRICS] Métricas obtidas para ${articleId}:`, rpcData);
         
         const metrics: ArticleMetrics = {
           articleId,
-          positiveFeedback: Number(metricsData.positive_feedback) || 0,
-          negativeFeedback: Number(metricsData.negative_feedback) || 0,
-          comments: Number(metricsData.total_comments) || 0,
-          approvalRate: Number(metricsData.approval_rate) || 0,
-          total_likes: Number(metricsData.total_likes) || 0,
-          total_replies: Number(metricsData.total_replies) || 0,
-          engagement_rate: Number(metricsData.engagement_rate) || 0
+          positiveFeedback: Number(rpcData.positive_feedback) || 0,
+          negativeFeedback: Number(rpcData.negative_feedback) || 0,
+          comments: Number(rpcData.total_comments) || 0,
+          approvalRate: Number(rpcData.approval_rate) || 0,
+          total_likes: Number(rpcData.total_likes) || 0,
+          total_replies: Number(rpcData.total_replies) || 0,
+          engagement_rate: Number(rpcData.engagement_rate) || 0
         };
 
         // Cache com TTL de 30 segundos
@@ -131,7 +147,7 @@ export function useRealTimeMetrics(articleIds: string[]) {
       } else {
         console.warn(`⚠️ [REALTIME-METRICS] Função RPC falhou para ${articleId}:`, {
           error: rpcError,
-          data: data,
+          data: rpcData,
           errorMessage: rpcError?.message,
           errorDetails: rpcError?.details
         });
@@ -336,27 +352,30 @@ export function useRealTimeMetrics(articleIds: string[]) {
     });
     channelsRef.current = [];
 
-    // Subscription para feedback
+    // Subscription para feedbacks (CORRIGIDO: usar tabela 'feedbacks' não 'feedback')
     const feedbackChannel = supabase
-      .channel('feedback_realtime')
+      .channel('feedbacks_realtime')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'feedback',
+          table: 'feedbacks', // CORRIGIDO: tabela correta
           filter: `article_id=in.(${ids.join(',')})`
         },
         (payload) => {
           console.log('🔄 [REALTIME] Feedback atualizado:', payload);
           const articleId = (payload.new as any)?.article_id || (payload.old as any)?.article_id;
           if (articleId && ids.includes(articleId)) {
-            updateMetricsForArticle(articleId);
+            // Debounce para evitar múltiplas atualizações
+            setTimeout(() => {
+              updateMetricsForArticle(articleId);
+            }, 500);
           }
         }
       )
       .subscribe((status) => {
-        console.log('📡 [REALTIME] Status feedback subscription:', status);
+        console.log('📡 [REALTIME] Status feedbacks subscription:', status);
       });
 
     // Subscription para comentários
@@ -374,7 +393,10 @@ export function useRealTimeMetrics(articleIds: string[]) {
           console.log('🔄 [REALTIME] Comentários atualizados:', payload);
           const articleId = (payload.new as any)?.article_id || (payload.old as any)?.article_id;
           if (articleId && ids.includes(articleId)) {
-            updateMetricsForArticle(articleId);
+            // Debounce para evitar múltiplas atualizações
+            setTimeout(() => {
+              updateMetricsForArticle(articleId);
+            }, 500);
           }
         }
       )
@@ -427,6 +449,23 @@ export function useRealTimeMetrics(articleIds: string[]) {
     // Configurar Auto-refresh
     setupAutoRefresh(stableArticleIds);
 
+    // Listener para invalidação global de cache
+    const handleCacheInvalidation = () => {
+      console.log('🔄 [REALTIME-METRICS] Global cache invalidation triggered');
+      cache.clear();
+      loadAllMetrics(stableArticleIds);
+    };
+
+    // NOVO: Listener específico para atualizações de feedback
+    const handleFeedbackMetricsUpdate = (event: CustomEvent) => {
+      console.log('🔄 [REALTIME-METRICS] Feedback metrics update triggered:', event.detail);
+      cache.clear();
+      loadAllMetrics(stableArticleIds);
+    };
+
+    window.addEventListener('realtime-cache-invalidate', handleCacheInvalidation);
+    window.addEventListener('feedback-metrics-updated', handleFeedbackMetricsUpdate as EventListener);
+
     // Cleanup
     return () => {
       mountedRef.current = false;
@@ -439,6 +478,10 @@ export function useRealTimeMetrics(articleIds: string[]) {
         supabase.removeChannel(channel);
       });
       channelsRef.current = [];
+
+      // Remover listeners de invalidação de cache
+      window.removeEventListener('realtime-cache-invalidate', handleCacheInvalidation);
+      window.removeEventListener('feedback-metrics-updated', handleFeedbackMetricsUpdate as EventListener);
     };
   }, [stableArticleIds, loadAllMetrics, setupRealTimeSubscriptions, setupAutoRefresh]);
 
