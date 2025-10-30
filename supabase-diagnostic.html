@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico Supabase - Sistema de Alertas</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .warning { background: #fff3cd; border-color: #ffeaa7; color: #856404; }
+        .info { background: #d1ecf1; border-color: #bee5eb; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; white-space: pre-wrap; }
+        .status-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        .status-success { background: #28a745; }
+        .status-error { background: #dc3545; }
+        .status-warning { background: #ffc107; }
+        .loading { opacity: 0.6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Diagnóstico Completo do Supabase</h1>
+        <p>Esta página testa a conectividade e funcionalidade do sistema de alertas.</p>
+
+        <!-- Status Geral -->
+        <div id="general-status" class="test-section info">
+            <h3><span class="status-indicator status-warning"></span>Status Geral</h3>
+            <p>Inicializando diagnóstico...</p>
+        </div>
+
+        <!-- Teste de Conectividade Básica -->
+        <div class="test-section">
+            <h3>1. Teste de Conectividade Básica</h3>
+            <button onclick="testBasicConnectivity()">Testar Conectividade</button>
+            <div id="connectivity-result"></div>
+        </div>
+
+        <!-- Teste de Autenticação -->
+        <div class="test-section">
+            <h3>2. Teste de Autenticação</h3>
+            <button onclick="testAuthentication()">Testar Auth</button>
+            <div id="auth-result"></div>
+        </div>
+
+        <!-- Teste de Funções RPC -->
+        <div class="test-section">
+            <h3>3. Teste de Funções RPC</h3>
+            <button onclick="testRPCFunctions()">Testar RPCs</button>
+            <div id="rpc-result"></div>
+        </div>
+
+        <!-- Teste com Retry Logic -->
+        <div class="test-section">
+            <h3>4. Teste com Retry Logic</h3>
+            <button onclick="testWithRetry()">Testar com Retry</button>
+            <div id="retry-result"></div>
+        </div>
+
+        <!-- Teste de Tabelas -->
+        <div class="test-section">
+            <h3>5. Teste de Acesso a Tabelas</h3>
+            <button onclick="testTableAccess()">Testar Tabelas</button>
+            <div id="table-result"></div>
+        </div>
+
+        <!-- Logs Detalhados -->
+        <div class="test-section">
+            <h3>📋 Logs Detalhados</h3>
+            <button onclick="clearLogs()">Limpar Logs</button>
+            <pre id="detailed-logs"></pre>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Supabase
+        const supabaseUrl = 'https://jywjqzhqynhnhetidzsa.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5d2pxemhxeW5obmhldGlkenNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5MjkxMzQsImV4cCI6MjA3NjUwNTEzNH0.oTZ6B-77NGBSqa_lN2YWCtnKwKc0glWnwfuN9xQjDl0';
+        
+        let supabase;
+        let logs = [];
+
+        // Função para adicionar logs
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toISOString();
+            const logEntry = `[${timestamp}] [${type.toUpperCase()}] ${message}`;
+            logs.push(logEntry);
+            console.log(logEntry);
+            updateLogsDisplay();
+        }
+
+        function updateLogsDisplay() {
+            document.getElementById('detailed-logs').textContent = logs.join('\\n');
+        }
+
+        function clearLogs() {
+            logs = [];
+            updateLogsDisplay();
+        }
+
+        function updateStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `test-section ${type}`;
+            element.innerHTML = `<h3>${message}</h3>`;
+        }
+
+        // Inicialização
+        function initializeSupabase() {
+            try {
+                addLog('Inicializando cliente Supabase...');
+                supabase = window.supabase.createClient(supabaseUrl, supabaseKey, {
+                    auth: {
+                        autoRefreshToken: true,
+                        persistSession: false
+                    },
+                    global: {
+                        headers: {
+                            'x-client-info': 'diagnostic-tool',
+                            'apikey': supabaseKey
+                        }
+                    }
+                });
+                addLog('Cliente Supabase inicializado com sucesso', 'success');
+                updateStatus('general-status', '✅ Cliente Supabase Inicializado', 'success');
+                return true;
+            } catch (error) {
+                addLog(`Erro ao inicializar Supabase: ${error.message}`, 'error');
+                updateStatus('general-status', '❌ Erro na Inicialização', 'error');
+                return false;
+            }
+        }
+
+        // Teste de conectividade básica
+        async function testBasicConnectivity() {
+            const resultDiv = document.getElementById('connectivity-result');
+            resultDiv.innerHTML = '<p>🔄 Testando conectividade...</p>';
+            
+            try {
+                addLog('Iniciando teste de conectividade básica...');
+                
+                // Teste 1: Ping básico
+                const response = await fetch(supabaseUrl + '/rest/v1/', {
+                    method: 'HEAD',
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`
+                    }
+                });
+                
+                if (response.ok) {
+                    addLog('✅ Ping básico ao Supabase: OK', 'success');
+                    resultDiv.innerHTML = '<div class="success">✅ Conectividade básica funcionando</div>';
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+            } catch (error) {
+                addLog(`❌ Erro de conectividade: ${error.message}`, 'error');
+                resultDiv.innerHTML = `<div class="error">❌ Erro: ${error.message}</div>`;
+            }
+        }
+
+        // Teste de autenticação
+        async function testAuthentication() {
+            const resultDiv = document.getElementById('auth-result');
+            resultDiv.innerHTML = '<p>🔄 Testando autenticação...</p>';
+            
+            try {
+                addLog('Testando autenticação...');
+                const { data: { user }, error } = await supabase.auth.getUser();
+                
+                if (error && error.message !== 'Invalid JWT') {
+                    throw error;
+                }
+                
+                addLog('✅ Sistema de autenticação acessível', 'success');
+                resultDiv.innerHTML = '<div class="success">✅ Sistema de auth funcionando</div>';
+                
+            } catch (error) {
+                addLog(`❌ Erro de autenticação: ${error.message}`, 'error');
+                resultDiv.innerHTML = `<div class="error">❌ Erro: ${error.message}</div>`;
+            }
+        }
+
+        // Teste de funções RPC
+        async function testRPCFunctions() {
+            const resultDiv = document.getElementById('rpc-result');
+            resultDiv.innerHTML = '<p>🔄 Testando funções RPC...</p>';
+            
+            let results = [];
+            
+            try {
+                addLog('Testando função test_alert_system...');
+                
+                // Teste da função principal
+                try {
+                    const { data, error } = await supabase.rpc('test_alert_system');
+                    if (error) throw error;
+                    addLog('✅ test_alert_system: OK', 'success');
+                    results.push('✅ test_alert_system: Funcionando');
+                } catch (error) {
+                    addLog(`❌ test_alert_system: ${error.message}`, 'error');
+                    results.push(`❌ test_alert_system: ${error.message}`);
+                }
+                
+                // Teste da função simplificada
+                try {
+                    const { data, error } = await supabase.rpc('test_alert_system_simple');
+                    if (error) throw error;
+                    addLog('✅ test_alert_system_simple: OK', 'success');
+                    results.push('✅ test_alert_system_simple: Funcionando');
+                } catch (error) {
+                    addLog(`❌ test_alert_system_simple: ${error.message}`, 'error');
+                    results.push(`❌ test_alert_system_simple: ${error.message}`);
+                }
+                
+                resultDiv.innerHTML = `<div class="${results.some(r => r.includes('❌')) ? 'error' : 'success'}">
+                    ${results.map(r => `<p>${r}</p>`).join('')}
+                </div>`;
+                
+            } catch (error) {
+                addLog(`❌ Erro geral nos testes RPC: ${error.message}`, 'error');
+                resultDiv.innerHTML = `<div class="error">❌ Erro geral: ${error.message}</div>`;
+            }
+        }
+
+        // Teste com retry logic
+        async function testWithRetry() {
+            const resultDiv = document.getElementById('retry-result');
+            resultDiv.innerHTML = '<p>🔄 Testando com retry logic...</p>';
+            
+            async function retryRPC(functionName, maxRetries = 3) {
+                for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                    try {
+                        addLog(`Tentativa ${attempt}/${maxRetries} para ${functionName}...`);
+                        const { data, error } = await supabase.rpc(functionName);
+                        if (error) throw error;
+                        addLog(`✅ ${functionName} sucesso na tentativa ${attempt}`, 'success');
+                        return { success: true, data, attempt };
+                    } catch (error) {
+                        addLog(`❌ ${functionName} falhou na tentativa ${attempt}: ${error.message}`, 'warning');
+                        if (attempt === maxRetries) {
+                            return { success: false, error: error.message, attempt };
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                    }
+                }
+            }
+            
+            try {
+                const result1 = await retryRPC('test_alert_system');
+                const result2 = await retryRPC('test_alert_system_simple');
+                
+                const results = [
+                    `test_alert_system: ${result1.success ? '✅ Sucesso' : '❌ Falhou'} (${result1.attempt} tentativas)`,
+                    `test_alert_system_simple: ${result2.success ? '✅ Sucesso' : '❌ Falhou'} (${result2.attempt} tentativas)`
+                ];
+                
+                resultDiv.innerHTML = `<div class="${result1.success && result2.success ? 'success' : 'warning'}">
+                    ${results.map(r => `<p>${r}</p>`).join('')}
+                </div>`;
+                
+            } catch (error) {
+                addLog(`❌ Erro no teste de retry: ${error.message}`, 'error');
+                resultDiv.innerHTML = `<div class="error">❌ Erro: ${error.message}</div>`;
+            }
+        }
+
+        // Teste de acesso a tabelas
+        async function testTableAccess() {
+            const resultDiv = document.getElementById('table-result');
+            resultDiv.innerHTML = '<p>🔄 Testando acesso a tabelas...</p>';
+            
+            const tables = ['alert_subscriptions', 'system_logs', 'articles'];
+            let results = [];
+            
+            for (const table of tables) {
+                try {
+                    addLog(`Testando acesso à tabela ${table}...`);
+                    const { data, error } = await supabase.from(table).select('*').limit(1);
+                    if (error) throw error;
+                    addLog(`✅ Tabela ${table}: Acessível`, 'success');
+                    results.push(`✅ ${table}: OK`);
+                } catch (error) {
+                    addLog(`❌ Tabela ${table}: ${error.message}`, 'error');
+                    results.push(`❌ ${table}: ${error.message}`);
+                }
+            }
+            
+            resultDiv.innerHTML = `<div class="${results.some(r => r.includes('❌')) ? 'warning' : 'success'}">
+                ${results.map(r => `<p>${r}</p>`).join('')}
+            </div>`;
+        }
+
+        // Inicializar quando a página carregar
+        window.addEventListener('load', () => {
+            if (initializeSupabase()) {
+                addLog('Diagnóstico pronto para execução', 'success');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste do Sistema de Logs</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste do Sistema de Logs - AIMindset</h1>
+    
+    <div class="test-section">
+        <h3>📝 Teste de App Logs</h3>
+        <button onclick="testAppLog()">Testar Log de Aplicação</button>
+        <button onclick="testErrorLog()">Testar Log de Erro</button>
+        <button onclick="testPerformanceLog()">Testar Log de Performance</button>
+        <div id="app-log-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>🔧 Teste de System Logs</h3>
+        <button onclick="testSystemLog()">Testar Log de Sistema</button>
+        <button onclick="testAuthLog()">Testar Log de Autenticação</button>
+        <div id="system-log-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>📊 Verificar Logs no Console</h3>
+        <p>Abra o console do navegador (F12) para ver os logs locais em desenvolvimento.</p>
+        <button onclick="window.location.href='http://localhost:5174/admin'">Ir para Admin Panel</button>
+    </div>
+
+    <script type="module">
+        import { logEvent, logSystem, logError, logPerformance, logAuth } from './src/lib/logging.js';
+        
+        // Tornar as funções globais para os botões
+        window.logEvent = logEvent;
+        window.logSystem = logSystem;
+        window.logError = logError;
+        window.logPerformance = logPerformance;
+        window.logAuth = logAuth;
+
+        window.testAppLog = async function() {
+            const result = await logEvent('info', 'test-page', 'button_click', {
+                test_data: 'Teste de log de aplicação',
+                timestamp: new Date().toISOString()
+            });
+            
+            document.getElementById('app-log-result').innerHTML = 
+                `<strong>Resultado:</strong> ${JSON.stringify(result, null, 2)}`;
+        };
+
+        window.testErrorLog = async function() {
+            try {
+                throw new Error('Erro de teste para logging');
+            } catch (error) {
+                await logError(error, 'test-page', 'test_error', {
+                    test_context: 'Simulação de erro para teste'
+                });
+                
+                document.getElementById('app-log-result').innerHTML = 
+                    `<strong>Log de erro registrado com sucesso!</strong>`;
+            }
+        };
+
+        window.testPerformanceLog = async function() {
+            const startTime = performance.now();
+            
+            // Simular uma operação
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            const duration = performance.now() - startTime;
+            
+            await logPerformance('test_operation', duration, 'test-page', {
+                operation_type: 'simulated_delay'
+            });
+            
+            document.getElementById('app-log-result').innerHTML = 
+                `<strong>Log de performance registrado!</strong> Duração: ${duration.toFixed(2)}ms`;
+        };
+
+        window.testSystemLog = async function() {
+            const result = await logSystem('general', 'Teste de log de sistema', {
+                component: 'test-page',
+                function_name: 'testSystemLog',
+                test_data: 'Dados de teste do sistema'
+            });
+            
+            document.getElementById('system-log-result').innerHTML = 
+                `<strong>Resultado:</strong> ${JSON.stringify(result, null, 2)}`;
+        };
+
+        window.testAuthLog = async function() {
+            await logAuth('test_login', 'test-user-123', true, {
+                test_context: 'Simulação de login para teste'
+            });
+            
+            document.getElementById('system-log-result').innerHTML = 
+                `<strong>Log de autenticação registrado com sucesso!</strong>`;
+        };
+
+        // Log inicial para indicar que a página foi carregada
+        logSystem('general', 'Página de teste de logs carregada', {
+            component: 'test-page',
+            function_name: 'page_load'
+        });
+    </script>
+</body>
+</html>

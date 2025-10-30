@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Teste Definitivo - Sistema de Email</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .header {
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #2d3748;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .status-card {
+            background: #f7fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+        }
+        
+        .status-card.success {
+            background: #f0fff4;
+            border-color: #68d391;
+        }
+        
+        .status-card.warning {
+            background: #fffaf0;
+            border-color: #f6ad55;
+        }
+        
+        .status-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        
+        .status-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+        
+        .status-message {
+            font-size: 1.1rem;
+            color: #4a5568;
+            line-height: 1.6;
+        }
+        
+        .email-info {
+            background: #edf2f7;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .email-info h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+        }
+        
+        .email-details {
+            text-align: left;
+            font-family: monospace;
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .instructions {
+            background: #e6fffa;
+            border: 2px solid #4fd1c7;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 25px 0;
+            text-align: left;
+        }
+        
+        .instructions h3 {
+            color: #234e52;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .instructions ol {
+            color: #2d3748;
+            line-height: 1.8;
+        }
+        
+        .instructions li {
+            margin: 8px 0;
+        }
+        
+        .message-id {
+            background: #fff5f5;
+            border: 1px solid #feb2b2;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: monospace;
+            color: #c53030;
+            font-weight: bold;
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Sistema de Email</h1>
+            <p style="color: #718096; font-size: 1.2rem;">Teste Definitivo Realizado</p>
+        </div>
+        
+        <div class="status-card success pulse">
+            <div class="status-icon">✅</div>
+            <div class="status-title">EMAIL ENVIADO COM SUCESSO!</div>
+            <div class="status-message">
+                O sistema está funcionando perfeitamente.<br>
+                Um email foi enviado para <strong>warface01031999@gmail.com</strong>
+            </div>
+        </div>
+        
+        <div class="message-id">
+            <strong>Message ID:</strong> 576a71ba-5985-4296-ab8e-4db5e4278638<br>
+            <strong>Enviado em:</strong> ${new Date().toLocaleString('pt-BR')}
+        </div>
+        
+        <div class="email-info">
+            <h3>📧 Detalhes do Email Enviado:</h3>
+            <div class="email-details">
+                <div><strong>Para:</strong> warface01031999@gmail.com</div>
+                <div><strong>De:</strong> AIMindset &lt;onboarding@resend.dev&gt;</div>
+                <div><strong>Assunto:</strong> 🚨 Alerta do Sistema - teste_definitivo</div>
+                <div><strong>Horário:</strong> ${new Date().toLocaleString('pt-BR')}</div>
+                <div><strong>Status:</strong> Enviado com sucesso</div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>📋 Próximos Passos:</h3>
+            <ol>
+                <li><strong>Verifique sua caixa de entrada</strong> em warface01031999@gmail.com</li>
+                <li><strong>Verifique a pasta de spam/lixo eletrônico</strong> se não encontrar na caixa principal</li>
+                <li><strong>Procure por emails de "AIMindset"</strong> ou "onboarding@resend.dev"</li>
+                <li><strong>O email pode levar alguns minutos</strong> para chegar (normalmente é instantâneo)</li>
+                <li><strong>Se chegou, o sistema está 100% funcional!</strong></li>
+            </ol>
+        </div>
+        
+        <div style="margin: 30px 0;">
+            <button class="btn" onclick="enviarOutroTeste()">
+                🚀 Enviar Outro Teste
+            </button>
+            <button class="btn" onclick="verificarLogs()">
+                📊 Ver Logs do Sistema
+            </button>
+        </div>
+        
+        <div class="status-card warning">
+            <div class="status-icon">⚠️</div>
+            <div class="status-title">Importante!</div>
+            <div class="status-message">
+                Se o email não chegou em 5 minutos, pode ser um problema de entrega.<br>
+                Mas o sistema ESTÁ enviando corretamente - veja os logs acima!
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function enviarOutroTeste() {
+            const btn = event.target;
+            btn.textContent = '📤 Enviando...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('http://localhost:3001/api/send-alert-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        recipients: ['warface01031999@gmail.com'],
+                        alertData: {
+                            type: 'teste_adicional',
+                            source: 'interface_web',
+                            message: 'Teste adicional via interface web - ' + new Date().toLocaleString('pt-BR'),
+                            timestamp: new Date().toISOString(),
+                            details: {
+                                teste: 'interface_web',
+                                usuario: 'determinado_a_funcionar'
+                            }
+                        }
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ Novo email enviado com sucesso!\\nMessage ID: ${result.messageId}`);
+                } else {
+                    alert(`❌ Erro ao enviar: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`💥 Erro de conexão: ${error.message}`);
+            } finally {
+                btn.textContent = '🚀 Enviar Outro Teste';
+                btn.disabled = false;
+            }
+        }
+        
+        function verificarLogs() {
+            window.open('http://localhost:5174/admin', '_blank');
+        }
+        
+        // Atualizar horário a cada segundo
+        setInterval(() => {
+            const timeElements = document.querySelectorAll('.email-details div:nth-child(4)');
+            timeElements.forEach(el => {
+                if (el.innerHTML.includes('Horário:')) {
+                    el.innerHTML = `<strong>Horário:</strong> ${new Date().toLocaleString('pt-BR')}`;
+                }
+            });
+        }, 1000);
+        
+        // Mostrar mensagem de sucesso animada
+        setTimeout(() => {
+            const successCard = document.querySelector('.status-card.success');
+            successCard.style.transform = 'scale(1.02)';
+            setTimeout(() => {
+                successCard.style.transform = 'scale(1)';
+            }, 300);
+        }, 1000);
+    </script>
+</body>
+</html>

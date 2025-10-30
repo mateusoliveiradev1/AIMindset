@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste RPC test_alert_system</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .container {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .result {
+            background: #333;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+        .error {
+            background: #d32f2f;
+            color: white;
+        }
+        .success {
+            background: #388e3c;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste da Função RPC test_alert_system</h1>
+    
+    <div class="container">
+        <h2>Configuração do Supabase</h2>
+        <p><strong>URL:</strong> https://jywjqzhqynhnhetidzsa.supabase.co</p>
+        <p><strong>Status:</strong> <span id="connection-status">Verificando...</span></p>
+    </div>
+
+    <div class="container">
+        <h2>Testes de Função RPC</h2>
+        <button onclick="testConnection()">Testar Conexão</button>
+        <button onclick="testAlertSystem('app_error')">Teste App Error</button>
+        <button onclick="testAlertSystem('security')">Teste Security</button>
+        <button onclick="testDirectSQL()">Teste SQL Direto</button>
+        <button onclick="clearResults()">Limpar Resultados</button>
+    </div>
+
+    <div class="container">
+        <h2>Resultados</h2>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Configuração do Supabase
+        const supabaseUrl = 'https://jywjqzhqynhnhetidzsa.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5d2pxemhxeW5obmhldGlkenNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5MjkxMzQsImV4cCI6MjA3NjUwNTEzNH0.oTZ6B-77NGBSqa_lN2YWCtnKwKc0glWnwfuN9xQjDl0';
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testConnection() {
+            addResult('🔍 Testando conexão com Supabase...');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('system_logs')
+                    .select('count')
+                    .limit(1);
+                
+                if (error) {
+                    addResult(`❌ Erro de conexão: ${error.message}`, 'error');
+                    document.getElementById('connection-status').textContent = 'Erro';
+                } else {
+                    addResult('✅ Conexão com Supabase OK', 'success');
+                    document.getElementById('connection-status').textContent = 'Conectado';
+                }
+            } catch (err) {
+                addResult(`❌ Erro de conexão: ${err.message}`, 'error');
+                document.getElementById('connection-status').textContent = 'Erro';
+            }
+        }
+
+        async function testAlertSystem(alertType) {
+            addResult(`🧪 Testando função test_alert_system com tipo: ${alertType}`);
+            
+            try {
+                const { data, error } = await supabase.rpc('test_alert_system', {
+                    alert_type: alertType,
+                    test_message: `Teste ${alertType} - ${new Date().toISOString()}`
+                });
+
+                if (error) {
+                    addResult(`❌ Erro RPC: ${error.message}`, 'error');
+                    addResult(`Detalhes do erro: ${JSON.stringify(error, null, 2)}`, 'error');
+                } else {
+                    addResult(`✅ Sucesso! Resultado: ${JSON.stringify(data, null, 2)}`, 'success');
+                }
+            } catch (err) {
+                addResult(`❌ Erro JavaScript: ${err.message}`, 'error');
+            }
+        }
+
+        async function testDirectSQL() {
+            addResult('🔍 Testando SQL direto para verificar função...');
+            
+            try {
+                const { data, error } = await supabase
+                    .rpc('test_alert_system', {
+                        alert_type: 'test_direct',
+                        test_message: 'Teste SQL direto via RPC'
+                    });
+
+                if (error) {
+                    addResult(`❌ Erro SQL direto: ${error.message}`, 'error');
+                } else {
+                    addResult(`✅ SQL direto OK: ${JSON.stringify(data, null, 2)}`, 'success');
+                }
+            } catch (err) {
+                addResult(`❌ Erro SQL direto: ${err.message}`, 'error');
+            }
+        }
+
+        // Testar conexão automaticamente ao carregar
+        window.onload = function() {
+            addResult('🚀 Página carregada. Iniciando testes...');
+            testConnection();
+        };
+    </script>
+</body>
+</html>

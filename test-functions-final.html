@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Final das Funções RPC</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .success { border-color: #4CAF50; background-color: #f8fff8; }
+        .error { border-color: #f44336; background-color: #fff8f8; }
+        .info { border-color: #2196F3; background-color: #f8f9ff; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 16px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status.info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste Final das Funções RPC de Alerta</h1>
+        
+        <div class="test-section info">
+            <h2>📋 Status da Conexão</h2>
+            <div id="connection-status">Verificando conexão...</div>
+        </div>
+
+        <div class="test-section">
+            <h2>🚀 Testes das Funções</h2>
+            <button onclick="testMainFunction()">Testar test_alert_system</button>
+            <button onclick="testSimpleFunction()">Testar test_alert_system_simple</button>
+            <button onclick="testBothFunctions()">Testar Ambas as Funções</button>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Resultados dos Testes</h2>
+            <div id="test-results"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📝 Logs Detalhados</h2>
+            <div id="detailed-logs" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Supabase
+        const supabaseUrl = 'https://jywjqzhqynhnhetidzsa.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5d2pxemhxeW5obmhldGlkenNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5MjkxMzQsImV4cCI6MjA3NjUwNTEzNH0.oTZ6B-77NGBSqa_lN2YWCtnKwKc0glWnwfuN9xQjDl0';
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toISOString();
+            const logElement = document.getElementById('detailed-logs');
+            const logMessage = `[${timestamp}] [${type.toUpperCase()}] ${message}\n`;
+            logElement.textContent += logMessage;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(logMessage);
+        }
+
+        function updateStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        async function checkConnection() {
+            try {
+                log('Verificando conexão com Supabase...');
+                const { data, error } = await supabase.from('system_logs').select('count').limit(1);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                updateStatus('connection-status', '✅ Conexão com Supabase estabelecida com sucesso!', 'success');
+                log('✅ Conexão verificada com sucesso');
+                return true;
+            } catch (error) {
+                updateStatus('connection-status', `❌ Erro de conexão: ${error.message}`, 'error');
+                log(`❌ Erro de conexão: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function testMainFunction() {
+            log('🚀 Iniciando teste da função test_alert_system...');
+            
+            try {
+                const { data, error } = await supabase.rpc('test_alert_system', {
+                    alert_type: 'app_error',
+                    test_message: 'Teste da função principal - Sistema funcionando!'
+                });
+
+                if (error) {
+                    throw error;
+                }
+
+                log('✅ test_alert_system executada com sucesso!');
+                log(`📊 Resultado: ${JSON.stringify(data, null, 2)}`);
+                
+                updateStatus('test-results', 
+                    `✅ test_alert_system: SUCESSO<br>
+                     📊 Dados: ${JSON.stringify(data, null, 2)}`, 
+                    'success'
+                );
+                
+                return data;
+            } catch (error) {
+                log(`❌ Erro na test_alert_system: ${error.message}`, 'error');
+                updateStatus('test-results', 
+                    `❌ test_alert_system: FALHOU<br>
+                     🚨 Erro: ${error.message}`, 
+                    'error'
+                );
+                throw error;
+            }
+        }
+
+        async function testSimpleFunction() {
+            log('🚀 Iniciando teste da função test_alert_system_simple...');
+            
+            try {
+                const { data, error } = await supabase.rpc('test_alert_system_simple', {
+                    alert_type: 'security',
+                    test_message: 'Teste da função simplificada - Sistema funcionando!'
+                });
+
+                if (error) {
+                    throw error;
+                }
+
+                log('✅ test_alert_system_simple executada com sucesso!');
+                log(`📊 Resultado: ${JSON.stringify(data, null, 2)}`);
+                
+                updateStatus('test-results', 
+                    `✅ test_alert_system_simple: SUCESSO<br>
+                     📊 Dados: ${JSON.stringify(data, null, 2)}`, 
+                    'success'
+                );
+                
+                return data;
+            } catch (error) {
+                log(`❌ Erro na test_alert_system_simple: ${error.message}`, 'error');
+                updateStatus('test-results', 
+                    `❌ test_alert_system_simple: FALHOU<br>
+                     🚨 Erro: ${error.message}`, 
+                    'error'
+                );
+                throw error;
+            }
+        }
+
+        async function testBothFunctions() {
+            log('🔄 Iniciando teste completo de ambas as funções...');
+            
+            const results = {
+                main: null,
+                simple: null,
+                success: false
+            };
+
+            try {
+                // Testar função principal
+                try {
+                    results.main = await testMainFunction();
+                    log('✅ Função principal: OK');
+                } catch (error) {
+                    log(`❌ Função principal falhou: ${error.message}`, 'error');
+                    results.main = { error: error.message };
+                }
+
+                // Aguardar um pouco entre os testes
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // Testar função simplificada
+                try {
+                    results.simple = await testSimpleFunction();
+                    log('✅ Função simplificada: OK');
+                } catch (error) {
+                    log(`❌ Função simplificada falhou: ${error.message}`, 'error');
+                    results.simple = { error: error.message };
+                }
+
+                // Avaliar resultados
+                const mainSuccess = results.main && !results.main.error;
+                const simpleSuccess = results.simple && !results.simple.error;
+                
+                if (mainSuccess && simpleSuccess) {
+                    results.success = true;
+                    log('🎉 SUCESSO TOTAL: Ambas as funções funcionaram!', 'success');
+                    updateStatus('test-results', 
+                        `🎉 TESTE COMPLETO: SUCESSO TOTAL!<br>
+                         ✅ test_alert_system: OK<br>
+                         ✅ test_alert_system_simple: OK<br>
+                         🚀 Sistema de alertas 100% funcional!`, 
+                        'success'
+                    );
+                } else if (mainSuccess || simpleSuccess) {
+                    log('⚠️ SUCESSO PARCIAL: Pelo menos uma função funcionou', 'info');
+                    updateStatus('test-results', 
+                        `⚠️ TESTE COMPLETO: SUCESSO PARCIAL<br>
+                         ${mainSuccess ? '✅' : '❌'} test_alert_system: ${mainSuccess ? 'OK' : 'FALHOU'}<br>
+                         ${simpleSuccess ? '✅' : '❌'} test_alert_system_simple: ${simpleSuccess ? 'OK' : 'FALHOU'}`, 
+                        'info'
+                    );
+                } else {
+                    log('❌ FALHA TOTAL: Ambas as funções falharam', 'error');
+                    updateStatus('test-results', 
+                        `❌ TESTE COMPLETO: FALHA TOTAL<br>
+                         ❌ test_alert_system: FALHOU<br>
+                         ❌ test_alert_system_simple: FALHOU<br>
+                         🚨 Sistema de alertas não funcional!`, 
+                        'error'
+                    );
+                }
+
+                return results;
+            } catch (error) {
+                log(`❌ Erro geral no teste: ${error.message}`, 'error');
+                updateStatus('test-results', 
+                    `❌ ERRO GERAL NO TESTE<br>
+                     🚨 ${error.message}`, 
+                    'error'
+                );
+                return results;
+            }
+        }
+
+        // Inicializar quando a página carregar
+        window.addEventListener('load', async () => {
+            log('🔄 Inicializando testes...');
+            await checkConnection();
+            log('✅ Sistema pronto para testes!');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste RPC Alert System</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Teste do Sistema de Alertas</h1>
+    <button id="testBtn">Testar Sistema de Alertas</button>
+    <div id="result"></div>
+
+    <script>
+        // Configuração do Supabase
+        const supabaseUrl = 'https://wnqhqxqjqjqjqjqjqjqj.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InducWhxeHFqcWpxanFqcWpxanFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjkxNzI4NzEsImV4cCI6MjA0NDc0ODg3MX0.Qs8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8'
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey)
+
+        document.getElementById('testBtn').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result')
+            resultDiv.innerHTML = '<p>Testando...</p>'
+            
+            console.log('🔄 Iniciando teste do sistema de alertas...')
+            
+            try {
+                // Testar função test_alert_system
+                console.log('📞 Chamando supabase.rpc("test_alert_system")...')
+                const { data, error } = await supabase.rpc('test_alert_system')
+                
+                if (error) {
+                    console.error('❌ Erro na função test_alert_system:', error)
+                    
+                    // Tentar função simplificada
+                    console.log('📞 Tentando função simplificada...')
+                    const { data: simpleData, error: simpleError } = await supabase.rpc('test_alert_system_simple')
+                    
+                    if (simpleError) {
+                        console.error('❌ Erro na função test_alert_system_simple:', simpleError)
+                        resultDiv.innerHTML = `
+                            <h3>❌ Erro em ambas as funções:</h3>
+                            <p><strong>test_alert_system:</strong> ${error.message}</p>
+                            <p><strong>test_alert_system_simple:</strong> ${simpleError.message}</p>
+                        `
+                    } else {
+                        console.log('✅ Função simplificada funcionou:', simpleData)
+                        resultDiv.innerHTML = `
+                            <h3>✅ Função simplificada funcionou!</h3>
+                            <pre>${JSON.stringify(simpleData, null, 2)}</pre>
+                        `
+                    }
+                } else {
+                    console.log('✅ Função test_alert_system funcionou:', data)
+                    resultDiv.innerHTML = `
+                        <h3>✅ Sistema de alertas funcionando!</h3>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `
+                }
+            } catch (err) {
+                console.error('💥 Erro inesperado:', err)
+                resultDiv.innerHTML = `
+                    <h3>💥 Erro inesperado:</h3>
+                    <p>${err.message}</p>
+                `
+            }
+        })
+    </script>
+</body>
+</html>

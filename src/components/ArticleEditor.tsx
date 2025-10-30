@@ -40,6 +40,7 @@ import {
   validateOrigin
 } from '../utils/security';
 import { SecurityHeaders } from '../utils/securityHeaders';
+import { logEvent, logError } from '../lib/logging';
 
 interface ArticleData {
   title: string;
@@ -304,6 +305,15 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
       timestamp: new Date().toISOString()
     });
 
+    // Log do início da operação
+    await logEvent('info', 'ArticleEditor', 'save_article_start', {
+      user_id: supabaseUser?.id,
+      article_title: title.substring(0, 100),
+      is_editing: !!initialData?.id,
+      content_length: content.length,
+      has_featured_image: !!featuredImage
+    });
+
     // Verificar rate limiting para salvamento de artigos
     if (!RateLimiter.canPerformAction('article_save', 10, 60000)) { // 10 salvamentos por minuto
       console.log('❌ RATE LIMIT ATINGIDO');
@@ -397,11 +407,28 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
         console.log('⏰ TIMESTAMP ANTES DO onSave:', new Date().toISOString());
         await onSave(articleData);
         console.log('✅ onSave() CONCLUÍDO COM SUCESSO');
+        
+        // Log de sucesso
+        await logEvent('info', 'ArticleEditor', 'save_article_success', {
+          user_id: supabaseUser?.id,
+          article_title: articleData.title.substring(0, 100),
+          article_slug: articleData.slug,
+          is_editing: !!initialData?.id,
+          published: articleData.published,
+          content_length: articleData.content.length
+        });
       } catch (error) {
         console.error('💥 ERRO NO onSave():', {
           name: error.name,
           message: error.message,
           stack: error.stack?.substring(0, 500)
+        });
+        
+        // Log de erro
+        await logError(error, 'ArticleEditor', 'save_article_error', {
+          user_id: supabaseUser?.id,
+          article_title: title.substring(0, 100),
+          is_editing: !!initialData?.id
         });
       }
     } else {

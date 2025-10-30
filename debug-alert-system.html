@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Sistema de Alertas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        .log-entry {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug Sistema de Alertas</h1>
+        <p>Diagnóstico completo do sistema de alertas para identificar onde está falhando.</p>
+    </div>
+
+    <div class="container">
+        <h2>1. Verificar Assinantes Ativos</h2>
+        <button onclick="checkSubscribers()">Verificar Assinantes</button>
+        <div id="subscribers-result" class="test-section info" style="display:none;">
+            <h4>Resultado:</h4>
+            <div id="subscribers-content"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>2. Verificar Logs do Sistema</h2>
+        <button onclick="checkSystemLogs()">Verificar Logs Recentes</button>
+        <div id="logs-result" class="test-section info" style="display:none;">
+            <h4>Logs Recentes:</h4>
+            <div id="logs-content"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>3. Testar Função RPC Diretamente</h2>
+        <button onclick="testRPCFunction()">Testar test_alert_system</button>
+        <button onclick="testRPCSimple()">Testar test_alert_system_simple</button>
+        <div id="rpc-result" class="test-section info" style="display:none;">
+            <h4>Resultado RPC:</h4>
+            <div id="rpc-content"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>4. Verificar Servidor Node.js</h2>
+        <button onclick="checkNodeServer()">Testar Servidor (porta 3001)</button>
+        <div id="node-result" class="test-section info" style="display:none;">
+            <h4>Status do Servidor:</h4>
+            <div id="node-content"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>5. Testar Endpoint de Email Diretamente</h2>
+        <button onclick="testEmailEndpoint()">Testar /api/send-alert-email</button>
+        <div id="email-result" class="test-section info" style="display:none;">
+            <h4>Resultado do Email:</h4>
+            <div id="email-content"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>6. Verificar Funções do Banco</h2>
+        <button onclick="checkDatabaseFunctions()">Verificar Funções Existentes</button>
+        <div id="functions-result" class="test-section info" style="display:none;">
+            <h4>Funções do Banco:</h4>
+            <div id="functions-content"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2';
+
+        const supabaseUrl = 'https://ixmvkqjqfqhqhqhqhqhq.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4bXZrcWpxZnFocWhxaHFocWhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzU2NzQsImV4cCI6MjA1MDU1MTY3NH0.Zt8Ej-Ej-Ej-Ej-Ej-Ej-Ej-Ej-Ej-Ej-Ej-Ej-Ej';
+        
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        window.checkSubscribers = async function() {
+            const resultDiv = document.getElementById('subscribers-result');
+            const contentDiv = document.getElementById('subscribers-content');
+            
+            try {
+                resultDiv.style.display = 'block';
+                contentDiv.innerHTML = '<p>Verificando assinantes...</p>';
+                
+                const { data, error } = await supabase
+                    .from('alert_subscriptions')
+                    .select('*')
+                    .eq('is_active', true);
+                
+                if (error) {
+                    resultDiv.className = 'test-section error';
+                    contentDiv.innerHTML = `<p><strong>Erro:</strong> ${error.message}</p>`;
+                } else {
+                    resultDiv.className = 'test-section success';
+                    contentDiv.innerHTML = `
+                        <p><strong>Assinantes ativos encontrados:</strong> ${data.length}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (err) {
+                resultDiv.className = 'test-section error';
+                contentDiv.innerHTML = `<p><strong>Erro de conexão:</strong> ${err.message}</p>`;
+            }
+        };
+
+        window.checkSystemLogs = async function() {
+            const resultDiv = document.getElementById('logs-result');
+            const contentDiv = document.getElementById('logs-content');
+            
+            try {
+                resultDiv.style.display = 'block';
+                contentDiv.innerHTML = '<p>Verificando logs...</p>';
+                
+                const { data, error } = await supabase
+                    .from('system_logs')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(10);
+                
+                if (error) {
+                    resultDiv.className = 'test-section error';
+                    contentDiv.innerHTML = `<p><strong>Erro:</strong> ${error.message}</p>`;
+                } else {
+                    resultDiv.className = 'test-section success';
+                    let logsHtml = `<p><strong>Logs encontrados:</strong> ${data.length}</p>`;
+                    
+                    data.forEach(log => {
+                        logsHtml += `
+                            <div class="log-entry">
+                                <strong>${log.type}</strong> - ${log.created_at}<br>
+                                ${log.message}<br>
+                                ${log.context ? `<small>Context: ${JSON.stringify(log.context)}</small>` : ''}
+                            </div>
+                        `;
+                    });
+                    
+                    contentDiv.innerHTML = logsHtml;
+                }
+            } catch (err) {
+                resultDiv.className = 'test-section error';
+                contentDiv.innerHTML = `<p><strong>Erro de conexão:</strong> ${err.message}</p>`;
+            }
+        };
+
+        window.testRPCFunction = async function() {
+            const resultDiv = document.getElementById('rpc-result');
+            const contentDiv = document.getElementById('rpc-content');
+            
+            try {
+                resultDiv.style.display = 'block';
+                contentDiv.innerHTML = '<p>Testando função test_alert_system...</p>';
+                
+                const { data, error } = await supabase.rpc('test_alert_system');
+                
+                if (error) {
+                    resultDiv.className = 'test-section error';
+                    contentDiv.innerHTML = `<p><strong>Erro RPC:</strong> ${error.message}</p>`;
+                } else {
+                    resultDiv.className = 'test-section success';
+                    contentDiv.innerHTML = `
+                        <p><strong>Resultado da função:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (err) {
+                resultDiv.className = 'test-section error';
+                contentDiv.innerHTML = `<p><strong>Erro de conexão:</strong> ${err.message}</p>`;
+            }
+        };
+
+        window.testRPCSimple = async function() {
+            const resultDiv = document.getElementById('rpc-result');
+            const contentDiv = document.getElementById('rpc-content');
+            
+            try {
+                resultDiv.style.display = 'block';
+                contentDiv.innerHTML = '<p>Testando função test_alert_system_simple...</p>';
+                
+                const { data, error } = await supabase.rpc('test_alert_system_simple');
+                
+                if (error) {
+                    resultDiv.className = 'test-section error';
+                    contentDiv.innerHTML = `<p><strong>Erro RPC:</strong> ${error.message}</p>`;
+                } else {
+                    resultDiv.className = 'test-section success';
+                    contentDiv.innerHTML = `
+                        <p><strong>Resultado da função:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (err) {
+                resultDiv.className = 'test-section error';
+                contentDiv.innerHTML = `<p><strong>Erro de conexão:</strong> ${err.message}</p>`;
+            }
+        };
+
+        window.checkNodeServer = async function() {
+            const resultDiv = document.getElementById('node-result');
+            const contentDiv = document.getElementById('node-content');
+            
+            try {
+                resultDiv.style.display = 'block';
+                contentDiv.innerHTML = '<p>Testando servidor Node.js...</p>';
+                
+                const response = await fetch('http://localhost:3001/health');
+                
+                if (response.ok) {
+                    const data = await response.text();
+                    resultDiv.className = 'test-section success';
+                    contentDiv.innerHTML = `
+                        <p><strong>Servidor funcionando!</strong></p>
+                        <p>Status: ${response.status}</p>
+                        <p>Resposta: ${data}</p>
+                    `;
+                } else {
+                    resultDiv.className = 'test-section error';
+                    contentDiv.innerHTML = `<p><strong>Servidor com problema:</strong> Status ${response.status}</p>`;
+                }
+            } catch (err) {
+                resultDiv.className = 'test-section error';
+                contentDiv.innerHTML = `<p><strong>Servidor não acessível:</strong> ${err.message}</p>`;
+            }
+        };
+
+        window.testEmailEndpoint = async function() {
+            const resultDiv = document.getElementById('email-result');
+            const contentDiv = document.getElementById('email-content');
+            
+            try {
+                resultDiv.style.display = 'block';
+                contentDiv.innerHTML = '<p>Testando endpoint de email...</p>';
+                
+                const response = await fetch('http://localhost:3001/api/send-alert-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        to: 'teste@exemplo.com',
+                        subject: 'Teste de Alerta',
+                        message: 'Este é um teste do sistema de alertas'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'test-section success';
+                    contentDiv.innerHTML = `
+                        <p><strong>Email enviado com sucesso!</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.className = 'test-section error';
+                    contentDiv.innerHTML = `
+                        <p><strong>Erro no envio:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (err) {
+                resultDiv.className = 'test-section error';
+                contentDiv.innerHTML = `<p><strong>Erro de conexão:</strong> ${err.message}</p>`;
+            }
+        };
+
+        window.checkDatabaseFunctions = async function() {
+            const resultDiv = document.getElementById('functions-result');
+            const contentDiv = document.getElementById('functions-content');
+            
+            try {
+                resultDiv.style.display = 'block';
+                contentDiv.innerHTML = '<p>Verificando funções do banco...</p>';
+                
+                const { data, error } = await supabase
+                    .rpc('get_function_list');
+                
+                if (error) {
+                    // Se a função não existir, vamos tentar uma query direta
+                    const { data: functions, error: queryError } = await supabase
+                        .from('pg_proc')
+                        .select('proname')
+                        .like('proname', '%alert%');
+                    
+                    if (queryError) {
+                        resultDiv.className = 'test-section error';
+                        contentDiv.innerHTML = `<p><strong>Erro:</strong> ${queryError.message}</p>`;
+                    } else {
+                        resultDiv.className = 'test-section warning';
+                        contentDiv.innerHTML = `
+                            <p><strong>Funções relacionadas a alertas:</strong></p>
+                            <pre>${JSON.stringify(functions, null, 2)}</pre>
+                        `;
+                    }
+                } else {
+                    resultDiv.className = 'test-section success';
+                    contentDiv.innerHTML = `
+                        <p><strong>Funções encontradas:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (err) {
+                resultDiv.className = 'test-section error';
+                contentDiv.innerHTML = `<p><strong>Erro de conexão:</strong> ${err.message}</p>`;
+            }
+        };
+    </script>
+</body>
+</html>

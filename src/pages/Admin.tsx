@@ -46,7 +46,8 @@ import {
   Home,
   Star,
   RefreshCw,
-  Shield
+  Shield,
+  Monitor
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import ArticleEditor from '../components/ArticleEditor';
@@ -59,11 +60,12 @@ import { NotificationCenter } from '../components/Admin/NotificationCenter';
 import NewsletterLogs from '../components/Admin/NewsletterLogs';
 import { SEODashboard } from '../components/Admin/SEODashboard';
 import { BackupTab } from '../components/Admin/BackupTab';
+import { LogsTab } from '../components/Admin/LogsTab';
 import { resetForFeedbackTesting, getLocalStorageInfo } from '../utils/localStorageReset';
 
 
 export const Admin: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'articles' | 'categories' | 'editor' | 'newsletter' | 'users' | 'feedback' | 'seo' | 'backup'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'articles' | 'categories' | 'editor' | 'newsletter' | 'users' | 'feedback' | 'seo' | 'backup' | 'logs'>('dashboard');
   const { logout, user } = useAuth();
   
   // Hook para SEO
@@ -731,6 +733,7 @@ export const Admin: React.FC = () => {
             { id: 'categories', label: 'Categorias', icon: TrendingUp },
             { id: 'feedback', label: 'Feedback', icon: MessageSquare },
             { id: 'seo', label: 'SEO', icon: Search },
+            { id: 'logs', label: 'Logs & Monitoramento', icon: Monitor },
             { id: 'backup', label: 'Backup', icon: Shield }
           ].map((tab) => {
             const Icon = tab.icon;
@@ -2755,6 +2758,13 @@ export const Admin: React.FC = () => {
         {activeTab === 'seo' && (
           <div>
             <SEODashboard />
+          </div>
+        )}
+
+        {/* Logs & Monitoramento Tab */}
+        {activeTab === 'logs' && (
+          <div>
+            <LogsTab />
           </div>
         )}
 

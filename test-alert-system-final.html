@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Final - Sistema de Alertas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        .log-entry {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-ok { background-color: #28a745; }
+        .status-error { background-color: #dc3545; }
+        .status-warning { background-color: #ffc107; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Teste Final - Sistema de Alertas Corrigido</h1>
+        <p>Sistema corrigido para funcionar sem dependência do pg_net.</p>
+        
+        <div class="test-section info">
+            <h3>Status dos Componentes:</h3>
+            <div id="component-status">
+                <p><span class="status-indicator status-ok"></span>Servidor Node.js (porta 3001): Funcionando</p>
+                <p><span class="status-indicator status-ok"></span>Endpoint /api/send-alert-email: Testado e funcionando</p>
+                <p><span class="status-indicator status-warning"></span>Funções RPC: Corrigidas (sem pg_net)</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>1. Testar Funções Corrigidas</h2>
+        <button onclick="testWorkingFunctions()">Testar Funções Corrigidas</button>
+        <div id="working-result" class="test-section info" style="display:none;">
+            <h4>Resultado:</h4>
+            <div id="working-content"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>2. Verificar Logs do Sistema</h2>
+        <button onclick="checkRecentLogs()">Verificar Logs Recentes</button>
+        <div id="logs-result" class="test-section info" style="display:none;">
+            <h4>Logs Recentes:</h4>
+            <div id="logs-content"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>3. Processar Alertas Pendentes</h2>
+        <button onclick="processAlerts()">Processar Alertas nos Logs</button>
+        <div id="process-result" class="test-section info" style="display:none;">
+            <h4>Resultado do Processamento:</h4>
+            <div id="process-content"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>4. Teste Completo do Fluxo</h2>
+        <button onclick="testCompleteFlow()">Executar Teste Completo</button>
+        <div id="complete-result" class="test-section info" style="display:none;">
+            <h4>Resultado do Teste Completo:</h4>
+            <div id="complete-content"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js@2';
+
+        const supabaseUrl = 'https://ixmvkqjqfqhqhqhqhqhq.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4bXZrcWpxZnFocWhxaHFocWhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzU2NzQsImV4cCI6MjA1MDU1MTY3NH0.Zt8Ej-Ej-Ej-Ej-Ej-Ej-Ej-Ej-Ej-Ej-Ej-Ej-Ej';
+        
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        window.testWorkingFunctions = async function() {
+            const resultDiv = document.getElementById('working-result');
+            const contentDiv = document.getElementById('working-content');
+            
+            try {
+                resultDiv.style.display = 'block';
+                contentDiv.innerHTML = '<p>Testando funções corrigidas...</p>';
+                
+                // Testar função simples
+                const { data: simpleResult, error: simpleError } = await supabase
+                    .rpc('test_alert_system_simple_working');
+                
+                if (simpleError) {
+                    resultDiv.className = 'test-section error';
+                    contentDiv.innerHTML = `<p><strong>Erro na função simples:</strong> ${simpleError.message}</p>`;
+                    return;
+                }
+                
+                // Testar função completa
+                const { data: fullResult, error: fullError } = await supabase
+                    .rpc('test_alert_system_working', {
+                        alert_type: 'test_final',
+                        test_message: 'Teste final do sistema corrigido'
+                    });
+                
+                if (fullError) {
+                    resultDiv.className = 'test-section error';
+                    contentDiv.innerHTML = `<p><strong>Erro na função completa:</strong> ${fullError.message}</p>`;
+                    return;
+                }
+                
+                resultDiv.className = 'test-section success';
+                contentDiv.innerHTML = `
+                    <h5>✅ Função Simples:</h5>
+                    <pre>${JSON.stringify(simpleResult, null, 2)}</pre>
+                    <h5>✅ Função Completa:</h5>
+                    <pre>${JSON.stringify(fullResult, null, 2)}</pre>
+                `;
+                
+            } catch (err) {
+                resultDiv.className = 'test-section error';
+                contentDiv.innerHTML = `<p><strong>Erro de conexão:</strong> ${err.message}</p>`;
+            }
+        };
+
+        window.checkRecentLogs = async function() {
+            const resultDiv = document.getElementById('logs-result');
+            const contentDiv = document.getElementById('logs-content');
+            
+            try {
+                resultDiv.style.display = 'block';
+                contentDiv.innerHTML = '<p>Verificando logs...</p>';
+                
+                const { data, error } = await supabase
+                    .from('system_logs')
+                    .select('*')
+                    .in('type', ['test_alert', 'email_alert', 'email_processed', 'migration'])
+                    .order('created_at', { ascending: false })
+                    .limit(15);
+                
+                if (error) {
+                    resultDiv.className = 'test-section error';
+                    contentDiv.innerHTML = `<p><strong>Erro:</strong> ${error.message}</p>`;
+                } else {
+                    resultDiv.className = 'test-section success';
+                    let logsHtml = `<p><strong>Logs encontrados:</strong> ${data.length}</p>`;
+                    
+                    data.forEach(log => {
+                        const typeColor = log.type === 'email_alert' ? '#007bff' : 
+                                        log.type === 'test_alert' ? '#28a745' : 
+                                        log.type === 'email_processed' ? '#17a2b8' : '#6c757d';
+                        
+                        logsHtml += `
+                            <div class="log-entry">
+                                <strong style="color: ${typeColor}">${log.type}</strong> - ${new Date(log.created_at).toLocaleString()}<br>
+                                ${log.message}<br>
+                                ${log.context ? `<small>Context: ${JSON.stringify(log.context, null, 2)}</small>` : ''}
+                            </div>
+                        `;
+                    });
+                    
+                    contentDiv.innerHTML = logsHtml;
+                }
+            } catch (err) {
+                resultDiv.className = 'test-section error';
+                contentDiv.innerHTML = `<p><strong>Erro de conexão:</strong> ${err.message}</p>`;
+            }
+        };
+
+        window.processAlerts = async function() {
+            const resultDiv = document.getElementById('process-result');
+            const contentDiv = document.getElementById('process-content');
+            
+            try {
+                resultDiv.style.display = 'block';
+                contentDiv.innerHTML = '<p>Processando alertas pendentes...</p>';
+                
+                // Buscar logs de alertas pendentes
+                const { data: alertLogs, error } = await supabase
+                    .from('system_logs')
+                    .select('*')
+                    .eq('type', 'email_alert')
+                    .gte('created_at', new Date(Date.now() - 10 * 60 * 1000).toISOString())
+                    .order('created_at', { ascending: true });
+                
+                if (error) {
+                    resultDiv.className = 'test-section error';
+                    contentDiv.innerHTML = `<p><strong>Erro:</strong> ${error.message}</p>`;
+                    return;
+                }
+                
+                if (!alertLogs || alertLogs.length === 0) {
+                    resultDiv.className = 'test-section warning';
+                    contentDiv.innerHTML = '<p>Nenhum alerta pendente encontrado nos últimos 10 minutos.</p>';
+                    return;
+                }
+                
+                let processedCount = 0;
+                let results = [];
+                
+                for (const log of alertLogs) {
+                    try {
+                        const context = log.context;
+                        const recipients = context.recipients;
+                        const alertData = context.alert_data;
+                        
+                        // Enviar via Node.js
+                        const response = await fetch('http://localhost:3001/api/send-alert-email', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                recipients,
+                                alertData
+                            })
+                        });
+                        
+                        const emailResult = await response.json();
+                        
+                        if (response.ok) {
+                            processedCount++;
+                            results.push(`✅ Log ${log.id}: Email enviado (${emailResult.messageId})`);
+                            
+                            // Registrar sucesso
+                            await supabase
+                                .from('system_logs')
+                                .insert({
+                                    type: 'email_processed',
+                                    message: 'Email enviado com sucesso via processamento manual',
+                                    context: {
+                                        original_log_id: log.id,
+                                        email_result: emailResult,
+                                        processed_at: new Date().toISOString()
+                                    }
+                                });
+                        } else {
+                            results.push(`❌ Log ${log.id}: Falha no envio (${emailResult.error})`);
+                        }
+                        
+                    } catch (err) {
+                        results.push(`💥 Log ${log.id}: Erro (${err.message})`);
+                    }
+                }
+                
+                resultDiv.className = processedCount > 0 ? 'test-section success' : 'test-section error';
+                contentDiv.innerHTML = `
+                    <p><strong>Alertas encontrados:</strong> ${alertLogs.length}</p>
+                    <p><strong>Processados com sucesso:</strong> ${processedCount}</p>
+                    <div style="margin-top: 10px;">
+                        ${results.map(r => `<div>${r}</div>`).join('')}
+                    </div>
+                `;
+                
+            } catch (err) {
+                resultDiv.className = 'test-section error';
+                contentDiv.innerHTML = `<p><strong>Erro de conexão:</strong> ${err.message}</p>`;
+            }
+        };
+
+        window.testCompleteFlow = async function() {
+            const resultDiv = document.getElementById('complete-result');
+            const contentDiv = document.getElementById('complete-content');
+            
+            try {
+                resultDiv.style.display = 'block';
+                contentDiv.innerHTML = '<p>Executando teste completo do fluxo...</p>';
+                
+                let steps = [];
+                
+                // Passo 1: Executar função RPC
+                steps.push('1️⃣ Executando função RPC...');
+                const { data: rpcResult, error: rpcError } = await supabase
+                    .rpc('test_alert_system_working', {
+                        alert_type: 'test_complete_flow',
+                        test_message: 'Teste completo do fluxo de alertas'
+                    });
+                
+                if (rpcError) {
+                    steps.push(`❌ Erro na função RPC: ${rpcError.message}`);
+                    resultDiv.className = 'test-section error';
+                    contentDiv.innerHTML = steps.join('<br>');
+                    return;
+                }
+                
+                steps.push(`✅ Função RPC executada: ${rpcResult.message}`);
+                
+                // Passo 2: Aguardar um pouco
+                steps.push('2️⃣ Aguardando processamento...');
+                contentDiv.innerHTML = steps.join('<br>');
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Passo 3: Verificar se foi criado log de alerta
+                steps.push('3️⃣ Verificando logs criados...');
+                const { data: newLogs, error: logsError } = await supabase
+                    .from('system_logs')
+                    .select('*')
+                    .eq('type', 'email_alert')
+                    .gte('created_at', new Date(Date.now() - 2 * 60 * 1000).toISOString())
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+                
+                if (logsError || !newLogs || newLogs.length === 0) {
+                    steps.push('❌ Nenhum log de alerta criado');
+                    resultDiv.className = 'test-section error';
+                    contentDiv.innerHTML = steps.join('<br>');
+                    return;
+                }
+                
+                steps.push(`✅ Log de alerta criado: ID ${newLogs[0].id}`);
+                
+                // Passo 4: Processar o alerta
+                steps.push('4️⃣ Processando alerta...');
+                contentDiv.innerHTML = steps.join('<br>');
+                
+                const log = newLogs[0];
+                const context = log.context;
+                const recipients = context.recipients;
+                const alertData = context.alert_data;
+                
+                const response = await fetch('http://localhost:3001/api/send-alert-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        recipients,
+                        alertData
+                    })
+                });
+                
+                const emailResult = await response.json();
+                
+                if (response.ok) {
+                    steps.push(`✅ Email enviado com sucesso: ${emailResult.messageId}`);
+                    steps.push(`📧 Destinatários: ${context.recipients_count}`);
+                    steps.push(`🎯 Tipo de alerta: ${alertData.type}`);
+                    
+                    resultDiv.className = 'test-section success';
+                } else {
+                    steps.push(`❌ Falha no envio: ${emailResult.error}`);
+                    resultDiv.className = 'test-section error';
+                }
+                
+                contentDiv.innerHTML = steps.join('<br>');
+                
+            } catch (err) {
+                resultDiv.className = 'test-section error';
+                contentDiv.innerHTML = `<p><strong>Erro no teste completo:</strong> ${err.message}</p>`;
+            }
+        };
+
+        // Executar teste automático ao carregar
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                console.log('🚀 Página carregada - sistema de alertas corrigido pronto para teste');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

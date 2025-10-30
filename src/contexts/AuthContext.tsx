@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { logAuth, logError } from '../lib/logging';
 
 interface User {
   id: string;
@@ -422,11 +423,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (adminUser) {
           console.log('✅ ADMIN CONFIRMADO, SALVANDO NO STORAGE...');
           saveUserToStorage(adminUser);
+          
+          // Log de sucesso do login
+          await logAuth('login_success', adminUser.id, true, {
+            email: adminUser.email,
+            role: adminUser.role
+          });
+          
           setIsLoading(false);
           console.log('🎯 LOGIN COMPLETO - ESTADO PERSISTIDO - RETORNANDO TRUE');
           return true;
         } else {
           console.log('❌ NÃO É ADMIN - LIMPANDO DADOS LOCAIS...');
+          
+          // Log de falha por não ser admin
+          await logAuth('login_failure_not_admin', data.user.id, false, {
+            email: data.user.email,
+            reason: 'user_not_admin'
+          });
+          
           // NÃO FAZER LOGOUT NO SUPABASE - APENAS LIMPAR DADOS LOCAIS
           saveSupabaseUserToStorage(null);
           saveUserToStorage(null);
@@ -441,6 +456,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       // 🔥 APENAS LOG DE ERRO CRÍTICO - SEM RE-THROW
       console.error('💥 ERRO CRÍTICO NO LOGIN:', error);
+      
+      // Log de erro no login
+      await logError('login_error', error, {
+        email,
+        context: 'AuthContext.login'
+      });
+      
       setIsLoading(false);
       return false; // 🔥 RETORNA FALSE EM VEZ DE THROW
     }
@@ -448,6 +470,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     console.log('🚪 INICIANDO LOGOUT ROBUSTO...');
+    
+    // Log do logout
+    if (user) {
+      await logAuth('logout', user.id, true, {
+        email: user.email,
+        role: user.role
+      });
+    }
     
     // Função para limpeza local garantida
     const performLocalCleanup = () => {

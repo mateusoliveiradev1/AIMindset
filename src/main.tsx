@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.tsx'
 import { devSecurityTest } from './utils/securityTest'
 import { autoReset } from './utils/localStorageReset'
+import { initializeLogging } from './lib/logging'
 // import { initServiceWorker } from './utils/serviceWorker'
 
 // 🔄 RESET AUTOMÁTICO DO LOCALSTORAGE
@@ -14,6 +15,14 @@ autoReset().then((resetResult) => {
   }
 }).catch((error) => {
   console.error('❌ [MAIN] Erro no reset automático:', error);
+});
+
+// 📝 INICIALIZAR SISTEMA DE LOGS
+// Inicializar sistema de logs após reset automático
+initializeLogging().then(() => {
+  console.log('📝 [MAIN] Sistema de logs inicializado com sucesso');
+}).catch((error) => {
+  console.error('❌ [MAIN] Erro ao inicializar sistema de logs:', error);
 });
 
 // Executar testes de segurança em desenvolvimento

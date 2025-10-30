@@ -1,0 +1,82 @@
+[2025-10-30T22:42:31.231Z] 🚀 Iniciando backup completo do banco de dados...
+[2025-10-30T22:42:31.232Z] 📊 Fazendo backup das tabelas...
+[2025-10-30T22:42:31.232Z] 🔄 Processando tabela: admin_users
+[2025-10-30T22:42:31.515Z] ✅ Tabela admin_users: 2 registros
+[2025-10-30T22:42:31.516Z] 🔄 Processando tabela: alert_subscribers
+[2025-10-30T22:42:31.696Z] ✅ Tabela alert_subscribers: 3 registros
+[2025-10-30T22:42:31.697Z] 🔄 Processando tabela: alert_subscriptions
+[2025-10-30T22:42:31.907Z] ✅ Tabela alert_subscriptions: 1 registros
+[2025-10-30T22:42:31.907Z] 🔄 Processando tabela: app_logs
+[2025-10-30T22:42:32.127Z] ✅ Tabela app_logs: 22 registros
+[2025-10-30T22:42:32.128Z] 🔄 Processando tabela: app_logs_backup
+[2025-10-30T22:42:32.341Z] ✅ Tabela app_logs_backup: 0 registros
+[2025-10-30T22:42:32.341Z] 🔄 Processando tabela: articles
+[2025-10-30T22:42:32.855Z] ✅ Tabela articles: 10 registros
+[2025-10-30T22:42:32.855Z] 🔄 Processando tabela: articles_backup
+[2025-10-30T22:42:33.020Z] ✅ Tabela articles_backup: 0 registros
+[2025-10-30T22:42:33.020Z] 🔄 Processando tabela: backend_logs
+[2025-10-30T22:42:33.367Z] ✅ Tabela backend_logs: 11 registros
+[2025-10-30T22:42:33.367Z] 🔄 Processando tabela: backend_logs_backup
+[2025-10-30T22:42:33.528Z] ✅ Tabela backend_logs_backup: 0 registros
+[2025-10-30T22:42:33.528Z] 🔄 Processando tabela: backup_articles
+[2025-10-30T22:42:34.474Z] ✅ Tabela backup_articles: 80 registros
+[2025-10-30T22:42:34.476Z] 🔄 Processando tabela: backup_comments
+[2025-10-30T22:42:34.654Z] ✅ Tabela backup_comments: 1 registros
+[2025-10-30T22:42:34.654Z] 🔄 Processando tabela: backup_feedbacks
+[2025-10-30T22:42:34.825Z] ✅ Tabela backup_feedbacks: 80 registros
+[2025-10-30T22:42:34.826Z] 🔄 Processando tabela: backup_logs
+[2025-10-30T22:42:34.990Z] ✅ Tabela backup_logs: 20 registros
+[2025-10-30T22:42:34.990Z] 🔄 Processando tabela: categories
+[2025-10-30T22:42:35.150Z] ✅ Tabela categories: 8 registros
+[2025-10-30T22:42:35.151Z] 🔄 Processando tabela: comments
+[2025-10-30T22:42:35.314Z] ✅ Tabela comments: 0 registros
+[2025-10-30T22:42:35.315Z] 🔄 Processando tabela: comments_backup
+[2025-10-30T22:42:35.488Z] ✅ Tabela comments_backup: 0 registros
+[2025-10-30T22:42:35.489Z] 🔄 Processando tabela: contacts
+[2025-10-30T22:42:35.645Z] ✅ Tabela contacts: 0 registros
+[2025-10-30T22:42:35.645Z] 🔄 Processando tabela: cookie_preferences
+[2025-10-30T22:42:35.818Z] ✅ Tabela cookie_preferences: 1 registros
+[2025-10-30T22:42:35.818Z] 🔄 Processando tabela: email_automations
+[2025-10-30T22:42:35.992Z] ✅ Tabela email_automations: 3 registros
+[2025-10-30T22:42:35.992Z] 🔄 Processando tabela: email_templates
+[2025-10-30T22:42:36.172Z] ✅ Tabela email_templates: 3 registros
+[2025-10-30T22:42:36.172Z] 🔄 Processando tabela: feedback_backup
+[2025-10-30T22:42:36.335Z] ✅ Tabela feedback_backup: 0 registros
+[2025-10-30T22:42:36.335Z] 🔄 Processando tabela: feedbacks
+[2025-10-30T22:42:36.512Z] ✅ Tabela feedbacks: 10 registros
+[2025-10-30T22:42:36.512Z] 🔄 Processando tabela: feedbacks_backup
+[2025-10-30T22:42:36.687Z] ✅ Tabela feedbacks_backup: 0 registros
+[2025-10-30T22:42:36.687Z] 🔄 Processando tabela: newsletter_campaigns
+[2025-10-30T22:42:36.901Z] ✅ Tabela newsletter_campaigns: 3 registros
+[2025-10-30T22:42:36.902Z] 🔄 Processando tabela: newsletter_logs
+[2025-10-30T22:42:37.062Z] ✅ Tabela newsletter_logs: 2 registros
+[2025-10-30T22:42:37.062Z] 🔄 Processando tabela: newsletter_logs_backup
+[2025-10-30T22:42:37.225Z] ✅ Tabela newsletter_logs_backup: 4 registros
+[2025-10-30T22:42:37.225Z] 🔄 Processando tabela: newsletter_subscribers
+[2025-10-30T22:42:37.381Z] ✅ Tabela newsletter_subscribers: 0 registros
+[2025-10-30T22:42:37.382Z] 🔄 Processando tabela: newsletter_templates
+[2025-10-30T22:42:37.562Z] ✅ Tabela newsletter_templates: 3 registros
+[2025-10-30T22:42:37.562Z] 🔄 Processando tabela: privacy_requests
+[2025-10-30T22:42:37.722Z] ✅ Tabela privacy_requests: 0 registros
+[2025-10-30T22:42:37.722Z] 🔄 Processando tabela: rate_limits
+[2025-10-30T22:42:37.913Z] ✅ Tabela rate_limits: 0 registros
+[2025-10-30T22:42:37.913Z] 🔄 Processando tabela: security_audit_logs
+[2025-10-30T22:42:38.388Z] ✅ Tabela security_audit_logs: 50 registros
+[2025-10-30T22:42:38.389Z] 🔄 Processando tabela: seo_metadata
+[2025-10-30T22:42:38.633Z] ✅ Tabela seo_metadata: 38 registros
+[2025-10-30T22:42:38.634Z] 🔄 Processando tabela: system_logs
+[2025-10-30T22:42:38.944Z] ✅ Tabela system_logs: 335 registros
+[2025-10-30T22:42:38.945Z] 🔄 Processando tabela: system_logs_backup
+[2025-10-30T22:42:39.134Z] ✅ Tabela system_logs_backup: 0 registros
+[2025-10-30T22:42:39.134Z] 🔄 Processando tabela: user_profiles
+[2025-10-30T22:42:39.309Z] ✅ Tabela user_profiles: 0 registros
+[2025-10-30T22:42:39.312Z] ✅ Backup concluído!
+[2025-10-30T22:42:39.312Z] 📁 Arquivo: C:\Users\Administrador\Documents\estudos\AIMindset\backups\database-backup-2025-10-30T22-42-31-230Z.sql
+[2025-10-30T22:42:39.312Z] 📊 Tabelas: 35/35
+[2025-10-30T22:42:39.312Z] 📈 Registros: 690
+[2025-10-30T22:42:39.313Z] 🔍 Validando integridade do backup...
+[2025-10-30T22:42:39.318Z] 📋 Cabeçalho: ✅
+[2025-10-30T22:42:39.318Z] 📋 Comandos INSERT: ✅
+[2025-10-30T22:42:39.319Z] 📋 Estatísticas: ✅
+[2025-10-30T22:42:39.319Z] 📋 Linhas totais: 22130
+[2025-10-30T22:42:39.319Z] 🎯 Backup VÁLIDO

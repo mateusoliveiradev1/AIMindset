@@ -7,6 +7,7 @@ import { useToast } from '../hooks/useToast';
 import { useSEO } from '../hooks/useSEO';
 import SEOManager from '../components/SEO/SEOManager';
 import { sanitizeEmail, validators, RateLimiter, CSRFProtection, secureCleanup } from '../utils/security';
+import { logAuth, logError } from '../lib/logging';
 
 const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -60,11 +61,23 @@ const AdminLogin: React.FC = () => {
 
     try {
       console.log('🚀 INICIANDO LOGIN COM:', sanitizedEmail);
+      
+      // Log da tentativa de login
+      await logAuth('admin_login_attempt', undefined, true, {
+        email: sanitizedEmail,
+        user_agent: navigator.userAgent
+      });
+      
       const success = await login(sanitizedEmail, password);
       
       if (success) {
         console.log('✅ LOGIN REALIZADO COM SUCESSO!');
         showToast('success', 'Login realizado com sucesso!');
+        
+        // Log de sucesso
+        await logAuth('admin_login_success', undefined, true, {
+          email: sanitizedEmail
+        });
         
         // Limpar dados sensíveis do formulário
         secureCleanup.clearFormData(e.target as HTMLFormElement);
@@ -78,6 +91,12 @@ const AdminLogin: React.FC = () => {
         setError('Credenciais inválidas ou usuário não é administrador');
         showToast('error', 'Credenciais inválidas');
         
+        // Log de falha
+        await logAuth('admin_login_failure', undefined, false, {
+          email: sanitizedEmail,
+          reason: 'invalid_credentials'
+        });
+        
         // Limpar senha em caso de erro
         setPassword('');
       }
@@ -86,6 +105,11 @@ const AdminLogin: React.FC = () => {
       console.error('💥 ERRO INESPERADO NO LOGIN:', error);
       setError('Erro interno do sistema. Tente novamente.');
       showToast('error', 'Erro interno do sistema');
+      
+      // Log de erro
+      await logError(error, 'AdminLogin', 'admin_login_error', {
+        email: sanitizedEmail
+      });
       
       // Limpar senha em caso de erro
       setPassword('');

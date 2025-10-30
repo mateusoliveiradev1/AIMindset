@@ -10,6 +10,9 @@ interface BackupResult {
     articles: number;
     comments: number;
     feedbacks: number;
+    backend_logs?: number;
+    app_logs?: number;
+    system_logs?: number;
   };
   error?: string;
 }
@@ -82,16 +85,24 @@ export const useBackup = () => {
       
       console.log('✅ [DEBUG] Backup concluído:', data);
       
-      // Processar o resultado da RPC
+      // Processar o resultado da RPC com suporte a logs
       const processedResult: BackupResult = {
         success: data.success,
         message: data.success ? 'Backup criado com sucesso!' : 'Erro ao criar backup',
-        records_affected: data.counts ? 
-          (data.counts.articles || 0) + (data.counts.comments || 0) + (data.counts.feedbacks || 0) : 0,
-        details: data.counts ? {
-          articles: data.counts.articles || 0,
-          comments: data.counts.comments || 0,
-          feedbacks: data.counts.feedbacks || 0
+        records_affected: data.details ? 
+          (data.details.articles || 0) + 
+          (data.details.comments || 0) + 
+          (data.details.feedbacks || 0) +
+          (data.details.backend_logs || 0) +
+          (data.details.app_logs || 0) +
+          (data.details.system_logs || 0) : 0,
+        details: data.details ? {
+          articles: data.details.articles || 0,
+          comments: data.details.comments || 0,
+          feedbacks: data.details.feedbacks || 0,
+          backend_logs: data.details.backend_logs || 0,
+          app_logs: data.details.app_logs || 0,
+          system_logs: data.details.system_logs || 0
         } : undefined,
         error: data.error
       };

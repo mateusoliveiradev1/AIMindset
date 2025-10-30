@@ -1,0 +1,48 @@
+# Supabase Configuration File
+
+[api]
+# API settings
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+# Database settings
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+# Studio settings
+enabled = true
+port = 54323
+api_url = "http://localhost"
+
+[inbucket]
+# Inbucket settings (for local email testing)
+enabled = true
+port = 54324
+smtp_port = 54326
+
+[storage]
+# Storage settings
+enabled = true
+
+[auth]
+# Auth settings
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://localhost:3000"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+# Email auth settings
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[functions]
+# Edge Functions settings

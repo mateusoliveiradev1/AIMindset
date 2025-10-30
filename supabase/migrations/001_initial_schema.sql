@@ -1,11 +1,18 @@
--- AIMindset Database Schema
--- Initial migration with all tables, RLS policies, indexes, and triggers
+-- =====================================================
+-- AIMindset Database Schema - Consolidated Migration
+-- Data: 2025-10-30
+-- Descrição: Schema inicial consolidado com todas as tabelas principais
+-- =====================================================
 
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- =====================================================
+-- TABELAS PRINCIPAIS
+-- =====================================================
+
 -- Create categories table
-CREATE TABLE categories (
+CREATE TABLE IF NOT EXISTS categories (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   name VARCHAR(100) NOT NULL UNIQUE,
   slug VARCHAR(100) NOT NULL UNIQUE,
@@ -15,7 +22,7 @@ CREATE TABLE categories (
 );
 
 -- Create admin_users table
-CREATE TABLE admin_users (
+CREATE TABLE IF NOT EXISTS admin_users (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   email VARCHAR(255) NOT NULL UNIQUE,
   name VARCHAR(255) NOT NULL,
@@ -25,21 +32,63 @@ CREATE TABLE admin_users (
 );
 
 -- Create articles table
-CREATE TABLE articles (
+CREATE TABLE IF NOT EXISTS articles (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
   excerpt TEXT NOT NULL,
   content TEXT NOT NULL,
   image_url TEXT,
+  slug VARCHAR(255) UNIQUE,
+  tags TEXT[],
   category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
   author_id UUID REFERENCES admin_users(id) ON DELETE SET NULL,
   published BOOLEAN DEFAULT false,
+  is_featured BOOLEAN DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create comments table
+CREATE TABLE IF NOT EXISTS comments (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  article_id UUID REFERENCES articles(id) ON DELETE CASCADE,
+  author_name VARCHAR(255) NOT NULL,
+  author_email VARCHAR(255) NOT NULL,
+  content TEXT NOT NULL,
+  likes INTEGER DEFAULT 0,
+  replies INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create feedbacks table
+CREATE TABLE IF NOT EXISTS feedbacks (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  article_id UUID REFERENCES articles(id) ON DELETE CASCADE,
+  rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+  comment TEXT,
+  user_email VARCHAR(255),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create contacts table
+CREATE TABLE IF NOT EXISTS contacts (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  subject VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'responded', 'archived')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- TABELAS DE NEWSLETTER E EMAIL
+-- =====================================================
+
 -- Create newsletter_subscribers table
-CREATE TABLE newsletter_subscribers (
+CREATE TABLE IF NOT EXISTS newsletter_subscribers (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   email VARCHAR(255) NOT NULL UNIQUE,
   status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
@@ -47,185 +96,200 @@ CREATE TABLE newsletter_subscribers (
   unsubscribed_at TIMESTAMP WITH TIME ZONE
 );
 
--- Create contacts table
-CREATE TABLE contacts (
+-- Create newsletter_campaigns table
+CREATE TABLE IF NOT EXISTS newsletter_campaigns (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
-  email VARCHAR(255) NOT NULL,
   subject VARCHAR(255) NOT NULL,
-  message TEXT NOT NULL,
-  status VARCHAR(20) DEFAULT 'new' CHECK (status IN ('new', 'read', 'replied')),
+  content TEXT NOT NULL,
+  status VARCHAR(20) DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'scheduled')),
+  sent_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create email_templates table
+CREATE TABLE IF NOT EXISTS email_templates (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  name VARCHAR(255) NOT NULL UNIQUE,
+  subject VARCHAR(255) NOT NULL,
+  content TEXT NOT NULL,
+  variables JSONB DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create email_automations table
+CREATE TABLE IF NOT EXISTS email_automations (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  trigger_event VARCHAR(100) NOT NULL,
+  template_id UUID REFERENCES email_templates(id) ON DELETE CASCADE,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- TABELAS DE LOGS E AUDITORIA
+-- =====================================================
+
+-- Create app_logs table
+CREATE TABLE IF NOT EXISTS app_logs (
+  id SERIAL PRIMARY KEY,
+  level VARCHAR(20) NOT NULL CHECK (level IN ('info', 'warn', 'error', 'debug')),
+  source VARCHAR(100) NOT NULL,
+  action VARCHAR(100) NOT NULL,
+  details JSONB,
+  user_id TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create newsletter_logs table
-CREATE TABLE newsletter_logs (
-  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  subject VARCHAR(255) NOT NULL,
-  content TEXT NOT NULL,
-  recipients_count INTEGER NOT NULL DEFAULT 0,
-  sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  status VARCHAR(20) DEFAULT 'sent' CHECK (status IN ('sent', 'failed')),
-  error_message TEXT
+-- Create system_logs table
+CREATE TABLE IF NOT EXISTS system_logs (
+  id SERIAL PRIMARY KEY,
+  type VARCHAR(50) NOT NULL,
+  message TEXT NOT NULL,
+  context JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create indexes for better performance
-CREATE INDEX idx_articles_category_id ON articles(category_id);
-CREATE INDEX idx_articles_author_id ON articles(author_id);
-CREATE INDEX idx_articles_published ON articles(published);
-CREATE INDEX idx_articles_created_at ON articles(created_at DESC);
-CREATE INDEX idx_newsletter_subscribers_email ON newsletter_subscribers(email);
-CREATE INDEX idx_newsletter_subscribers_status ON newsletter_subscribers(status);
-CREATE INDEX idx_contacts_status ON contacts(status);
-CREATE INDEX idx_contacts_created_at ON contacts(created_at DESC);
-CREATE INDEX idx_newsletter_logs_sent_at ON newsletter_logs(sent_at DESC);
+-- Create backend_logs table
+CREATE TABLE IF NOT EXISTS backend_logs (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  table_name VARCHAR(100) NOT NULL,
+  action VARCHAR(20) NOT NULL CHECK (action IN ('INSERT', 'UPDATE', 'DELETE')),
+  record_id UUID,
+  old_data JSONB,
+  new_data JSONB,
+  performed_by TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
--- Enable Row Level Security (RLS)
-ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE admin_users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE articles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE newsletter_subscribers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE newsletter_logs ENABLE ROW LEVEL SECURITY;
+-- Create security_audit_logs table
+CREATE TABLE IF NOT EXISTS security_audit_logs (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  event_type VARCHAR(100) NOT NULL,
+  user_id TEXT,
+  ip_address INET,
+  user_agent TEXT,
+  details JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
--- RLS Policies for categories
-CREATE POLICY "Categories are viewable by everyone" ON categories
-  FOR SELECT USING (true);
+-- =====================================================
+-- TABELAS DE SISTEMA E CONFIGURAÇÃO
+-- =====================================================
 
-CREATE POLICY "Categories are editable by admins only" ON categories
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM admin_users 
-      WHERE admin_users.email = auth.jwt() ->> 'email'
-    )
-  );
+-- Create seo_metadata table
+CREATE TABLE IF NOT EXISTS seo_metadata (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  page_path VARCHAR(255) NOT NULL UNIQUE,
+  title VARCHAR(255) NOT NULL,
+  description TEXT NOT NULL,
+  keywords TEXT[],
+  og_title VARCHAR(255),
+  og_description TEXT,
+  og_image TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
--- RLS Policies for admin_users
-CREATE POLICY "Admin users are viewable by authenticated admins" ON admin_users
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM admin_users 
-      WHERE admin_users.email = auth.jwt() ->> 'email'
-    )
-  );
+-- Create user_profiles table
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  name VARCHAR(255),
+  preferences JSONB DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
-CREATE POLICY "Admin users are editable by super admins only" ON admin_users
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM admin_users 
-      WHERE admin_users.email = auth.jwt() ->> 'email' 
-      AND admin_users.role = 'super_admin'
-    )
-  );
+-- Create cookie_preferences table
+CREATE TABLE IF NOT EXISTS cookie_preferences (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  analytics BOOLEAN DEFAULT false,
+  marketing BOOLEAN DEFAULT false,
+  functional BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
--- RLS Policies for articles
-CREATE POLICY "Published articles are viewable by everyone" ON articles
-  FOR SELECT USING (published = true OR EXISTS (
-    SELECT 1 FROM admin_users 
-    WHERE admin_users.email = auth.jwt() ->> 'email'
-  ));
+-- Create alert_subscribers table
+CREATE TABLE IF NOT EXISTS alert_subscribers (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  is_active BOOLEAN DEFAULT true
+);
 
-CREATE POLICY "Articles are editable by admins only" ON articles
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM admin_users 
-      WHERE admin_users.email = auth.jwt() ->> 'email'
-    )
-  );
+-- Create alert_subscriptions table
+CREATE TABLE IF NOT EXISTS alert_subscriptions (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  is_active BOOLEAN DEFAULT true
+);
 
--- RLS Policies for newsletter_subscribers
-CREATE POLICY "Newsletter subscribers can be inserted by anyone" ON newsletter_subscribers
-  FOR INSERT WITH CHECK (true);
+-- =====================================================
+-- ÍNDICES PARA PERFORMANCE
+-- =====================================================
 
-CREATE POLICY "Newsletter subscribers are viewable by admins only" ON newsletter_subscribers
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM admin_users 
-      WHERE admin_users.email = auth.jwt() ->> 'email'
-    )
-  );
+-- Índices para articles
+CREATE INDEX IF NOT EXISTS idx_articles_published ON articles(published);
+CREATE INDEX IF NOT EXISTS idx_articles_category ON articles(category_id);
+CREATE INDEX IF NOT EXISTS idx_articles_created_at ON articles(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_articles_slug ON articles(slug);
 
-CREATE POLICY "Newsletter subscribers are editable by admins only" ON newsletter_subscribers
-  FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM admin_users 
-      WHERE admin_users.email = auth.jwt() ->> 'email'
-    )
-  );
+-- Índices para comments
+CREATE INDEX IF NOT EXISTS idx_comments_article_id ON comments(article_id);
+CREATE INDEX IF NOT EXISTS idx_comments_created_at ON comments(created_at DESC);
 
--- RLS Policies for contacts
-CREATE POLICY "Contacts can be inserted by anyone" ON contacts
-  FOR INSERT WITH CHECK (true);
+-- Índices para feedbacks
+CREATE INDEX IF NOT EXISTS idx_feedbacks_article_id ON feedbacks(article_id);
+CREATE INDEX IF NOT EXISTS idx_feedbacks_created_at ON feedbacks(created_at DESC);
 
-CREATE POLICY "Contacts are viewable by admins only" ON contacts
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM admin_users 
-      WHERE admin_users.email = auth.jwt() ->> 'email'
-    )
-  );
+-- Índices para logs
+CREATE INDEX IF NOT EXISTS idx_app_logs_created_at ON app_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_app_logs_level ON app_logs(level);
+CREATE INDEX IF NOT EXISTS idx_system_logs_created_at ON system_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_system_logs_type ON system_logs(type);
 
-CREATE POLICY "Contacts are editable by admins only" ON contacts
-  FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM admin_users 
-      WHERE admin_users.email = auth.jwt() ->> 'email'
-    )
-  );
+-- Índices para newsletter
+CREATE INDEX IF NOT EXISTS idx_newsletter_subscribers_email ON newsletter_subscribers(email);
+CREATE INDEX IF NOT EXISTS idx_newsletter_subscribers_status ON newsletter_subscribers(status);
 
--- RLS Policies for newsletter_logs
-CREATE POLICY "Newsletter logs are viewable by admins only" ON newsletter_logs
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM admin_users 
-      WHERE admin_users.email = auth.jwt() ->> 'email'
-    )
-  );
+-- =====================================================
+-- INSERIR DADOS INICIAIS
+-- =====================================================
 
-CREATE POLICY "Newsletter logs are insertable by admins only" ON newsletter_logs
-  FOR INSERT WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM admin_users 
-      WHERE admin_users.email = auth.jwt() ->> 'email'
-    )
-  );
-
--- Create function to update updated_at timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ language 'plpgsql';
-
--- Create triggers for updated_at
-CREATE TRIGGER update_categories_updated_at BEFORE UPDATE ON categories
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_admin_users_updated_at BEFORE UPDATE ON admin_users
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_articles_updated_at BEFORE UPDATE ON articles
-  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- Insert initial categories
+-- Insert default categories
 INSERT INTO categories (name, slug, description) VALUES
   ('Inteligência Artificial', 'inteligencia-artificial', 'Artigos sobre IA, machine learning e tecnologias emergentes'),
   ('Tecnologia', 'tecnologia', 'Novidades e tendências em tecnologia'),
-  ('Inovação', 'inovacao', 'Inovações e descobertas que moldam o futuro'),
-  ('Negócios', 'negocios', 'Estratégias de negócios e empreendedorismo'),
-  ('Educação', 'educacao', 'Educação e desenvolvimento pessoal');
+  ('Inovação', 'inovacao', 'Inovações e startups que estão mudando o mundo'),
+  ('Futuro', 'futuro', 'Visões e previsões sobre o futuro da tecnologia'),
+  ('Negócios', 'negocios', 'Como a tecnologia está transformando os negócios'),
+  ('Educação', 'educacao', 'Tecnologia na educação e aprendizado'),
+  ('Saúde', 'saude', 'Inovações tecnológicas na área da saúde'),
+  ('Sustentabilidade', 'sustentabilidade', 'Tecnologia verde e sustentável')
+ON CONFLICT (slug) DO NOTHING;
 
--- Insert super admin user
+-- Insert default admin user
 INSERT INTO admin_users (email, name, role) VALUES
-  ('warface01031999@gmail.com', 'Super Admin', 'super_admin');
+  ('admin@aimindset.com', 'Admin AIMindset', 'super_admin')
+ON CONFLICT (email) DO NOTHING;
 
--- Grant permissions to anon and authenticated roles
-GRANT SELECT ON categories TO anon;
-GRANT SELECT ON articles TO anon;
-GRANT INSERT ON newsletter_subscribers TO anon;
-GRANT INSERT ON contacts TO anon;
+-- Insert default email templates
+INSERT INTO email_templates (name, subject, content, variables) VALUES
+  ('welcome', 'Bem-vindo ao AIMindset!', 'Olá {{name}}, bem-vindo à nossa newsletter!', '{"name": "string"}'),
+  ('newsletter', 'Newsletter AIMindset', 'Confira as últimas novidades: {{content}}', '{"content": "string"}'),
+  ('alert', 'Alerta do Sistema', 'Alerta: {{message}}', '{"message": "string"}')
+ON CONFLICT (name) DO NOTHING;
 
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO authenticated;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+-- Insert default alert subscribers
+INSERT INTO alert_subscribers (email) VALUES
+  ('admin@aimindset.com'),
+  ('alerts@aimindset.com')
+ON CONFLICT (email) DO NOTHING;
