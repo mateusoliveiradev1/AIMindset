@@ -2317,7 +2317,7 @@ export const SEODashboard: React.FC = () => {
                 value={scoreFilter}
                 onChange={(e) => {
                   console.log('🎯 Score filter changed:', e.target.value);
-                  setScoreFilter(e.target.value);
+                  setScoreFilter(e.target.value as 'all' | 'excellent' | 'good' | 'needs-improvement' | 'poor');
                 }}
                 className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
               >
@@ -2338,7 +2338,7 @@ export const SEODashboard: React.FC = () => {
                 value={pageTypeFilter}
                 onChange={(e) => {
                   console.log('📄 Page type filter changed:', e.target.value);
-                  setPageTypeFilter(e.target.value);
+                  setPageTypeFilter(e.target.value as 'all' | 'article' | 'category' | 'static');
                 }}
                 className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
               >
@@ -2359,7 +2359,7 @@ export const SEODashboard: React.FC = () => {
                 value={problemFilter}
                 onChange={(e) => {
                   console.log('⚠️ Problem filter changed:', e.target.value);
-                  setProblemFilter(e.target.value);
+                  setProblemFilter(e.target.value as 'all' | 'duplicate-title' | 'short-description' | 'no-keywords' | 'long-url' | 'no-og-image' | 'no-schema');
                 }}
                 className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
               >
@@ -2382,7 +2382,7 @@ export const SEODashboard: React.FC = () => {
                 value={sortBy}
                 onChange={(e) => {
                   console.log('🔄 Sort changed:', e.target.value);
-                  setSortBy(e.target.value);
+                  setSortBy(e.target.value as 'score-desc' | 'score-asc' | 'updated-desc' | 'updated-asc' | 'type-asc' | 'title-asc');
                 }}
                 className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
               >
@@ -2728,7 +2728,7 @@ export const SEODashboard: React.FC = () => {
                   <Button
                     key={pageNum}
                     size="sm"
-                    variant={currentPage === pageNum ? "default" : "ghost"}
+                    variant={currentPage === pageNum ? "primary" : "ghost"}
                     onClick={() => setCurrentPage(pageNum)}
                     className={`w-8 h-8 p-0 ${
                       currentPage === pageNum 
