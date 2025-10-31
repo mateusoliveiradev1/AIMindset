@@ -418,7 +418,8 @@ export const SystemLogsTab: React.FC = () => {
               >
                 <Download className="w-4 h-4 mr-2 flex-shrink-0" />
                 <span className="hidden sm:inline">JSON</span>
-            </Button>
+              </Button>
+            </div>
           </div>
         </div>
       </Card>
