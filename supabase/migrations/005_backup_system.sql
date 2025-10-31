@@ -231,9 +231,9 @@ BEGIN
     END IF;
     
     -- Limpar dados atuais (com cuidado)
-    DELETE FROM comments WHERE id IS NOT NULL;
-    DELETE FROM feedbacks WHERE id IS NOT NULL;
-    DELETE FROM articles WHERE id IS NOT NULL;
+    DELETE FROM comments WHERE id > 0;
+    DELETE FROM feedbacks WHERE id > 0;
+    DELETE FROM articles WHERE id > 0;
     
     -- Restaurar artigos do backup mais recente
     INSERT INTO articles (
