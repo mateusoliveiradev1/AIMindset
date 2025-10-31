@@ -760,7 +760,7 @@ const LogsDashboard: React.FC = () => {
           font: {
             family: 'Orbitron, monospace',
             size: 16,
-            weight: 'bold'
+            weight: 'bold' as const
           },
           padding: 25,
           usePointStyle: true,
@@ -788,12 +788,12 @@ const LogsDashboard: React.FC = () => {
         titleFont: {
           family: 'Orbitron, monospace',
           size: 18,
-          weight: 'bold'
+          weight: 'bold' as const
         },
         bodyFont: {
           family: 'Inter, sans-serif',
           size: 15,
-          weight: '500'
+          weight: 500
         },
         padding: 16,
         displayColors: true,
@@ -802,7 +802,7 @@ const LogsDashboard: React.FC = () => {
         // Animação do tooltip
         animation: {
           duration: 300,
-          easing: 'easeOutQuart'
+          easing: 'easeOutQuart' as const
         },
         callbacks: {
           title: function(context: any) {
@@ -821,7 +821,7 @@ const LogsDashboard: React.FC = () => {
           font: {
             family: 'Inter, sans-serif',
             size: 13,
-            weight: '600'
+            weight: 600
           },
           padding: 8
         },
@@ -843,7 +843,7 @@ const LogsDashboard: React.FC = () => {
           font: {
             family: 'Inter, sans-serif',
             size: 13,
-            weight: '600'
+            weight: 600
           },
           padding: 12,
           callback: function(value: any) {
@@ -905,7 +905,7 @@ const LogsDashboard: React.FC = () => {
           font: {
             family: 'Orbitron, monospace',
             size: 16,
-            weight: 'bold'
+            weight: 'bold' as const
           },
           padding: 25,
           usePointStyle: true,
@@ -947,12 +947,12 @@ const LogsDashboard: React.FC = () => {
         titleFont: {
           family: 'Orbitron, monospace',
           size: 18,
-          weight: 'bold'
+          weight: 'bold' as const
         },
         bodyFont: {
           family: 'Inter, sans-serif',
           size: 16,
-          weight: '600'
+          weight: 600
         },
         padding: 20,
         displayColors: true,
@@ -961,7 +961,7 @@ const LogsDashboard: React.FC = () => {
         // Animação do tooltip
         animation: {
           duration: 400,
-          easing: 'easeOutQuart'
+          easing: 'easeOutQuart' as const
         },
         callbacks: {
           title: function(context: any) {
