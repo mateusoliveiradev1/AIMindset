@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Database, Search, Filter, RefreshCw, Calendar, User, FileText, Eye, Clock } from 'lucide-react';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
+import DateFilters, { DateRange } from '../UI/DateFilters';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 
@@ -25,6 +26,7 @@ export const BackendLogsTab: React.FC = () => {
   const [selectedLog, setSelectedLog] = useState<BackendLog | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [dateRange, setDateRange] = useState<DateRange | null>(null);
   const logsPerPage = 20;
 
   const fetchLogs = async (page = 1) => {
@@ -50,6 +52,12 @@ export const BackendLogsTab: React.FC = () => {
         query = query.or(`record_id.ilike.%${searchTerm}%,performed_by.ilike.%${searchTerm}%`);
       }
 
+      // Aplicar filtro de data
+      if (dateRange) {
+        query = query.gte('created_at', dateRange.startDate.toISOString())
+                    .lte('created_at', dateRange.endDate.toISOString());
+      }
+
       const { data, error, count } = await query;
 
       if (error) {
@@ -71,7 +79,7 @@ export const BackendLogsTab: React.FC = () => {
 
   useEffect(() => {
     fetchLogs(1);
-  }, [actionFilter, tableFilter, searchTerm]);
+  }, [actionFilter, tableFilter, searchTerm, dateRange]);
 
   const getActionColor = (action: string) => {
     switch (action) {
@@ -154,6 +162,9 @@ export const BackendLogsTab: React.FC = () => {
           </Button>
         </div>
       </Card>
+
+      {/* Filtros de Data */}
+      <DateFilters onDateRangeChange={setDateRange} />
 
       {/* Lista de Logs */}
       <Card className="glass-effect">

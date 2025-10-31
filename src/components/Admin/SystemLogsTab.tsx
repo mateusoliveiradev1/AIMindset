@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AlertTriangle, Search, Filter, RefreshCw, Server, Shield, Zap, Clock, Eye, TrendingUp, Activity } from 'lucide-react';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
+import DateFilters, { DateRange } from '../UI/DateFilters';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 
@@ -27,6 +28,7 @@ export const SystemLogsTab: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'error' | 'warning' | 'info' | 'security' | 'performance'>('all');
+  const [dateRange, setDateRange] = useState<DateRange | null>(null);
   const [selectedLog, setSelectedLog] = useState<SystemLog | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -72,6 +74,11 @@ export const SystemLogsTab: React.FC = () => {
 
       if (searchTerm) {
         query = query.or(`message.ilike.%${searchTerm}%,type.ilike.%${searchTerm}%`);
+      }
+
+      // Aplicar filtro de data
+      if (dateRange) {
+        query = query.gte('created_at', dateRange.startDate).lte('created_at', dateRange.endDate);
       }
 
       const { data, error, count } = await query;
@@ -120,12 +127,12 @@ export const SystemLogsTab: React.FC = () => {
         clearInterval(intervalRef.current);
       }
     };
-  }, [autoRefresh, currentPage, typeFilter, searchTerm]);
+  }, [autoRefresh, currentPage, typeFilter, searchTerm, dateRange]);
 
   useEffect(() => {
     fetchStats();
     fetchLogs(1);
-  }, [typeFilter, searchTerm]);
+  }, [typeFilter, searchTerm, dateRange]);
 
   // Cleanup no unmount
   useEffect(() => {
@@ -279,6 +286,8 @@ export const SystemLogsTab: React.FC = () => {
               <option value="security">Segurança</option>
               <option value="performance">Performance</option>
             </select>
+
+
           </div>
 
           {/* Botões de Ação */}
@@ -315,6 +324,9 @@ export const SystemLogsTab: React.FC = () => {
           </div>
         </div>
       </Card>
+
+      {/* Filtros de Data */}
+      <DateFilters onDateRangeChange={setDateRange} />
 
       {/* Lista de Logs */}
       <Card className="glass-effect">

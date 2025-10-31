@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Activity, Search, Filter, RefreshCw, User, AlertCircle, Info, CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
+import DateFilters, { DateRange } from '../UI/DateFilters';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 
@@ -25,6 +26,7 @@ export const AppLogsTab: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [dateRange, setDateRange] = useState<DateRange | null>(null);
   const logsPerPage = 50;
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -49,6 +51,12 @@ export const AppLogsTab: React.FC = () => {
 
       if (searchTerm) {
         query = query.or(`action.ilike.%${searchTerm}%,source.ilike.%${searchTerm}%,user_id.ilike.%${searchTerm}%`);
+      }
+
+      // Aplicar filtro de data
+      if (dateRange) {
+        query = query.gte('created_at', dateRange.startDate.toISOString())
+                    .lte('created_at', dateRange.endDate.toISOString());
       }
 
       const { data, error, count } = await query;
@@ -90,11 +98,11 @@ export const AppLogsTab: React.FC = () => {
         clearInterval(intervalRef.current);
       }
     };
-  }, [autoRefresh, currentPage, levelFilter, sourceFilter, searchTerm]);
+  }, [autoRefresh, currentPage, levelFilter, sourceFilter, searchTerm, dateRange]);
 
   useEffect(() => {
     fetchLogs(1);
-  }, [levelFilter, sourceFilter, searchTerm]);
+  }, [levelFilter, sourceFilter, searchTerm, dateRange]);
 
   // Cleanup no unmount
   useEffect(() => {
@@ -214,6 +222,9 @@ export const AppLogsTab: React.FC = () => {
           </div>
         </div>
       </Card>
+
+      {/* Filtros de Data */}
+      <DateFilters onDateRangeChange={setDateRange} />
 
       {/* Lista de Logs */}
       <Card className="glass-effect">
