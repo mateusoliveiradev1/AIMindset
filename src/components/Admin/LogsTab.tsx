@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { Monitor, Database, Activity, AlertTriangle, Bell, TestTube } from 'lucide-react';
+import { Monitor, Database, Activity, AlertTriangle, Bell, TestTube, BarChart3 } from 'lucide-react';
 import { BackendLogsTab } from './BackendLogsTab';
 import { AppLogsTab } from './AppLogsTab';
 import { SystemLogsTab } from './SystemLogsTab';
 import AlertsManagement from './AlertsManagement';
 import TestLogging from '../TestLogging';
+import LogsDashboard from './LogsDashboard';
 
 export const LogsTab: React.FC = () => {
-  const [activeSubTab, setActiveSubTab] = useState<'backend' | 'app' | 'system' | 'alerts' | 'test'>('backend');
+  const [activeSubTab, setActiveSubTab] = useState<'dashboard' | 'backend' | 'app' | 'system' | 'alerts' | 'test'>('dashboard');
 
   const subTabs = [
+    { id: 'dashboard', label: 'Dashboard', icon: BarChart3, description: 'Gráficos e estatísticas dos logs' },
     { id: 'backend', label: 'Backend Logs', icon: Database, description: 'Logs de mudanças no banco de dados' },
     { id: 'app', label: 'App Logs', icon: Activity, description: 'Logs de eventos da aplicação' },
     { id: 'system', label: 'System Logs', icon: AlertTriangle, description: 'Logs do sistema e alertas' },
@@ -58,6 +60,7 @@ export const LogsTab: React.FC = () => {
 
       {/* Content */}
       <div className="min-h-[600px]">
+        {activeSubTab === 'dashboard' && <LogsDashboard />}
         {activeSubTab === 'backend' && <BackendLogsTab />}
         {activeSubTab === 'app' && <AppLogsTab />}
         {activeSubTab === 'system' && <SystemLogsTab />}
