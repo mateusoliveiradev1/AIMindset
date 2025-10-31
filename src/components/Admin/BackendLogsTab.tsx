@@ -141,15 +141,14 @@ export const BackendLogsTab: React.FC = () => {
 
   const exportToCSV = async () => {
     try {
-      toast.info('Preparando exportação CSV...');
       const logs = await fetchAllLogsForExport();
       
-      const exporter = new LogExporter();
-      await exporter.exportToCSV(logs, 'backend', {
-        filename: `backend-logs-${new Date().toISOString().split('T')[0]}`
+      await LogExporter.exportLogs({
+        data: logs,
+        format: 'csv',
+        filename: 'backend-logs',
+        headers: LogExporter.BACKEND_LOG_HEADERS
       });
-      
-      toast.success(`${logs.length} logs exportados para CSV com sucesso!`);
     } catch (error) {
       console.error('Erro ao exportar CSV:', error);
       toast.error('Erro ao exportar logs para CSV');
@@ -158,15 +157,13 @@ export const BackendLogsTab: React.FC = () => {
 
   const exportToJSON = async () => {
     try {
-      toast.info('Preparando exportação JSON...');
       const logs = await fetchAllLogsForExport();
       
-      const exporter = new LogExporter();
-      await exporter.exportToJSON(logs, {
-        filename: `backend-logs-${new Date().toISOString().split('T')[0]}`
+      await LogExporter.exportLogs({
+        data: logs,
+        format: 'json',
+        filename: 'backend-logs'
       });
-      
-      toast.success(`${logs.length} logs exportados para JSON com sucesso!`);
     } catch (error) {
       console.error('Erro ao exportar JSON:', error);
       toast.error('Erro ao exportar logs para JSON');

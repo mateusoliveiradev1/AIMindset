@@ -186,15 +186,14 @@ export const AppLogsTab: React.FC = () => {
 
   const exportToCSV = async () => {
     try {
-      toast.info('Preparando exportação CSV...');
       const logs = await fetchAllLogsForExport();
       
-      const exporter = new LogExporter();
-      await exporter.exportToCSV(logs, 'app', {
-        filename: `app-logs-${new Date().toISOString().split('T')[0]}`
+      await LogExporter.exportLogs({
+        data: logs,
+        format: 'csv',
+        filename: 'app-logs',
+        headers: LogExporter.APP_LOG_HEADERS
       });
-      
-      toast.success(`${logs.length} logs exportados para CSV com sucesso!`);
     } catch (error) {
       console.error('Erro ao exportar CSV:', error);
       toast.error('Erro ao exportar logs para CSV');
@@ -203,15 +202,13 @@ export const AppLogsTab: React.FC = () => {
 
   const exportToJSON = async () => {
     try {
-      toast.info('Preparando exportação JSON...');
       const logs = await fetchAllLogsForExport();
       
-      const exporter = new LogExporter();
-      await exporter.exportToJSON(logs, {
-        filename: `app-logs-${new Date().toISOString().split('T')[0]}`
+      await LogExporter.exportLogs({
+        data: logs,
+        format: 'json',
+        filename: 'app-logs'
       });
-      
-      toast.success(`${logs.length} logs exportados para JSON com sucesso!`);
     } catch (error) {
       console.error('Erro ao exportar JSON:', error);
       toast.error('Erro ao exportar logs para JSON');

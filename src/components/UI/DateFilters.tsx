@@ -146,7 +146,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onDateRangeChange, className 
               <Button
                 key={period.id}
                 onClick={() => handlePeriodChange(period.id as DatePeriod)}
-                variant={isSelected ? "default" : "outline"}
+                variant={isSelected ? "primary" : "outline"}
                 size="sm"
                 className={`text-xs ${
                   isSelected 
