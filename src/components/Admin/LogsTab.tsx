@@ -20,15 +20,15 @@ export const LogsTab: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-orbitron font-bold text-white flex items-center">
-            <Monitor className="w-8 h-8 mr-3 text-neon-purple" />
-            Logs &amp; Monitoramento
+        <div className="min-w-0 flex-1">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-orbitron font-bold text-white flex items-center">
+            <Monitor className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 mr-2 sm:mr-3 text-neon-purple flex-shrink-0" />
+            <span className="truncate">Logs &amp; Monitoramento</span>
           </h2>
-          <p className="text-futuristic-gray text-sm mt-1">
+          <p className="text-futuristic-gray text-xs sm:text-sm mt-1 hidden sm:block">
             Monitore atividades do sistema, eventos da aplicação e mudanças no banco de dados
           </p>
         </div>
@@ -42,16 +42,16 @@ export const LogsTab: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveSubTab(tab.id as any)}
-              className={`flex items-center space-x-2 px-4 py-3 rounded-md font-montserrat font-medium transition-all duration-300 whitespace-nowrap min-w-0 ${
+              className={`flex items-center space-x-1.5 sm:space-x-2 px-2 sm:px-3 lg:px-4 py-2 sm:py-3 rounded-md font-montserrat font-medium transition-all duration-300 whitespace-nowrap min-w-0 ${
                 activeSubTab === tab.id
                   ? 'bg-neon-gradient text-white shadow-lg'
                   : 'text-futuristic-gray hover:text-white hover:bg-dark-surface/50'
               }`}
             >
               <Icon className="w-4 h-4 flex-shrink-0" />
-              <div className="text-left">
-                <div className="text-sm font-medium">{tab.label}</div>
-                <div className="text-xs opacity-75">{tab.description}</div>
+              <div className="text-left min-w-0">
+                <div className="text-xs sm:text-sm font-medium truncate">{tab.label}</div>
+                <div className="text-xs opacity-75 hidden lg:block truncate">{tab.description}</div>
               </div>
             </button>
           );
@@ -59,7 +59,7 @@ export const LogsTab: React.FC = () => {
       </div>
 
       {/* Content */}
-      <div className="min-h-[600px]">
+      <div className="min-h-[400px] sm:min-h-[500px] lg:min-h-[600px]">
         {activeSubTab === 'dashboard' && <LogsDashboard />}
         {activeSubTab === 'backend' && <BackendLogsTab />}
         {activeSubTab === 'app' && <AppLogsTab />}

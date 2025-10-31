@@ -216,20 +216,20 @@ export const AppLogsTab: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Filtros e Controles */}
-      <Card className="glass-effect p-6">
-        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-          <div className="flex flex-col sm:flex-row gap-4 flex-1">
+      <Card className="glass-effect p-4 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 flex-1">
             {/* Busca */}
-            <div className="relative flex-1 max-w-md">
+            <div className="relative flex-1 max-w-full sm:max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-futuristic-gray w-4 h-4" />
               <input
                 type="text"
                 placeholder="Buscar por ação, fonte ou usuário..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple"
+                className="w-full pl-10 pr-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple text-sm"
               />
             </div>
 
@@ -237,7 +237,7 @@ export const AppLogsTab: React.FC = () => {
             <select
               value={levelFilter}
               onChange={(e) => setLevelFilter(e.target.value as any)}
-              className="px-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple"
+              className="w-full sm:w-auto px-3 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple text-sm"
             >
               <option value="all">Todos os Níveis</option>
               <option value="info">Info</option>
@@ -250,7 +250,7 @@ export const AppLogsTab: React.FC = () => {
             <select
               value={sourceFilter}
               onChange={(e) => setSourceFilter(e.target.value as any)}
-              className="px-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple"
+              className="w-full sm:w-auto px-3 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple text-sm"
             >
               <option value="all">Todas as Fontes</option>
               <option value="user">Usuário</option>
@@ -261,50 +261,53 @@ export const AppLogsTab: React.FC = () => {
           </div>
 
           {/* Controles */}
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
             {/* Botão Auto-Refresh */}
             <Button
               onClick={() => setAutoRefresh(!autoRefresh)}
               variant={autoRefresh ? "primary" : "outline"}
               size="sm"
-              className={autoRefresh ? "bg-green-600 hover:bg-green-700" : ""}
+              className={`w-full sm:w-auto ${autoRefresh ? "bg-green-600 hover:bg-green-700" : ""}`}
             >
-              <Activity className="w-4 h-4 mr-2" />
-              {autoRefresh ? 'Auto-Refresh ON' : 'Auto-Refresh OFF'}
+              <Activity className="w-4 h-4 mr-2 flex-shrink-0" />
+              <span className="truncate">{autoRefresh ? 'Auto-Refresh ON' : 'Auto-Refresh OFF'}</span>
             </Button>
 
             {/* Botão Atualizar */}
             <Button
               onClick={() => fetchLogs(currentPage, true)}
               disabled={loading}
-              className="bg-neon-gradient hover:bg-neon-gradient/80 disabled:opacity-50"
+              className="w-full sm:w-auto bg-neon-gradient hover:bg-neon-gradient/80 disabled:opacity-50"
             >
               {loading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 flex-shrink-0"></div>
               ) : (
-                <RefreshCw className="w-4 h-4 mr-2" />
+                <RefreshCw className="w-4 h-4 mr-2 flex-shrink-0" />
               )}
-              Atualizar
+              <span className="truncate">Atualizar</span>
             </Button>
             
             {/* Botões de Exportação */}
-            <Button
-              onClick={exportToCSV}
-              disabled={loading}
-              className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              CSV
-            </Button>
-            
-            <Button
-              onClick={exportToJSON}
-              disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              JSON
-            </Button>
+            <div className="flex gap-2 sm:contents">
+              <Button
+                onClick={exportToCSV}
+                variant="outline"
+                size="sm"
+                className="flex-1 sm:flex-none border-green-500/30 text-green-400 hover:bg-green-500/10"
+              >
+                <FileText className="w-4 h-4 mr-2 flex-shrink-0" />
+                <span className="hidden sm:inline">CSV</span>
+              </Button>
+              <Button
+                onClick={exportToJSON}
+                variant="outline"
+                size="sm"
+                className="flex-1 sm:flex-none border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+              >
+                <Download className="w-4 h-4 mr-2 flex-shrink-0" />
+                <span className="hidden sm:inline">JSON</span>
+              </Button>
+            </div>
           </div>
         </div>
       </Card>
@@ -314,73 +317,73 @@ export const AppLogsTab: React.FC = () => {
 
       {/* Lista de Logs */}
       <Card className="glass-effect">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-orbitron font-bold text-white flex items-center">
-              <Activity className="w-5 h-5 mr-2 text-neon-purple" />
-              Logs da Aplicação
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
+            <h3 className="text-base sm:text-lg font-orbitron font-bold text-white flex items-center">
+              <Activity className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-neon-purple flex-shrink-0" />
+              <span className="truncate">Logs da Aplicação</span>
             </h3>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               {autoRefresh && (
-                <div className="flex items-center text-green-400 text-sm">
+                <div className="flex items-center text-green-400 text-xs sm:text-sm">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse mr-2"></div>
-                  Auto-refresh ativo
+                  <span className="hidden sm:inline">Auto-refresh ativo</span>
                 </div>
               )}
-              <span className="text-futuristic-gray text-sm">
+              <span className="text-futuristic-gray text-xs sm:text-sm">
                 {logs.length} registros
               </span>
             </div>
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neon-purple"></div>
-              <span className="ml-3 text-futuristic-gray">Carregando logs...</span>
+            <div className="flex items-center justify-center py-8 sm:py-12">
+              <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-neon-purple"></div>
+              <span className="ml-3 text-futuristic-gray text-sm">Carregando logs...</span>
             </div>
           ) : logs.length === 0 ? (
-            <div className="text-center py-12">
-              <Activity className="w-12 h-12 text-futuristic-gray mx-auto mb-4" />
-              <p className="text-futuristic-gray">Nenhum log encontrado</p>
+            <div className="text-center py-8 sm:py-12">
+              <Activity className="w-8 h-8 sm:w-12 sm:h-12 text-futuristic-gray mx-auto mb-4" />
+              <p className="text-futuristic-gray text-sm">Nenhum log encontrado</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {logs.map((log) => (
                 <div
                   key={log.id}
-                  className="p-4 bg-darker-surface/30 border border-neon-purple/10 rounded-lg hover:border-neon-purple/30 transition-all duration-300 cursor-pointer"
+                  className="p-3 sm:p-4 bg-darker-surface/30 border border-neon-purple/10 rounded-lg hover:border-neon-purple/30 transition-all duration-300 cursor-pointer"
                   onClick={() => setSelectedLog(log)}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-2">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         {getLevelIcon(log.level)}
                         <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getLevelColor(log.level)}`}>
                           {log.level.toUpperCase()}
                         </span>
                       </div>
                       
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getSourceColor(log.source)}`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getSourceColor(log.source)} flex-shrink-0`}>
                         {log.source}
                       </span>
                       
-                      <span className="text-white font-medium">
+                      <span className="text-white font-medium flex-1 truncate text-sm sm:text-base">
                         {log.action}
                       </span>
                     </div>
 
-                    <div className="flex items-center space-x-4 text-sm text-futuristic-gray">
+                    <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4 text-xs sm:text-sm text-futuristic-gray">
                       {log.user_id && (
-                        <div className="flex items-center space-x-1">
-                          <User className="w-4 h-4" />
-                          <span>{log.user_id}</span>
+                        <div className="flex items-center gap-1">
+                          <User className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                          <span className="truncate">{log.user_id}</span>
                         </div>
                       )}
-                      <div className="flex items-center space-x-1">
-                        <Clock className="w-4 h-4" />
-                        <span>{new Date(log.created_at).toLocaleString('pt-BR')}</span>
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                        <span className="truncate">{new Date(log.created_at).toLocaleString('pt-BR')}</span>
                       </div>
-                      <Eye className="w-4 h-4 text-neon-purple" />
+                      <Eye className="w-3 h-3 sm:w-4 sm:h-4 text-neon-purple flex-shrink-0" />
                     </div>
                   </div>
                 </div>
@@ -390,16 +393,17 @@ export const AppLogsTab: React.FC = () => {
 
           {/* Paginação */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6 pt-6 border-t border-neon-purple/10">
-              <span className="text-futuristic-gray text-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-neon-purple/10">
+              <span className="text-futuristic-gray text-xs sm:text-sm">
                 Página {currentPage} de {totalPages}
               </span>
-              <div className="flex space-x-2">
+              <div className="flex gap-2">
                 <Button
                   onClick={() => fetchLogs(currentPage - 1)}
                   disabled={currentPage === 1 || loading}
                   variant="outline"
                   size="sm"
+                  className="flex-1 sm:flex-none text-xs sm:text-sm"
                 >
                   Anterior
                 </Button>
@@ -408,6 +412,7 @@ export const AppLogsTab: React.FC = () => {
                   disabled={currentPage === totalPages || loading}
                   variant="outline"
                   size="sm"
+                  className="flex-1 sm:flex-none text-xs sm:text-sm"
                 >
                   Próxima
                 </Button>
@@ -419,30 +424,31 @@ export const AppLogsTab: React.FC = () => {
 
       {/* Modal de Detalhes do Log */}
       {selectedLog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-darker-surface border border-neon-purple/20 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
-            <div className="p-6 border-b border-neon-purple/10">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-orbitron font-bold text-white flex items-center">
-                  <Activity className="w-6 h-6 mr-2 text-neon-purple" />
-                  Detalhes do Log da Aplicação
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-darker-surface border border-neon-purple/20 rounded-lg w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+            <div className="p-4 sm:p-6 border-b border-neon-purple/10">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h3 className="text-lg sm:text-xl font-orbitron font-bold text-white flex items-center">
+                  <Activity className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-neon-purple flex-shrink-0" />
+                  <span className="truncate">Detalhes do Log da Aplicação</span>
                 </h3>
                 <Button
                   onClick={() => setSelectedLog(null)}
                   variant="outline"
                   size="sm"
+                  className="w-full sm:w-auto"
                 >
                   Fechar
                 </Button>
               </div>
             </div>
             
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
+            <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-120px)]">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                <div className="space-y-3 sm:space-y-4">
                   <div>
-                    <label className="block text-futuristic-gray text-sm mb-1">Nível</label>
-                    <div className="flex items-center space-x-2">
+                    <label className="block text-futuristic-gray text-xs sm:text-sm mb-1">Nível</label>
+                    <div className="flex items-center gap-2">
                       {getLevelIcon(selectedLog.level)}
                       <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getLevelColor(selectedLog.level)}`}>
                         {selectedLog.level.toUpperCase()}
@@ -451,32 +457,32 @@ export const AppLogsTab: React.FC = () => {
                   </div>
                   
                   <div>
-                    <label className="block text-futuristic-gray text-sm mb-1">Fonte</label>
+                    <label className="block text-futuristic-gray text-xs sm:text-sm mb-1">Fonte</label>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getSourceColor(selectedLog.source)}`}>
                       {selectedLog.source}
                     </span>
                   </div>
                   
                   <div>
-                    <label className="block text-futuristic-gray text-sm mb-1">Ação</label>
-                    <span className="text-white font-medium">{selectedLog.action}</span>
+                    <label className="block text-futuristic-gray text-xs sm:text-sm mb-1">Ação</label>
+                    <span className="text-white font-medium text-sm sm:text-base break-words">{selectedLog.action}</span>
                   </div>
                   
                   <div>
-                    <label className="block text-futuristic-gray text-sm mb-1">Usuário</label>
-                    <span className="text-white">{selectedLog.user_id || 'Anônimo'}</span>
+                    <label className="block text-futuristic-gray text-xs sm:text-sm mb-1">Usuário</label>
+                    <span className="text-white text-sm sm:text-base break-words">{selectedLog.user_id || 'Anônimo'}</span>
                   </div>
                   
                   <div>
-                    <label className="block text-futuristic-gray text-sm mb-1">Data/Hora</label>
-                    <span className="text-white">{new Date(selectedLog.created_at).toLocaleString('pt-BR')}</span>
+                    <label className="block text-futuristic-gray text-xs sm:text-sm mb-1">Data/Hora</label>
+                    <span className="text-white text-sm sm:text-base break-words">{new Date(selectedLog.created_at).toLocaleString('pt-BR')}</span>
                   </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   <div>
-                    <label className="block text-futuristic-gray text-sm mb-2">Detalhes</label>
-                    <pre className="bg-darker-surface/50 border border-neon-purple/20 rounded-lg p-3 text-xs text-white overflow-x-auto">
+                    <label className="block text-futuristic-gray text-xs sm:text-sm mb-2">Detalhes</label>
+                    <pre className="bg-darker-surface/50 border border-neon-purple/20 rounded-lg p-3 text-xs text-white overflow-x-auto break-words">
                       {formatJsonData(selectedLog.details)}
                     </pre>
                   </div>

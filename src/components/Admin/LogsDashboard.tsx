@@ -1024,13 +1024,13 @@ const LogsDashboard: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Controles */}
-      <Card className="glass-effect p-6">
-        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h2 className="text-xl font-orbitron font-bold text-white flex items-center">
-              <BarChart3 className="w-6 h-6 mr-2 text-neon-purple" />
+      <Card className="glass-effect p-4 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+            <h2 className="text-lg sm:text-xl font-orbitron font-bold text-white flex items-center">
+              <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-neon-purple" />
               Dashboard de Logs
             </h2>
             
@@ -1040,120 +1040,121 @@ const LogsDashboard: React.FC = () => {
                 debouncedFetchMetrics();
               }}
               disabled={loading}
-              className="bg-neon-gradient hover:bg-neon-gradient/80 disabled:opacity-50 transition-all duration-200"
+              size="sm"
+              className="bg-neon-gradient hover:bg-neon-gradient/80 disabled:opacity-50 transition-all duration-200 w-full sm:w-auto"
             >
               {loading ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
               ) : (
                 <RefreshCw className="w-4 h-4 mr-2" />
               )}
-              Atualizar
+              <span className="sm:inline">Atualizar</span>
             </Button>
           </div>
 
-          <div className="flex items-center gap-4">
-            <label className="flex items-center text-white text-sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+            <label className="flex items-center text-white text-xs sm:text-sm">
               <input
                 type="checkbox"
                 checked={autoRefresh}
                 onChange={(e) => setAutoRefresh(e.target.checked)}
                 className="mr-2 rounded border-neon-purple/20 bg-darker-surface/50 text-neon-purple focus:ring-neon-purple"
               />
-              Auto-refresh (30s)
+              <span className="whitespace-nowrap">Auto-refresh (30s)</span>
             </label>
+            <div className="w-full sm:w-auto">
+              <DateFilters onDateRangeChange={setDateRange} />
+            </div>
           </div>
         </div>
       </Card>
 
-      {/* Filtros de Data */}
-      <DateFilters onDateRangeChange={setDateRange} />
-
       {/* Métricas em Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="glass-effect p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+        <Card className="glass-effect p-4 sm:p-6">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-futuristic-gray text-sm">Total de Logs</p>
-              <p className="text-2xl font-orbitron font-bold text-white">{metrics.totalLogs.toLocaleString()}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-futuristic-gray text-xs sm:text-sm truncate">Total de Logs</p>
+              <p className="text-lg sm:text-xl lg:text-2xl font-orbitron font-bold text-white">{metrics.totalLogs.toLocaleString()}</p>
             </div>
-            <Activity className="w-8 h-8 text-neon-purple" />
+            <Activity className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-neon-purple flex-shrink-0" />
           </div>
         </Card>
 
-        <Card className="glass-effect p-6">
+        <Card className="glass-effect p-4 sm:p-6">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-futuristic-gray text-sm">Logs de Sistema</p>
-              <p className="text-2xl font-orbitron font-bold text-neon-pink">{metrics.systemLogs.toLocaleString()}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-futuristic-gray text-xs sm:text-sm truncate">Logs de Sistema</p>
+              <p className="text-lg sm:text-xl lg:text-2xl font-orbitron font-bold text-neon-pink">{metrics.systemLogs.toLocaleString()}</p>
             </div>
-            <XCircle className="w-8 h-8 text-neon-pink" />
+            <XCircle className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-neon-pink flex-shrink-0" />
           </div>
         </Card>
 
-        <Card className="glass-effect p-6">
+        <Card className="glass-effect p-4 sm:p-6">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-futuristic-gray text-sm">Logs de Aplicação</p>
-              <p className="text-2xl font-orbitron font-bold text-neon-blue">{metrics.appLogs.toLocaleString()}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-futuristic-gray text-xs sm:text-sm truncate">Logs de Aplicação</p>
+              <p className="text-lg sm:text-xl lg:text-2xl font-orbitron font-bold text-neon-blue">{metrics.appLogs.toLocaleString()}</p>
             </div>
-            <AlertTriangle className="w-8 h-8 text-neon-blue" />
+            <AlertTriangle className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-neon-blue flex-shrink-0" />
           </div>
         </Card>
 
-        <Card className="glass-effect p-6">
+        <Card className="glass-effect p-4 sm:p-6">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-futuristic-gray text-sm">Logs de Backend</p>
-              <p className="text-2xl font-orbitron font-bold text-neon-green">{metrics.backendLogs.toLocaleString()}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-futuristic-gray text-xs sm:text-sm truncate">Logs de Backend</p>
+              <p className="text-lg sm:text-xl lg:text-2xl font-orbitron font-bold text-neon-green">{metrics.backendLogs.toLocaleString()}</p>
             </div>
-            <CheckCircle className="w-8 h-8 text-neon-green" />
+            <CheckCircle className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-neon-green flex-shrink-0" />
           </div>
         </Card>
       </div>
 
       {/* Gráficos - Layout Moderno e Responsivo */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
         {/* Gráfico de Linha Temporal */}
-        <Card className="glass-effect p-8 hover-lift transition-all duration-300">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-orbitron font-bold text-white flex items-center">
-              <TrendingUp className="w-6 h-6 mr-3 text-neon-purple animate-pulse" />
-              Volume de Logs (Temporal)
+        <Card className="glass-effect p-4 sm:p-6 lg:p-8 hover-lift transition-all duration-300">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+            <h3 className="text-lg sm:text-xl font-orbitron font-bold text-white flex items-center">
+              <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3 text-neon-purple animate-pulse" />
+              <span className="truncate">Volume de Logs (Temporal)</span>
             </h3>
             <Button
               onClick={() => exportChart('timeline-chart', 'timeline-logs')}
               variant="outline"
               size="sm"
-              className="hover:bg-neon-purple/20 transition-all duration-200"
+              className="hover:bg-neon-purple/20 transition-all duration-200 w-full sm:w-auto"
             >
               <Download className="w-4 h-4 mr-2" />
-              Exportar
+              <span className="sm:inline">Exportar</span>
             </Button>
           </div>
-          <div className="h-80 relative">
+          <div className="h-64 sm:h-72 lg:h-80 relative">
             <div className="absolute inset-0 bg-gradient-to-br from-neon-purple/5 to-transparent rounded-lg"></div>
             <Line id="timeline-chart" data={timelineData} options={chartOptions} />
           </div>
         </Card>
 
         {/* Gráfico de Pizza */}
-        <Card className="glass-effect p-8 hover-lift transition-all duration-300">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-orbitron font-bold text-white flex items-center">
-              <PieChart className="w-6 h-6 mr-3 text-neon-purple animate-pulse" />
-              Distribuição por Nível
+        <Card className="glass-effect p-4 sm:p-6 lg:p-8 hover-lift transition-all duration-300">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+            <h3 className="text-lg sm:text-xl font-orbitron font-bold text-white flex items-center">
+              <PieChart className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3 text-neon-purple animate-pulse" />
+              <span className="truncate">Distribuição por Nível</span>
             </h3>
             <Button
               onClick={() => exportChart('distribution-chart', 'distribution-logs')}
               variant="outline"
               size="sm"
-              className="hover:bg-neon-purple/20 transition-all duration-200"
+              className="hover:bg-neon-purple/20 transition-all duration-200 w-full sm:w-auto"
             >
               <Download className="w-4 h-4 mr-2" />
-              Exportar
+              <span className="sm:inline">Exportar</span>
             </Button>
           </div>
-          <div className="h-80 relative">
+          <div className="h-64 sm:h-72 lg:h-80 relative">
             <div className="absolute inset-0 bg-gradient-to-br from-neon-purple/5 to-transparent rounded-lg"></div>
             <Pie id="distribution-chart" data={distributionData} options={pieOptions} />
           </div>
@@ -1161,23 +1162,23 @@ const LogsDashboard: React.FC = () => {
       </div>
 
       {/* Gráfico de Barras - Top Fontes */}
-      <Card className="glass-effect p-8 hover-lift transition-all duration-300">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-orbitron font-bold text-white flex items-center">
-            <BarChart3 className="w-6 h-6 mr-3 text-neon-purple animate-pulse" />
-            Logs por Fonte
+      <Card className="glass-effect p-4 sm:p-6 lg:p-8 hover-lift transition-all duration-300">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+          <h3 className="text-lg sm:text-xl font-orbitron font-bold text-white flex items-center">
+            <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3 text-neon-purple animate-pulse" />
+            <span className="truncate">Logs por Fonte</span>
           </h3>
           <Button
             onClick={() => exportChart('sources-chart', 'sources-logs')}
             variant="outline"
             size="sm"
-            className="hover:bg-neon-purple/20 transition-all duration-200"
+            className="hover:bg-neon-purple/20 transition-all duration-200 w-full sm:w-auto"
           >
             <Download className="w-4 h-4 mr-2" />
-            Exportar
+            <span className="sm:inline">Exportar</span>
           </Button>
         </div>
-        <div className="h-80 relative">
+        <div className="h-64 sm:h-72 lg:h-80 relative">
           <div className="absolute inset-0 bg-gradient-to-br from-neon-purple/5 to-transparent rounded-lg"></div>
           <Bar id="sources-chart" data={topSourcesData} options={chartOptions} />
         </div>

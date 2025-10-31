@@ -111,15 +111,15 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onDateRangeChange, className 
   const isActive = selectedPeriod !== 'all';
 
   return (
-    <Card className={`glass-effect p-4 ${className}`}>
-      <div className="space-y-4">
+    <Card className={`glass-effect p-3 sm:p-4 ${className}`}>
+      <div className="space-y-3 sm:space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Calendar className="w-4 h-4 text-neon-purple" />
-            <span className="text-white font-medium text-sm">Filtros de Data</span>
+            <Calendar className="w-4 h-4 text-neon-purple flex-shrink-0" />
+            <span className="text-white font-medium text-xs sm:text-sm truncate">Filtros de Data</span>
             {isActive && (
-              <div className="w-2 h-2 bg-neon-purple rounded-full animate-pulse"></div>
+              <div className="w-2 h-2 bg-neon-purple rounded-full animate-pulse flex-shrink-0"></div>
             )}
           </div>
           
@@ -128,16 +128,16 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onDateRangeChange, className 
               onClick={clearFilters}
               variant="outline"
               size="sm"
-              className="text-xs"
+              className="text-xs flex-shrink-0"
             >
-              <X className="w-3 h-3 mr-1" />
-              Limpar
+              <X className="w-3 h-3 sm:mr-1" />
+              <span className="hidden sm:inline">Limpar</span>
             </Button>
           )}
         </div>
 
         {/* Period Buttons */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5 sm:gap-2">
           {periods.map((period) => {
             const Icon = period.icon;
             const isSelected = selectedPeriod === period.id;
@@ -148,14 +148,14 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onDateRangeChange, className 
                 onClick={() => handlePeriodChange(period.id as DatePeriod)}
                 variant={isSelected ? "primary" : "outline"}
                 size="sm"
-                className={`text-xs ${
+                className={`text-xs px-2 py-1.5 sm:px-3 sm:py-2 ${
                   isSelected 
                     ? 'bg-neon-gradient text-white border-neon-purple' 
                     : 'hover:border-neon-purple/50'
                 }`}
               >
-                <Icon className="w-3 h-3 mr-1" />
-                {period.label}
+                <Icon className="w-3 h-3 mr-1 flex-shrink-0" />
+                <span className="truncate">{period.label}</span>
               </Button>
             );
           })}
@@ -163,7 +163,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onDateRangeChange, className 
 
         {/* Custom Date Inputs */}
         {showCustomInputs && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-neon-purple/20">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-2 border-t border-neon-purple/20">
             <div>
               <label className="block text-futuristic-gray text-xs mb-1">
                 Data Inicial
@@ -173,7 +173,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onDateRangeChange, className 
                 value={customStartDate}
                 onChange={(e) => setCustomStartDate(e.target.value)}
                 max={formatDateForInput(new Date())}
-                className="w-full px-3 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white text-sm focus:outline-none focus:border-neon-purple/50 transition-colors"
+                className="w-full px-2 py-1.5 sm:px-3 sm:py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white text-xs sm:text-sm focus:outline-none focus:border-neon-purple/50 transition-colors"
               />
             </div>
             
@@ -187,7 +187,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onDateRangeChange, className 
                 onChange={(e) => setCustomEndDate(e.target.value)}
                 min={customStartDate}
                 max={formatDateForInput(new Date())}
-                className="w-full px-3 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white text-sm focus:outline-none focus:border-neon-purple/50 transition-colors"
+                className="w-full px-2 py-1.5 sm:px-3 sm:py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white text-xs sm:text-sm focus:outline-none focus:border-neon-purple/50 transition-colors"
               />
             </div>
           </div>
@@ -200,7 +200,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onDateRangeChange, className 
               periods.find(p => p.id === selectedPeriod)?.label
             }
             {selectedPeriod === 'custom' && customStartDate && customEndDate && (
-              <span className="ml-1">
+              <span className="ml-1 block sm:inline">
                 ({new Date(customStartDate).toLocaleDateString('pt-BR')} - {new Date(customEndDate).toLocaleDateString('pt-BR')})
               </span>
             )}
