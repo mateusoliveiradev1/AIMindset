@@ -500,9 +500,9 @@ const getEmailTemplate = (alertData: AlertEmailData): EmailTemplate => {
             <div class="footer-text">Sistema de Monitoramento Inteligente</div>
             <div class="footer-text">Este é um alerta automático. Não responda a este email.</div>
             <div class="footer-links">
-              <a href="https://aimindset.com.br" class="footer-link">Site</a>
-              <a href="https://aimindset.com.br/admin" class="footer-link">Admin</a>
-              <a href="https://aimindset.com.br/contact" class="footer-link">Suporte</a>
+              <a href="https://www.aimindset.com.br" class="footer-link">Site</a>
+              <a href="https://www.aimindset.com.br/admin" class="footer-link">Admin</a>
+              <a href="https://www.aimindset.com.br/contato" class="footer-link">Suporte</a>
             </div>
           </div>
         </div>
