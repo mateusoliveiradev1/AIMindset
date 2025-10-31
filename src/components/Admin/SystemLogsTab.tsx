@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AlertTriangle, Search, Filter, RefreshCw, Server, Shield, Zap, Clock, Eye, TrendingUp, Activity } from 'lucide-react';
+import { AlertTriangle, Search, Filter, RefreshCw, Server, Shield, Zap, Clock, Eye, TrendingUp, Activity, Download, FileText } from 'lucide-react';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
 import DateFilters, { DateRange } from '../UI/DateFilters';
+import { LogExporter } from '../../utils/exportUtils';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 
@@ -190,6 +191,83 @@ export const SystemLogsTab: React.FC = () => {
     }
   };
 
+  // Função para buscar todos os logs para exportação
+  const fetchAllLogsForExport = async (): Promise<SystemLog[]> => {
+    try {
+      let query = supabase
+        .from('system_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10000); // Limite de segurança
+
+      // Aplicar os mesmos filtros ativos
+      if (typeFilter !== 'all') {
+        query = query.eq('type', typeFilter);
+      }
+
+      if (searchTerm) {
+        query = query.or(`message.ilike.%${searchTerm}%,type.ilike.%${searchTerm}%`);
+      }
+
+      // Aplicar filtro de data
+      if (dateRange) {
+        query = query.gte('created_at', dateRange.startDate.toISOString())
+                    .lte('created_at', dateRange.endDate.toISOString());
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Erro ao buscar logs para exportação:', error);
+        toast.error('Erro ao buscar logs para exportação');
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Erro ao buscar logs para exportação:', error);
+      toast.error('Erro ao buscar logs para exportação');
+      return [];
+    }
+  };
+
+  // Função para exportar logs em CSV
+  const exportToCSV = async () => {
+    const logsData = await fetchAllLogsForExport();
+    
+    if (logsData.length === 0) {
+      toast.error('Nenhum log encontrado para exportação');
+      return;
+    }
+
+    await LogExporter.exportLogs({
+      filename: 'logs_sistema',
+      data: logsData.map(log => ({
+        ...log,
+        details: log.context ? JSON.stringify(log.context) : '',
+        created_at: new Date(log.created_at).toLocaleString('pt-BR')
+      })),
+      format: 'csv',
+      headers: LogExporter.SYSTEM_LOG_HEADERS
+    });
+  };
+
+  // Função para exportar logs em JSON
+  const exportToJSON = async () => {
+    const logsData = await fetchAllLogsForExport();
+    
+    if (logsData.length === 0) {
+      toast.error('Nenhum log encontrado para exportação');
+      return;
+    }
+
+    await LogExporter.exportLogs({
+      filename: 'logs_sistema',
+      data: logsData,
+      format: 'json'
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Estatísticas */}
@@ -320,6 +398,26 @@ export const SystemLogsTab: React.FC = () => {
                 <RefreshCw className="w-4 h-4 mr-2" />
               )}
               Atualizar
+            </Button>
+            
+            {/* Botões de Exportação */}
+            <Button
+              onClick={exportToCSV}
+              variant="outline"
+              size="sm"
+              className="border-green-500/30 text-green-400 hover:bg-green-500/10"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              CSV
+            </Button>
+            <Button
+              onClick={exportToJSON}
+              variant="outline"
+              size="sm"
+              className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              JSON
             </Button>
           </div>
         </div>

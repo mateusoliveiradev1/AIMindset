@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Activity, Search, Filter, RefreshCw, User, AlertCircle, Info, CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
+import { Activity, Search, Filter, RefreshCw, User, AlertCircle, Info, CheckCircle, XCircle, Clock, Eye, Download, FileText } from 'lucide-react';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
 import DateFilters, { DateRange } from '../UI/DateFilters';
+import { LogExporter } from '../../utils/exportUtils';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'sonner';
 
@@ -148,6 +149,75 @@ export const AppLogsTab: React.FC = () => {
     return JSON.stringify(data, null, 2);
   };
 
+  // Funções de exportação
+  const fetchAllLogsForExport = async () => {
+    let query = supabase
+      .from('app_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(10000); // Limite de segurança
+
+    // Aplicar filtros de data
+    if (dateRange.startDate && dateRange.endDate) {
+      query = query
+        .gte('created_at', dateRange.startDate.toISOString())
+        .lte('created_at', dateRange.endDate.toISOString());
+    }
+
+    // Aplicar filtro de nível
+    if (levelFilter !== 'all') {
+      query = query.eq('level', levelFilter);
+    }
+
+    // Aplicar filtro de origem
+    if (sourceFilter !== 'all') {
+      query = query.eq('source', sourceFilter);
+    }
+
+    // Aplicar filtro de busca
+    if (searchTerm) {
+      query = query.or(`message.ilike.%${searchTerm}%,user_id.ilike.%${searchTerm}%`);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  };
+
+  const exportToCSV = async () => {
+    try {
+      toast.info('Preparando exportação CSV...');
+      const logs = await fetchAllLogsForExport();
+      
+      const exporter = new LogExporter();
+      await exporter.exportToCSV(logs, 'app', {
+        filename: `app-logs-${new Date().toISOString().split('T')[0]}`
+      });
+      
+      toast.success(`${logs.length} logs exportados para CSV com sucesso!`);
+    } catch (error) {
+      console.error('Erro ao exportar CSV:', error);
+      toast.error('Erro ao exportar logs para CSV');
+    }
+  };
+
+  const exportToJSON = async () => {
+    try {
+      toast.info('Preparando exportação JSON...');
+      const logs = await fetchAllLogsForExport();
+      
+      const exporter = new LogExporter();
+      await exporter.exportToJSON(logs, {
+        filename: `app-logs-${new Date().toISOString().split('T')[0]}`
+      });
+      
+      toast.success(`${logs.length} logs exportados para JSON com sucesso!`);
+    } catch (error) {
+      console.error('Erro ao exportar JSON:', error);
+      toast.error('Erro ao exportar logs para JSON');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Filtros e Controles */}
@@ -218,6 +288,25 @@ export const AppLogsTab: React.FC = () => {
                 <RefreshCw className="w-4 h-4 mr-2" />
               )}
               Atualizar
+            </Button>
+            
+            {/* Botões de Exportação */}
+            <Button
+              onClick={exportToCSV}
+              disabled={loading}
+              className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              CSV
+            </Button>
+            
+            <Button
+              onClick={exportToJSON}
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              JSON
             </Button>
           </div>
         </div>

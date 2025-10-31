@@ -4,8 +4,8 @@ import Button from './Button';
 import Card from './Card';
 
 export interface DateRange {
-  startDate: string;
-  endDate: string;
+  startDate: Date;
+  endDate: Date;
 }
 
 export interface DateFiltersProps {
@@ -29,29 +29,29 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onDateRangeChange, className 
     switch (period) {
       case 'today':
         return {
-          startDate: today.toISOString(),
-          endDate: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString()
+          startDate: today,
+          endDate: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1)
         };
       
       case 'yesterday':
         const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
         return {
-          startDate: yesterday.toISOString(),
-          endDate: new Date(yesterday.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString()
+          startDate: yesterday,
+          endDate: new Date(yesterday.getTime() + 24 * 60 * 60 * 1000 - 1)
         };
       
       case 'week':
         const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
         return {
-          startDate: weekAgo.toISOString(),
-          endDate: now.toISOString()
+          startDate: weekAgo,
+          endDate: now
         };
       
       case 'month':
         const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
         return {
-          startDate: monthAgo.toISOString(),
-          endDate: now.toISOString()
+          startDate: monthAgo,
+          endDate: now
         };
       
       case 'custom':
@@ -60,8 +60,8 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onDateRangeChange, className 
           const endDate = new Date(customEndDate);
           endDate.setHours(23, 59, 59, 999); // Fim do dia
           return {
-            startDate: startDate.toISOString(),
-            endDate: endDate.toISOString()
+            startDate: startDate,
+            endDate: endDate
           };
         }
         return null;
