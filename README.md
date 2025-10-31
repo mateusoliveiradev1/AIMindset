@@ -422,4 +422,5 @@ Este projeto está sob a licença **MIT**. Veja o arquivo [LICENSE](LICENSE) par
 *AIMindset - Transformando a forma como consumimos conteúdo sobre IA* 🚀
 
 </div>#   D e p l o y   p a r a   p r o j e t o   c o r r e t o   t r a e _ 2 i r q r 9 z 3  
+ #   D e p l o y   p a r a   p r o j e t o   c o r r e t o   t r a e 2 i r q r 9 z 3 - a 9 2 q b y d u q  
  
