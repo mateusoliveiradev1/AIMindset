@@ -161,6 +161,10 @@ const getEmailTemplate = (alertData: AlertEmailData): EmailTemplate => {
   };
 
   const config = alertConfigs[type] || defaultConfig;
+  
+  // Definir variáveis para compatibilidade
+  const alertIcon = config.icon;
+  const alertTitle = config.title;
 
   const formattedTimestamp = new Date(timestamp).toLocaleString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
