@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIMindset - Atividade Suspeita de Usuário</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      margin: 0; 
+      padding: 0; 
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+    
+    .email-wrapper {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .email-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      animation: slideIn 0.6s ease-out;
+    }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+      padding: 30px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+      animation: pulse 3s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+    }
+    
+    .alert-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+      display: block;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+    }
+    
+    .alert-title {
+      color: white;
+      font-size: 28px;
+      font-weight: 700;
+      margin: 0;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      position: relative;
+      z-index: 1;
+    }
+    
+    .priority-badge {
+      display: inline-block;
+      background: #fef2f2;
+      color: #dc2626;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 15px;
+      border: 2px solid rgba(220, 38, 38, 0.2);
+    }
+    
+    .content {
+      padding: 40px 30px;
+    }
+    
+    .alert-message {
+      font-size: 18px;
+      color: #1f2937;
+      margin-bottom: 25px;
+      font-weight: 500;
+    }
+    
+    .alert-details {
+      background: rgba(220, 38, 38, 0.1);
+      border-left: 4px solid #dc2626;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 25px 0;
+    }
+    
+    .detail-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(220, 38, 38, 0.1);
+    }
+    
+    .detail-item:last-child {
+      border-bottom: none;
+    }
+    
+    .detail-label {
+      font-weight: 600;
+      color: #374151;
+    }
+    
+    .detail-value {
+      color: #6b7280;
+      font-family: 'Courier New', monospace;
+      word-break: break-all;
+    }
+    
+    .risk-level {
+      display: inline-block;
+      background: #dc2626;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    
+    .activity-timeline {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 25px 0;
+    }
+    
+    .timeline-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .timeline-item:last-child {
+      border-bottom: none;
+    }
+    
+    .timeline-time {
+      font-weight: 600;
+      color: #374151;
+      min-width: 80px;
+      font-size: 14px;
+    }
+    
+    .timeline-action {
+      color: #6b7280;
+      margin-left: 15px;
+    }
+    
+    .action-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+      color: white;
+      text-decoration: none;
+      padding: 15px 30px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 16px;
+      text-align: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+      margin: 20px 0;
+    }
+    
+    .action-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(220, 38, 38, 0.4);
+    }
+    
+    .security-actions {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 25px 0;
+    }
+    
+    .security-actions h4 {
+      color: #1e293b;
+      margin: 0 0 15px 0;
+      font-size: 16px;
+    }
+    
+    .security-actions ul {
+      margin: 0;
+      padding-left: 20px;
+      color: #475569;
+    }
+    
+    .security-actions li {
+      margin-bottom: 8px;
+    }
+    
+    .footer {
+      background: #f9fafb;
+      padding: 30px;
+      text-align: center;
+      border-top: 1px solid #e5e7eb;
+    }
+    
+    .footer-brand {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 10px;
+    }
+    
+    .footer-text {
+      color: #6b7280;
+      font-size: 14px;
+      margin: 5px 0;
+    }
+    
+    .footer-links {
+      margin-top: 20px;
+    }
+    
+    .footer-link {
+      color: #3b82f6;
+      text-decoration: none;
+      margin: 0 15px;
+      font-weight: 500;
+      transition: color 0.3s ease;
+    }
+    
+    .footer-link:hover {
+      color: #1d4ed8;
+    }
+    
+    @media (max-width: 600px) {
+      .email-wrapper { padding: 10px; }
+      .header { padding: 20px; }
+      .alert-title { font-size: 24px; }
+      .content { padding: 25px 20px; }
+      .footer { padding: 20px; }
+      .footer-link { display: block; margin: 10px 0; }
+      .detail-item { flex-direction: column; align-items: flex-start; }
+      .detail-value { margin-top: 5px; }
+      .timeline-item { flex-direction: column; align-items: flex-start; }
+      .timeline-action { margin-left: 0; margin-top: 5px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-container">
+      <div class="header">
+        <span class="alert-icon">👤</span>
+        <h1 class="alert-title">Atividade Suspeita de Usuário</h1>
+        <div class="priority-badge">ALTO</div>
+      </div>
+      
+      <div class="content">
+        <div class="alert-message">
+          Detectamos atividade suspeita de um usuário que pode indicar comprometimento de conta ou uso indevido.
+        </div>
+        
+        <div class="alert-details">
+          <div class="detail-item">
+            <span class="detail-label">Usuário:</span>
+            <span class="detail-value">admin@aimindset.com.br</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">ID do Usuário:</span>
+            <span class="detail-value">12345</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">IP de Origem:</span>
+            <span class="detail-value">203.0.113.45</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Localização:</span>
+            <span class="detail-value">São Paulo, Brasil</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Nível de Risco:</span>
+            <span class="detail-value"><span class="risk-level">Alto</span></span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Timestamp:</span>
+            <span class="detail-value">31/10/2024 23:15:30</span>
+          </div>
+        </div>
+        
+        <div class="activity-timeline">
+          <h4>📊 Atividades Recentes:</h4>
+          <div class="timeline-item">
+            <span class="timeline-time">23:15</span>
+            <span class="timeline-action">Múltiplas tentativas de login falharam</span>
+          </div>
+          <div class="timeline-item">
+            <span class="timeline-time">23:16</span>
+            <span class="timeline-action">Login bem-sucedido de IP diferente</span>
+          </div>
+          <div class="timeline-item">
+            <span class="timeline-time">23:17</span>
+            <span class="timeline-action">Acesso a dados sensíveis de usuários</span>
+          </div>
+          <div class="timeline-item">
+            <span class="timeline-time">23:18</span>
+            <span class="timeline-action">Tentativa de alteração de permissões</span>
+          </div>
+        </div>
+        
+        <a href="https://www.aimindset.com.br/admin" class="action-button">Investigar Atividade →</a>
+        
+        <div class="security-actions">
+          <h4>🔒 Ações de Segurança Recomendadas:</h4>
+          <ul>
+            <li>Suspender temporariamente a conta do usuário</li>
+            <li>Forçar redefinição de senha</li>
+            <li>Revisar logs de acesso detalhados</li>
+            <li>Verificar alterações recentes nos dados</li>
+            <li>Implementar autenticação de dois fatores</li>
+            <li>Notificar o usuário sobre a atividade suspeita</li>
+            <li>Considerar bloqueio do IP suspeito</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="footer">
+        <div class="footer-brand">🧠 AIMindset</div>
+        <div class="footer-text">Sistema de Monitoramento Inteligente</div>
+        <div class="footer-text">Este é um alerta automático. Não responda a este email.</div>
+        <div class="footer-links">
+          <a href="https://www.aimindset.com.br" class="footer-link">Site</a>
+          <a href="https://www.aimindset.com.br/admin" class="footer-link">Admin</a>
+          <a href="https://www.aimindset.com.br/contato" class="footer-link">Suporte</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

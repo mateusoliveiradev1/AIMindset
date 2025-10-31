@@ -147,6 +147,98 @@ const getEmailTemplate = (alertData: AlertEmailData): EmailTemplate => {
       bgColor: 'rgba(6, 182, 212, 0.1)',
       borderColor: '#06b6d4',
       priority: 'medium'
+    },
+    
+    // Novos tipos de alerta
+    'security_alert': {
+      icon: '🛡️',
+      title: 'Alerta de Segurança Crítico',
+      color: '#dc2626',
+      bgColor: 'rgba(220, 38, 38, 0.1)',
+      borderColor: '#dc2626',
+      priority: 'critical',
+      actionText: 'Revisar Segurança',
+      actionUrl: 'https://www.aimindset.com.br/admin'
+    },
+    'database_error': {
+      icon: '🗄️',
+      title: 'Erro de Banco de Dados',
+      color: '#dc2626',
+      bgColor: 'rgba(220, 38, 38, 0.1)',
+      borderColor: '#dc2626',
+      priority: 'critical',
+      actionText: 'Verificar Database',
+      actionUrl: 'https://www.aimindset.com.br/admin'
+    },
+    'api_error': {
+      icon: '🔌',
+      title: 'Erro de API',
+      color: '#ef4444',
+      bgColor: 'rgba(239, 68, 68, 0.1)',
+      borderColor: '#ef4444',
+      priority: 'high',
+      actionText: 'Verificar APIs',
+      actionUrl: 'https://www.aimindset.com.br/admin'
+    },
+    'storage_warning': {
+      icon: '💾',
+      title: 'Alerta de Armazenamento',
+      color: '#f59e0b',
+      bgColor: 'rgba(245, 158, 11, 0.1)',
+      borderColor: '#f59e0b',
+      priority: 'medium',
+      actionText: 'Gerenciar Storage',
+      actionUrl: 'https://www.aimindset.com.br/admin'
+    },
+    'user_activity': {
+      icon: '👤',
+      title: 'Atividade Suspeita de Usuário',
+      color: '#dc2626',
+      bgColor: 'rgba(220, 38, 38, 0.1)',
+      borderColor: '#dc2626',
+      priority: 'high',
+      actionText: 'Revisar Atividade',
+      actionUrl: 'https://www.aimindset.com.br/admin'
+    },
+    'network_error': {
+      icon: '🌐',
+      title: 'Erro de Rede',
+      color: '#ef4444',
+      bgColor: 'rgba(239, 68, 68, 0.1)',
+      borderColor: '#ef4444',
+      priority: 'high'
+    },
+    'memory_warning': {
+      icon: '🧠',
+      title: 'Alerta de Memória',
+      color: '#f59e0b',
+      bgColor: 'rgba(245, 158, 11, 0.1)',
+      borderColor: '#f59e0b',
+      priority: 'medium'
+    },
+    'disk_space_warning': {
+      icon: '💿',
+      title: 'Espaço em Disco Baixo',
+      color: '#f59e0b',
+      bgColor: 'rgba(245, 158, 11, 0.1)',
+      borderColor: '#f59e0b',
+      priority: 'medium'
+    },
+    'ssl_certificate': {
+      icon: '🔐',
+      title: 'Problema com Certificado SSL',
+      color: '#dc2626',
+      bgColor: 'rgba(220, 38, 38, 0.1)',
+      borderColor: '#dc2626',
+      priority: 'critical'
+    },
+    'rate_limit': {
+      icon: '⏱️',
+      title: 'Limite de Taxa Excedido',
+      color: '#f59e0b',
+      bgColor: 'rgba(245, 158, 11, 0.1)',
+      borderColor: '#f59e0b',
+      priority: 'medium'
     }
   };
 
