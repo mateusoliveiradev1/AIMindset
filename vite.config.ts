@@ -86,6 +86,19 @@ export default defineConfig({
     // HMR otimizado
     hmr: {
       overlay: true
+    },
+    // Proxy para APIs de backup
+    proxy: {
+      '/api/backup-status': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false
+      },
+      '/api/backup-health': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false
+      }
     }
   },
   // Otimizações de dependências

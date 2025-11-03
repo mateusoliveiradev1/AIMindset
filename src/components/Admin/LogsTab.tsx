@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { Monitor, Database, Activity, AlertTriangle, Bell, TestTube, BarChart3 } from 'lucide-react';
+import { Monitor, Database, Activity, AlertTriangle, Bell, TestTube, BarChart3, Shield } from 'lucide-react';
 import { BackendLogsTab } from './BackendLogsTab';
 import { AppLogsTab } from './AppLogsTab';
 import { SystemLogsTab } from './SystemLogsTab';
 import AlertsManagement from './AlertsManagement';
 import TestLogging from '../TestLogging';
 import LogsDashboard from './LogsDashboard';
+import { BackupMonitoring } from './BackupMonitoring';
 
 export const LogsTab: React.FC = () => {
-  const [activeSubTab, setActiveSubTab] = useState<'dashboard' | 'backend' | 'app' | 'system' | 'alerts' | 'test'>('dashboard');
+  const [activeSubTab, setActiveSubTab] = useState<'dashboard' | 'backend' | 'app' | 'system' | 'alerts' | 'backup' | 'test'>('dashboard');
 
   const subTabs = [
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3, description: 'Gráficos e estatísticas dos logs' },
@@ -16,6 +17,7 @@ export const LogsTab: React.FC = () => {
     { id: 'app', label: 'App Logs', icon: Activity, description: 'Logs de eventos da aplicação' },
     { id: 'system', label: 'System Logs', icon: AlertTriangle, description: 'Logs do sistema e alertas' },
     { id: 'alerts', label: 'Alertas', icon: Bell, description: 'Gerenciar alertas automáticos' },
+    { id: 'backup', label: 'Backup', icon: Shield, description: 'Monitoramento do sistema de backup' },
     { id: 'test', label: 'Test Logs', icon: TestTube, description: 'Testar inserção de logs' }
   ];
 
@@ -65,6 +67,7 @@ export const LogsTab: React.FC = () => {
         {activeSubTab === 'app' && <AppLogsTab />}
         {activeSubTab === 'system' && <SystemLogsTab />}
         {activeSubTab === 'alerts' && <AlertsManagement />}
+        {activeSubTab === 'backup' && <BackupMonitoring />}
         {activeSubTab === 'test' && <TestLogging />}
       </div>
     </div>

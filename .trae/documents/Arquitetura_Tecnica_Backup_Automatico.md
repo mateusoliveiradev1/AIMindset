@@ -37,25 +37,31 @@ graph TD
 
 ## 2. Technology Description
 
-- **🎯 Automação**: Supabase Scheduler (cron job nativo) - execução às 03:00
-- **⚡ Processamento**: Supabase Edge Functions (Deno runtime) - execução isolada
-- **🧱 Função SQL**: `backup_all_data()` **EXISTENTE** (zero modificações)
-- **📧 Alertas**: `alert-processor` **EXISTENTE** (integração via invoke)
-- **📊 Logs**: Sistema de logs **EXISTENTE** (`backup_logs` + `system_logs`)
-- **🔒 Compatibilidade**: Total com cache TTL, triggers e funções atuais
+* **🎯 Automação**: Supabase Scheduler (cron job nativo) - execução às 03:00
+
+* **⚡ Processamento**: Supabase Edge Functions (Deno runtime) - execução isolada
+
+* **🧱 Função SQL**: `backup_all_data()` **EXISTENTE** (zero modificações)
+
+* **📧 Alertas**: `alert-processor` **EXISTENTE** (integração via invoke)
+
+* **📊 Logs**: Sistema de logs **EXISTENTE** (`backup_logs` + `system_logs`)
+
+* **🔒 Compatibilidade**: Total com cache TTL, triggers e funções atuais
 
 ## 3. Route definitions
 
-| Route | Purpose | Status |
-|-------|---------|--------|
-| `/functions/v1/auto-backup` | 🆕 Edge Function para backup automático diário | **NOVA** |
-| `/functions/v1/alert-processor` | 📧 Edge Function para alertas por e-mail | **EXISTENTE** |
+| Route                           | Purpose                                        | Status        |
+| ------------------------------- | ---------------------------------------------- | ------------- |
+| `/functions/v1/auto-backup`     | 🆕 Edge Function para backup automático diário | **NOVA**      |
+| `/functions/v1/alert-processor` | 📧 Edge Function para alertas por e-mail       | **EXISTENTE** |
 
 ## 4. API definitions
 
 ### 4.1 Core API
 
 **🔄 Backup Automático (NOVA Edge Function)**
+
 ```
 POST /functions/v1/auto-backup
 ```
@@ -63,12 +69,14 @@ POST /functions/v1/auto-backup
 **Execução**: Automaticamente via Supabase Scheduler às 03:00 (sem parâmetros)
 
 **Fluxo Interno**:
+
 1. ✅ Chama `supabase.rpc('backup_all_data')` - **função SQL existente**
 2. 📊 Registra em `backup_logs` com `action_type: 'auto_backup'`
 3. 📝 Registra em `system_logs` com `type: 'auto_backup'`
 4. 🚨 Se erro: chama `alert-processor` existente
 
 **Response (Sucesso)**:
+
 ```json
 {
   "success": true,
@@ -79,6 +87,7 @@ POST /functions/v1/auto-backup
 ```
 
 **Response (Erro)**:
+
 ```json
 {
   "success": false,
@@ -88,17 +97,19 @@ POST /functions/v1/auto-backup
 ```
 
 **📧 Integração com Alert Processor (EXISTENTE)**
+
 ```
 POST /functions/v1/alert-processor
 ```
 
 **Chamada em caso de falha**:
-| Param Name | Param Type | isRequired | Description |
-|------------|------------|------------|-------------|
-| type | string | true | Sempre: `'critical'` |
-| source | string | true | Sempre: `'auto_backup_system'` |
-| message | string | true | Mensagem de erro do backup |
-| details | object | false | Stack trace e timestamp |
+
+| Param Name | Param Type | isRequired | Description                    |
+| ---------- | ---------- | ---------- | ------------------------------ |
+| type       | string     | true       | Sempre: `'critical'`           |
+| source     | string     | true       | Sempre: `'auto_backup_system'` |
+| message    | string     | true       | Mensagem de erro do backup     |
+| details    | object     | false      | Stack trace e timestamp        |
 
 ## 5. Server architecture diagram
 
@@ -187,6 +198,7 @@ erDiagram
 ### 6.2 Data Definition Language
 
 **🎯 Configuração do Supabase Scheduler**
+
 ```sql
 -- ⚠️ IMPORTANTE: Usar Supabase Scheduler (não pg_cron diretamente)
 -- Configuração via Dashboard do Supabase ou API
@@ -209,6 +221,7 @@ SELECT cron.schedule(
 ```
 
 **🔒 Configuração de Segurança**
+
 ```sql
 -- Garantir permissões para o service_role
 GRANT USAGE ON SCHEMA cron TO service_role;
@@ -221,6 +234,7 @@ WHERE jobname = 'daily-auto-backup';
 ```
 
 **Edge Function: auto-backup.ts**
+
 ```typescript
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -359,6 +373,7 @@ serve(async (req) => {
 ```
 
 **Configuração de Permissões**
+
 ```sql
 -- Garantir que o cron job tenha permissões para executar a Edge Function
 GRANT USAGE ON SCHEMA cron TO service_role;
@@ -369,6 +384,7 @@ SELECT * FROM cron.job WHERE jobname = 'daily-auto-backup';
 ```
 
 **📊 Monitoramento e Logs**
+
 ```sql
 -- Query para verificar logs de backup automático
 SELECT 
@@ -409,31 +425,52 @@ LIMIT 5;
 ## 7. 🎯 Garantias de Implementação
 
 ### 7.1 ✅ Compatibilidade Total
-- **Zero alterações** em funções SQL existentes (`backup_all_data`, `restore_from_backup`)
-- **Zero alterações** em tabelas existentes (`backup_logs`, `system_logs`)
-- **Zero alterações** no painel administrativo (visual ou funcional)
-- **Zero impacto** na performance do site principal
+
+* **Zero alterações** em funções SQL existentes (`backup_all_data`, `restore_from_backup`)
+
+* **Zero alterações** em tabelas existentes (`backup_logs`, `system_logs`)
+
+* **Zero alterações** no painel administrativo (visual ou funcional)
+
+* **Zero impacto** na performance do site principal
 
 ### 7.2 🚀 Execução Isolada
-- **Edge Function** executa fora do ciclo principal do aplicativo
-- **Supabase Scheduler** gerencia execução sem afetar recursos do app
-- **Processamento assíncrono** não bloqueia operações do usuário
-- **Recursos dedicados** para backup automático
+
+* **Edge Function** executa fora do ciclo principal do aplicativo
+
+* **Supabase Scheduler** gerencia execução sem afetar recursos do app
+
+* **Processamento assíncrono** não bloqueia operações do usuário
+
+* **Recursos dedicados** para backup automático
 
 ### 7.3 🔒 Segurança e Confiabilidade
-- **Logs detalhados** para auditoria e troubleshooting
-- **Alertas automáticos** por e-mail em caso de falha
-- **Integração nativa** com sistema de alertas existente
-- **Monitoramento contínuo** via dashboard do Supabase
+
+* **Logs detalhados** para auditoria e troubleshooting
+
+* **Alertas automáticos** por e-mail em caso de falha
+
+* **Integração nativa** com sistema de alertas existente
+
+* **Monitoramento contínuo** via dashboard do Supabase
 
 ### 7.4 📧 Sistema de Alertas
-- **Reutiliza** `alert-processor` existente (zero desenvolvimento adicional)
-- **Templates** de e-mail já testados e aprovados
-- **Lista de assinantes** já configurada no sistema
-- **Tratamento de erros** robusto com stack trace completo
+
+* **Reutiliza** `alert-processor` existente (zero desenvolvimento adicional)
+
+* **Templates** de e-mail já testados e aprovados
+
+* **Lista de assinantes** já configurada no sistema
+
+* **Tratamento de erros** robusto com stack trace completo
 
 ### 7.5 🛠️ Facilidade de Manutenção
-- **Código mínimo**: apenas uma Edge Function simples
-- **Dependências zero**: usa apenas infraestrutura existente
-- **Configuração única**: Supabase Scheduler via dashboard
-- **Monitoramento visual**: logs aparecem no painel admin existente
+
+* **Código mínimo**: apenas uma Edge Function simples
+
+* **Dependências zero**: usa apenas infraestrutura existente
+
+* **Configuração única**: Supabase Scheduler via dashboard
+
+* **Monitoramento visual**: logs aparecem no painel admin existente
+
