@@ -1,8 +1,8 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 interface BackupStatus {
   system_healthy: boolean;
@@ -27,6 +27,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Permitir apenas GET e POST
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Validar variáveis de ambiente
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('❌ [BACKUP-STATUS] Variáveis de ambiente faltando:', {
+      supabaseUrl: !!supabaseUrl,
+      supabaseServiceKey: !!supabaseServiceKey
+    });
+    return res.status(500).json({
+      success: false,
+      message: 'Erro de configuração do servidor',
+      error: 'Variáveis de ambiente do Supabase não configuradas'
+    });
   }
 
   if (req.method === 'GET') {
