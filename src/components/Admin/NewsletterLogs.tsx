@@ -129,55 +129,76 @@ const NewsletterLogs: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header com Estatísticas */}
-      {stats ? (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="glass-effect p-4 hover-lift transition-all">
-            <div className="flex items-center gap-2 mb-2">
-              <BarChart3 className="w-5 h-5 text-lime-green" />
-              <span className="text-sm text-futuristic-gray">Total de Eventos</span>
-            </div>
-            <div className="text-2xl font-orbitron font-bold text-white">{stats.total_events.toLocaleString()}</div>
-          </Card>
-
-          <Card className="glass-effect p-4 hover-lift transition-all">
-            <div className="flex items-center gap-2 mb-2">
-              <CheckCircle className="w-5 h-5 text-green-400" />
-              <span className="text-sm text-futuristic-gray">Taxa de Sucesso</span>
-            </div>
-            <div className="text-2xl font-orbitron font-bold text-green-400">{stats.success_rate.toFixed(1)}%</div>
-          </Card>
-
-          <Card className="glass-effect p-4 hover-lift transition-all">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertCircle className="w-5 h-5 text-red-400" />
-              <span className="text-sm text-futuristic-gray">Taxa de Erro</span>
-            </div>
-            <div className="text-2xl font-orbitron font-bold text-red-400">{stats.error_rate.toFixed(1)}%</div>
-          </Card>
-
-          <Card className="glass-effect p-4 hover-lift transition-all">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="w-5 h-5 text-yellow-400" />
-              <span className="text-sm text-futuristic-gray">Erros Recentes</span>
-            </div>
-            <div className="text-2xl font-orbitron font-bold text-yellow-400">{stats.recent_errors.length}</div>
-          </Card>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="glass-effect p-4 animate-pulse">
-              <div className="flex items-center justify-between mb-2">
-                <div className="w-6 h-6 bg-futuristic-gray/20 rounded" />
-                <div className="w-8 h-4 bg-futuristic-gray/20 rounded" />
+      {/* Header com Estatísticas - estilo idêntico ao dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Total de Eventos */}
+        <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-lime-green/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(34,197,94,0.25)]">
+          <div className="absolute -top-10 -right-10 h-24 w-24 rounded-full bg-lime-green/20 blur-2xl" aria-hidden="true" />
+          <div className="p-4 sm:p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[11px] sm:text-xs uppercase tracking-wide text-futuristic-gray">Total de Eventos</p>
+                <p className="text-2xl sm:text-3xl font-orbitron font-bold text-white mt-1">
+                  {stats && typeof stats.total_events === 'number' ? stats.total_events.toLocaleString() : '...'}
+                </p>
+                <p className="text-[11px] text-lime-green mt-1">Newsletter</p>
               </div>
-              <div className="w-24 h-6 bg-futuristic-gray/20 rounded mb-2" />
-              <div className="w-36 h-4 bg-futuristic-gray/20 rounded" />
-            </Card>
-          ))}
-        </div>
-      )}
+              <BarChart3 className="w-6 h-6 sm:w-7 sm:h-7 text-lime-green" />
+            </div>
+          </div>
+        </Card>
+
+        {/* Taxa de Sucesso */}
+        <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(34,197,94,0.25)]">
+          <div className="absolute -top-10 -right-10 h-24 w-24 rounded-full bg-green-400/20 blur-2xl" aria-hidden="true" />
+          <div className="p-4 sm:p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[11px] sm:text-xs uppercase tracking-wide text-futuristic-gray">Taxa de Sucesso</p>
+                <p className="text-2xl sm:text-3xl font-orbitron font-bold text-white mt-1">
+                  {stats && typeof stats.success_rate === 'number' ? `${stats.success_rate.toFixed(1)}%` : '...'}
+                </p>
+                <p className="text-[11px] text-green-400 mt-1">Entregas</p>
+              </div>
+              <CheckCircle className="w-6 h-6 sm:w-7 sm:h-7 text-green-400" />
+            </div>
+          </div>
+        </Card>
+
+        {/* Taxa de Erro */}
+        <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(248,113,113,0.25)]">
+          <div className="absolute -top-10 -right-10 h-24 w-24 rounded-full bg-red-400/20 blur-2xl" aria-hidden="true" />
+          <div className="p-4 sm:p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[11px] sm:text-xs uppercase tracking-wide text-futuristic-gray">Taxa de Erro</p>
+                <p className="text-2xl sm:text-3xl font-orbitron font-bold text-white mt-1">
+                  {stats && typeof stats.error_rate === 'number' ? `${stats.error_rate.toFixed(1)}%` : '...'}
+                </p>
+                <p className="text-[11px] text-red-400 mt-1">Falhas</p>
+              </div>
+              <AlertCircle className="w-6 h-6 sm:w-7 sm:h-7 text-red-400" />
+            </div>
+          </div>
+        </Card>
+
+        {/* Erros Recentes */}
+        <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(250,204,21,0.25)]">
+          <div className="absolute -top-10 -right-10 h-24 w-24 rounded-full bg-yellow-400/20 blur-2xl" aria-hidden="true" />
+          <div className="p-4 sm:p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-[11px] sm:text-xs uppercase tracking-wide text-futuristic-gray">Erros Recentes</p>
+                <p className="text-2xl sm:text-3xl font-orbitron font-bold text-white mt-1">
+                  {stats && Array.isArray(stats.recent_errors) ? stats.recent_errors.length : '...'}
+                </p>
+                <p className="text-[11px] text-yellow-400 mt-1">Últimas 24h</p>
+              </div>
+              <AlertTriangle className="w-6 h-6 sm:w-7 sm:h-7 text-yellow-400" />
+            </div>
+          </div>
+        </Card>
+      </div>
 
       {/* Controles */}
       <Card className="glass-effect p-4 sm:p-6">
