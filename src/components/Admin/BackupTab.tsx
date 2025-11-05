@@ -18,6 +18,7 @@ import {
   MessageSquare,
   Star
 } from 'lucide-react';
+import DateFilters, { DateRange } from '../UI/DateFilters';
 
 /**
  * Componente BackupTab - Interface de Backup e Restauração
@@ -49,6 +50,21 @@ export const BackupTab: React.FC = () => {
 
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [restoreConfirmation, setRestoreConfirmation] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange | null>(null);
+  const [filteredLogs, setFilteredLogs] = useState(logs);
+
+  useEffect(() => {
+    if (!dateRange) {
+      setFilteredLogs(logs);
+      return;
+    }
+    setFilteredLogs(
+      logs.filter((log) => {
+        const created = new Date(log.created_at);
+        return created >= dateRange.startDate && created <= dateRange.endDate;
+      })
+    );
+  }, [logs, dateRange]);
 
   // Carregar logs ao montar o componente
   useEffect(() => {
@@ -182,7 +198,7 @@ export const BackupTab: React.FC = () => {
 
       {/* Status Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <Card className="glass-effect hover-lift transition-all duration-300">
+        <Card className="relative overflow-hidden rounded-2xl glass-effect hover-lift transition-all duration-300 bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent border border-white/10 ring-1 ring-white/10">
           <div className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -199,7 +215,7 @@ export const BackupTab: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="glass-effect hover-lift transition-all duration-300">
+        <Card className="relative overflow-hidden rounded-2xl glass-effect hover-lift transition-all duration-300 bg-gradient-to-br from-blue-500/10 via-white/5 to-transparent border border-white/10 ring-1 ring-white/10">
           <div className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -216,7 +232,7 @@ export const BackupTab: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="glass-effect hover-lift transition-all duration-300">
+        <Card className="relative overflow-hidden rounded-2xl glass-effect hover-lift transition-all duration-300 bg-gradient-to-br from-lime-500/10 via-white/5 to-transparent border border-white/10 ring-1 ring-white/10">
           <div className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -233,7 +249,7 @@ export const BackupTab: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="glass-effect hover-lift transition-all duration-300">
+        <Card className="relative overflow-hidden rounded-2xl glass-effect hover-lift transition-all duration-300 bg-gradient-to-br from-yellow-400/10 via-white/5 to-transparent border border-white/10 ring-1 ring-white/10">
           <div className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -253,7 +269,7 @@ export const BackupTab: React.FC = () => {
 
       {/* Action Buttons */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-        <Card className="glass-effect">
+        <Card className="relative overflow-hidden rounded-2xl glass-effect hover-lift transition-all duration-300 bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent border border-white/10 ring-1 ring-white/10">
           <div className="p-6">
             <div className="flex items-center space-x-3 mb-4">
               <Download className="w-6 h-6 text-neon-purple" />
@@ -284,7 +300,7 @@ export const BackupTab: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="glass-effect">
+        <Card className="relative overflow-hidden rounded-2xl glass-effect hover-lift transition-all duration-300 bg-gradient-to-br from-blue-500/10 via-white/5 to-transparent border border-white/10 ring-1 ring-white/10">
           <div className="p-6">
             <div className="flex items-center space-x-3 mb-4">
               <Upload className="w-6 h-6 text-blue-400" />
@@ -310,46 +326,58 @@ export const BackupTab: React.FC = () => {
       {/* Backup History */}
       <Card className="glass-effect">
         <div className="p-6">
+          <div className="mb-4">
+            <DateFilters onDateRangeChange={setDateRange} />
+          </div>
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-orbitron font-bold text-white flex items-center">
               <Calendar className="w-5 h-5 mr-2 text-neon-purple" />
               Histórico de Operações
             </h3>
             <span className="text-futuristic-gray text-sm">
-              {logs.length} operações registradas
+              {filteredLogs.length} operações registradas
             </span>
           </div>
-
-          {logs.length === 0 ? (
-            <div className="text-center py-8">
-              <Database className="w-12 h-12 text-futuristic-gray mx-auto mb-4" />
-              <p className="text-futuristic-gray">Nenhuma operação de backup registrada</p>
+          
+          {filteredLogs.length === 0 ? (
+            <div className="text-center py-10">
+              <Database className="w-12 h-12 text-neon-purple/50 mx-auto mb-4 animate-pulse" />
+              <p className="text-futuristic-gray">Nenhuma operação de backup neste período</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {logs.map((log) => (
+              {filteredLogs.map((log) => (
                 <div
                   key={log.id}
-                  className="flex items-center justify-between p-4 bg-dark-surface/30 rounded-lg border border-futuristic-gray/10"
+                  className="group relative overflow-hidden rounded-xl p-4 bg-gradient-to-br from-neon-purple/5 via-white/5 to-transparent border border-white/10 ring-1 ring-white/5 hover:border-neon-purple/30 hover:ring-neon-purple/20 transition-all hover-lift"
                 >
-                  <div className="flex items-center space-x-3">
-                    {getActionTypeIcon(log.action_type)}
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-white font-medium capitalize">
-                          {log.action_type === 'backup' ? 'Backup' : 'Restauração'}
-                        </span>
-                        {getStatusIcon(log.success)}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="w-9 h-9 mr-3 rounded-full bg-neon-purple/15 border border-neon-purple/30 flex items-center justify-center text-neon-purple font-orbitron text-sm">
+                        {log.action_type === 'backup' ? 'B' : 'R'}
                       </div>
-                      <p className="text-futuristic-gray text-sm">
-                        {log.records_affected} registros • {formatDate(new Date(log.created_at))}
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-white font-medium capitalize">
+                            {log.action_type === 'backup' ? 'Backup' : 'Restauração'}
+                          </span>
+                          <span className={`px-2 py-0.5 text-xs rounded-full border ${log.success ? 'bg-green-500/10 text-green-400 border-green-400/30' : 'bg-red-500/10 text-red-400 border-red-400/30'}`}>
+                            {log.success ? 'Sucesso' : 'Falha'}
+                          </span>
+                        </div>
+                        <p className="text-futuristic-gray text-sm">
+                          {log.records_affected} registros • {formatDate(new Date(log.created_at))}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-futuristic-gray text-xs">
+                        {log.details}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-futuristic-gray text-xs">
-                      {log.details}
-                    </p>
+                  <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute -top-12 -right-12 w-24 h-24 rounded-full bg-neon-purple/10 blur-xl"></div>
                   </div>
                 </div>
               ))}
@@ -361,7 +389,7 @@ export const BackupTab: React.FC = () => {
       {/* Restore Confirmation Modal */}
       {showRestoreModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <Card className="glass-effect max-w-md w-full">
+          <Card className="relative overflow-hidden rounded-2xl glass-effect hover-lift transition-all duration-300 max-w-md w-full bg-gradient-to-br from-red-500/10 via-white/5 to-transparent border border-white/10 ring-1 ring-white/10">
             <div className="p-6">
               <div className="flex items-center space-x-3 mb-4">
                 <AlertTriangle className="w-6 h-6 text-yellow-400" />
