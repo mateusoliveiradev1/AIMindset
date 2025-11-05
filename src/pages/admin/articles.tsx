@@ -5,6 +5,27 @@ import { FileText, Search, Filter, Edit3, Trash2, Eye, Star } from 'lucide-react
 import { useArticles } from '@/hooks/useArticles';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useDebounce } from '@/hooks/useDebounce';
+
+// Skeleton para linha de artigo
+const ArticleRowSkeleton: React.FC = () => (
+  <div className="flex flex-col lg:flex-row lg:items-center justify-between p-4 bg-darker-surface/30 rounded-lg">
+    <div className="flex-1 min-w-0 space-y-2">
+      <div className="h-4 w-3/4 bg-neon-purple/20 animate-pulse rounded" />
+      <div className="h-3 w-full bg-neon-purple/10 animate-pulse rounded" />
+      <div className="flex gap-2">
+        <div className="h-3 w-24 bg-neon-purple/10 animate-pulse rounded" />
+        <div className="h-3 w-24 bg-neon-purple/10 animate-pulse rounded" />
+        <div className="h-3 w-24 bg-neon-purple/10 animate-pulse rounded hidden sm:block" />
+      </div>
+    </div>
+    <div className="flex items-center gap-2 mt-3 lg:mt-0">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="h-9 w-9 sm:h-8 sm:w-8 bg-neon-purple/10 animate-pulse rounded" />
+      ))}
+    </div>
+  </div>
+);
 
 export default function AdminArticles() {
   const navigate = useNavigate();
@@ -12,18 +33,41 @@ export default function AdminArticles() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'draft'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'recent' | 'updated' | 'title' | 'views'>('updated');
+
+  const debouncedSearch = useDebounce(searchTerm, 300);
 
   const filteredArticles = useMemo(() => {
-    return (articles || [])
-      .filter((article) => {
-        const matchesSearch = article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (article.content || '').toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesFilter = filterStatus === 'all' ||
-          (filterStatus === 'published' && article.published) ||
-          (filterStatus === 'draft' && !article.published);
-        return matchesSearch && matchesFilter;
-      });
-  }, [articles, searchTerm, filterStatus]);
+    const arr = (articles || []).filter((article) => {
+      const needle = debouncedSearch.toLowerCase();
+      const matchesSearch = (article.title || '').toLowerCase().includes(needle) ||
+        (article.content || '').toLowerCase().includes(needle);
+      const matchesFilter = filterStatus === 'all' ||
+        (filterStatus === 'published' && article.published) ||
+        (filterStatus === 'draft' && !article.published);
+      const matchesCategory = categoryFilter === 'all' || String(article.category_id) === String(categoryFilter);
+      return matchesSearch && matchesFilter && matchesCategory;
+    });
+
+    const result = arr.slice();
+    result.sort((a: any, b: any) => {
+      switch (sortBy) {
+        case 'updated':
+          return new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime();
+        case 'recent':
+          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        case 'title':
+          return (a.title || '').localeCompare(b.title || '');
+        case 'views':
+          return (b.views_count || 0) - (a.views_count || 0);
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [articles, debouncedSearch, filterStatus, categoryFilter, sortBy]);
 
   const handleNewArticle = () => {
     navigate('/admin/editor');
@@ -120,6 +164,26 @@ export default function AdminArticles() {
               <option value="published">Publicados</option>
               <option value="draft">Rascunhos</option>
             </select>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="px-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple text-sm sm:text-base min-w-0 sm:min-w-[180px]"
+            >
+              <option value="all">Todas categorias</option>
+              {categories.map((c: any) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="px-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple text-sm sm:text-base min-w-0 sm:min-w-[160px]"
+            >
+              <option value="updated">Atualizados</option>
+              <option value="recent">Recentes</option>
+              <option value="title">Título (A–Z)</option>
+              <option value="views">Mais vistos</option>
+            </select>
           </div>
         </div>
       </Card>
@@ -128,9 +192,10 @@ export default function AdminArticles() {
       <Card className="glass-effect">
         <div className="p-3 sm:p-6">
           {loading && (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neon-purple mx-auto mb-4"></div>
-              <p className="text-futuristic-gray">Carregando artigos...</p>
+            <div className="space-y-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <ArticleRowSkeleton key={i} />
+              ))}
             </div>
           )}
 
