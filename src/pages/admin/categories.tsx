@@ -4,6 +4,7 @@ import { Button } from '@/components/UI/Button';
 import { TrendingUp, Search, PlusCircle, Edit3, Trash2, FileText, Brain, BarChart3, X } from 'lucide-react';
 import { useArticles } from '@/hooks/useArticles';
 import { toast } from 'sonner';
+import SEOManager from '@/components/SEO/SEOManager';
 
 export default function AdminCategories() {
   const { categories, articles, loading, error, createCategory, updateCategory, deleteCategory, refresh } = useArticles();
@@ -85,6 +86,21 @@ export default function AdminCategories() {
 
   return (
     <div className="space-y-6">
+      <SEOManager
+        metadata={{
+          title: 'Gerenciamento de Categorias - Admin AIMindset',
+          description: 'Gerencie categorias e taxonomias dos artigos na área administrativa.',
+          keywords: ['admin', 'categorias', 'taxonomia', 'artigos', 'blog', 'aimindset'],
+          canonicalUrl: 'https://aimindset.com.br/admin/categories',
+          type: 'webpage',
+          language: 'pt-BR',
+          robots: 'noindex, nofollow',
+          breadcrumbs: [
+            { name: 'Admin', url: 'https://aimindset.com.br/admin', position: 1 },
+            { name: 'Categorias', url: 'https://aimindset.com.br/admin/categories', position: 2 }
+          ]
+        }}
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

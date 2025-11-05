@@ -5,6 +5,7 @@ import { useArticles } from '@/hooks/useArticles';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import SEOManager from '@/components/SEO/SEOManager';
 
 export default function AdminEditor() {
   const navigate = useNavigate();
@@ -136,6 +137,22 @@ export default function AdminEditor() {
 
   return (
     <div className="space-y-8">
+      <SEOManager
+        metadata={{
+          title: 'Editor de Artigos - Admin AIMindset',
+          description: 'Crie e edite artigos do blog na área administrativa.',
+          keywords: ['admin', 'editor', 'artigos', 'blog', 'aimindset', 'conteúdo'],
+          canonicalUrl: 'https://aimindset.com.br/admin/editor',
+          type: 'webpage',
+          language: 'pt-BR',
+          robots: 'noindex, nofollow',
+          breadcrumbs: [
+            { name: 'Admin', url: 'https://aimindset.com.br/admin', position: 1 },
+            { name: 'Editor', url: 'https://aimindset.com.br/admin/editor', position: 2 }
+          ]
+        }}
+      />
+      {/* Header */}
       <div>
         <h2 className="text-2xl font-orbitron font-bold text-white">{articleId || articleSlug ? 'Editar Artigo' : 'Novo Artigo'}</h2>
         <p className="text-futuristic-gray text-sm">Crie ou edite artigos do blog.</p>

@@ -12,6 +12,7 @@ import {
   Users,
   TestTube
 } from 'lucide-react';
+import Card from '../UI/Card';
 
 interface AlertSubscriber {
   id: number;
@@ -228,7 +229,7 @@ export default function AlertsManagement({ className = '' }: AlertsManagementPro
       {/* Header */}
       <div className="flex items-center gap-3">
         <Bell className="w-6 h-6 text-neon-purple" />
-        <h2 className="text-2xl font-bold text-white">Gerenciamento de Alertas</h2>
+        <h2 className="text-2xl font-orbitron font-bold text-white">Gerenciamento de Alertas</h2>
       </div>
 
       {/* Mensagem de status */}
@@ -248,126 +249,134 @@ export default function AlertsManagement({ className = '' }: AlertsManagementPro
       )}
 
       {/* Adicionar novo assinante */}
-      <div className="bg-darker-surface/50 border border-neon-purple/20 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Plus className="w-5 h-5 text-neon-purple" />
-          Adicionar Assinante
-        </h3>
-        
-        <form onSubmit={addSubscriber} className="flex gap-3">
-          <div className="flex-1">
-            <input
-              type="email"
-              value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
-              placeholder="Digite o e-mail do administrador"
-              className="w-full px-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple"
-              disabled={isLoading}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={isLoading || !newEmail.trim()}
-            className="px-6 py-2 bg-neon-purple text-white rounded-lg hover:bg-neon-purple/80 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all duration-300"
-          >
-            <Mail className="w-4 h-4" />
-            {isLoading ? 'Adicionando...' : 'Adicionar'}
-          </button>
-        </form>
-      </div>
+      <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10">
+        <div className="p-6">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Plus className="w-5 h-5 text-neon-purple" />
+            Adicionar Assinante
+          </h3>
+          
+          <form onSubmit={addSubscriber} className="flex gap-3">
+            <div className="flex-1">
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="Digite o e-mail do administrador"
+                className="w-full px-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple"
+                disabled={isLoading}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isLoading || !newEmail.trim()}
+              className="px-6 py-2 bg-neon-purple text-white rounded-lg hover:bg-neon-purple/80 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-all duration-300"
+            >
+              <Mail className="w-4 h-4" />
+              {isLoading ? 'Adicionando...' : 'Adicionar'}
+            </button>
+          </form>
+        </div>
+      </Card>
 
       {/* Lista de assinantes */}
-      <div className="bg-darker-surface/50 border border-neon-purple/20 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5 text-neon-purple" />
-          Assinantes de Alertas ({subscribers.length})
-        </h3>
+      <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10">
+        <div className="p-6">
+          <h3 className="text-lg font-semibold text-white mb-4 flex itens-center gap-2">
+            <Users className="w-5 h-5 text-neon-purple" />
+            Assinantes de Alertas ({subscribers.length})
+          </h3>
 
-        {subscribers.length === 0 ? (
-          <div className="text-center py-8 text-futuristic-gray">
-            <Mail className="w-12 h-12 mx-auto mb-3 text-futuristic-gray/50" />
-            <p>Nenhum assinante cadastrado</p>
-            <p className="text-sm">Adicione e-mails para receber alertas automáticos</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {subscribers.map((subscriber) => (
-              <div
-                key={subscriber.id}
-                className="flex items-center justify-between p-3 bg-darker-surface/30 border border-neon-purple/10 rounded-lg hover:border-neon-purple/30 transition-all duration-300"
-              >
-                <div className="flex items-center gap-3">
-                  <Mail className="w-4 h-4 text-futuristic-gray" />
-                  <div>
-                    <p className="font-medium text-white">{subscriber.email}</p>
-                    <p className="text-sm text-futuristic-gray">
-                      Adicionado em {new Date(subscriber.created_at).toLocaleDateString('pt-BR')}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => removeSubscriber(subscriber.email)}
-                  disabled={isLoading}
-                  className="p-2 text-red-400 hover:bg-red-900/20 hover:text-red-300 rounded-lg disabled:opacity-50 transition-all duration-300"
-                  title="Remover assinante"
+          {subscribers.length === 0 ? (
+            <div className="text-center py-8 text-futuristic-gray">
+              <Mail className="w-12 h-12 mx-auto mb-3 text-futuristic-gray/50" />
+              <p>Nenhum assinante cadastrado</p>
+              <p className="text-sm">Adicione e-mails para receber alertas automáticos</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {subscribers.map((subscriber) => (
+                <div
+                  key={subscriber.id}
+                  className="flex items-center justify-between p-3 bg-darker-surface/30 border border-neon-purple/10 rounded-lg hover:border-neon-purple/30 transition-all duration-300"
                 >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-4 h-4 text-futuristic-gray" />
+                    <div>
+                      <p className="font-medium text-white">{subscriber.email}</p>
+                      <p className="text-sm text-futuristic-gray">
+                        Adicionado em {new Date(subscriber.created_at).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeSubscriber(subscriber.email)}
+                    disabled={isLoading}
+                    className="p-2 text-red-400 hover:bg-red-900/20 hover:text-red-300 rounded-lg disabled:opacity-50 transition-all duration-300"
+                    title="Remover assinante"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Card>
 
       {/* Testar sistema de alertas */}
-      <div className="bg-darker-surface/50 border border-neon-purple/20 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <TestTube className="w-5 h-5 text-neon-purple" />
-          Testar Sistema de Alertas
-        </h3>
-        
-        <p className="text-futuristic-gray mb-4">
-          Envie alertas de teste para verificar se o sistema está funcionando corretamente.
-        </p>
-
-        <div className="flex gap-3">
-          <button
-            onClick={() => testAlertSystem('app_error')}
-            disabled={testingAlert}
-            className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 flex items-center gap-2 transition-all duration-300"
-          >
-            <AlertTriangle className="w-4 h-4" />
-            {testingAlert ? 'Enviando...' : 'Teste Erro App'}
-          </button>
+      <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10">
+        <div className="p-6">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <TestTube className="w-5 h-5 text-neon-purple" />
+            Testar Sistema de Alertas
+          </h3>
           
-          <button
-            onClick={() => testAlertSystem('security')}
-            disabled={testingAlert}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2 transition-all duration-300"
-          >
-            <Send className="w-4 h-4" />
-            {testingAlert ? 'Enviando...' : 'Teste Segurança'}
-          </button>
-        </div>
-
-        <div className="mt-4 p-3 bg-neon-purple/10 border border-neon-purple/20 rounded-lg">
-          <p className="text-sm text-neon-purple">
-            <strong>Nota:</strong> Os alertas de teste serão registrados nos logs do sistema e 
-            enviados para todos os assinantes cadastrados.
+          <p className="text-futuristic-gray mb-4">
+            Envie alertas de teste para verificar se o sistema está funcionando corretamente.
           </p>
+
+          <div className="flex gap-3">
+            <button
+              onClick={() => testAlertSystem('app_error')}
+              disabled={testingAlert}
+              className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 flex items-center gap-2 transition-all duration-300"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              {testingAlert ? 'Enviando...' : 'Teste Erro App'}
+            </button>
+            
+            <button
+              onClick={() => testAlertSystem('security')}
+              disabled={testingAlert}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2 transition-all duration-300"
+            >
+              <Send className="w-4 h-4" />
+              {testingAlert ? 'Enviando...' : 'Teste Segurança'}
+            </button>
+          </div>
+
+          <div className="mt-4 p-3 bg-neon-purple/10 border border-neon-purple/20 rounded-lg">
+            <p className="text-sm text-neon-purple">
+              <strong>Nota:</strong> Os alertas de teste serão registrados nos logs do sistema e 
+              enviados para todos os assinantes cadastrados.
+            </p>
+          </div>
         </div>
-      </div>
+      </Card>
 
       {/* Informações sobre o sistema */}
-      <div className="bg-darker-surface/30 border border-neon-purple/10 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-3">Como funciona o Sistema de Alertas</h3>
-        <div className="space-y-2 text-sm text-futuristic-gray">
-          <p>• <strong className="text-neon-purple">Alertas Automáticos:</strong> Enviados quando erros críticos são detectados</p>
-          <p>• <strong className="text-neon-purple">Tipos de Alerta:</strong> Erros de aplicação, falhas de segurança, problemas de banco de dados</p>
-          <p>• <strong className="text-neon-purple">Entrega:</strong> E-mails são enviados automaticamente para todos os assinantes</p>
-          <p>• <strong className="text-neon-purple">Logs:</strong> Todos os alertas são registrados na aba "Logs &amp; Monitoramento"</p>
+      <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/5 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10">
+        <div className="p-6">
+          <h3 className="text-lg font-semibold text-white mb-3">Como funciona o Sistema de Alertas</h3>
+          <div className="space-y-2 text-sm text-futuristic-gray">
+            <p>• <strong className="text-neon-purple">Alertas Automáticos:</strong> Enviados quando erros críticos são detectados</p>
+            <p>• <strong className="text-neon-purple">Tipos de Alerta:</strong> Erros de aplicação, falhas de segurança, problemas de banco de dados</p>
+            <p>• <strong className="text-neon-purple">Entrega:</strong> E-mails são enviados automaticamente para todos os assinantes</p>
+            <p>• <strong className="text-neon-purple">Logs:</strong> Todos os alertas são registrados na aba "Logs & Monitoramento"</p>
+          </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
