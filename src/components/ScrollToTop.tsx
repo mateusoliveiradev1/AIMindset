@@ -58,6 +58,18 @@ export const ScrollToTop: React.FC = () => {
 
   // Calcular posicionamento dinâmico baseado no contexto
   const getPositionClasses = () => {
+    // Detectar se estamos no painel admin
+    const isAdminPage = location.pathname.startsWith('/admin');
+    
+    if (isAdminPage && (screenSize === 'mobile' || screenSize === 'tablet')) {
+      // Em páginas admin mobile/tablet: posicionar mais alto para não conflitar com menu hambúrguer
+      if (screenSize === 'mobile') {
+        return 'bottom-20 right-6'; // Mais alto para não conflitar com header
+      } else {
+        return 'bottom-6 right-6';
+      }
+    }
+
     if (screenSize === 'desktop') {
       // Desktop: posição padrão sempre
       return 'bottom-6 right-6';

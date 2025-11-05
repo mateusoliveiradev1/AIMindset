@@ -86,31 +86,31 @@ export default function AdminLayout() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-darker-bg via-dark-bg to-darker-bg">
       {/* Header com navegação por abas - Visual idêntico ao original */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-orbitron font-bold gradient-text mb-2">
+      <div className="container mx-auto px-4 py-4 sm:py-6 lg:py-8">
+        <div className="mb-4 sm:mb-6 lg:mb-8">
+          <h2 className="text-2xl sm:text-3xl font-orbitron font-bold gradient-text mb-1 sm:mb-2">
             Painel Administrativo
           </h2>
-          <p className="text-futuristic-gray">
+          <p className="text-futuristic-gray text-sm sm:text-base">
             Gerencie o conteúdo do seu blog AIMindset
           </p>
         </div>
 
         {/* Navigation Tabs - Mesmo visual do Admin.tsx original */}
-        <div className="flex space-x-1 mb-8 bg-darker-surface/50 p-1 rounded-lg backdrop-blur-sm overflow-x-auto scrollbar-hide">
+        <div className="flex space-x-1 mb-4 sm:mb-6 lg:mb-8 bg-darker-surface/50 p-1 rounded-lg backdrop-blur-sm overflow-x-auto scrollbar-hide">
           {sidebarItems.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => handleNavigation(tab.path)}
-                className={`flex items-center space-x-1 sm:space-x-2 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 rounded-md font-montserrat font-medium transition-all duration-300 whitespace-nowrap min-w-0 ${
+                className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 rounded-md font-montserrat font-medium transition-all duration-300 whitespace-nowrap min-w-0 ${
                   activeTab === tab.id
                     ? 'bg-neon-gradient text-white shadow-lg'
                     : 'text-futuristic-gray hover:text-white hover:bg-dark-surface/50'
                 }`}
               >
-                <Icon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                <Icon className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 flex-shrink-0" />
                 <span className="text-xs sm:text-sm lg:text-base truncate">{tab.label}</span>
               </button>
             );
@@ -118,21 +118,21 @@ export default function AdminLayout() {
         </div>
 
         {/* Botões de ação rápida - Mesmo visual do original */}
-        <div className="flex flex-wrap gap-4 mb-8">
+        <div className="flex flex-wrap gap-2 sm:gap-3 lg:gap-4 mb-4 sm:mb-6 lg:mb-8">
           <Button
             onClick={handleGoHome}
             variant="outline"
-            className="bg-dark-surface/50 border-neon-purple/30 text-futuristic-gray hover:text-white hover:bg-dark-surface/70"
+            className="bg-dark-surface/50 border-neon-purple/30 text-futuristic-gray hover:text-white hover:bg-dark-surface/70 px-3 sm:px-4 py-2 text-xs sm:text-sm"
           >
-            <Home className="w-4 h-4 mr-2" />
+            <Home className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             Home
           </Button>
           <Button
             onClick={handleLogout}
             variant="outline"
-            className="bg-dark-surface/50 border-red-500/30 text-futuristic-gray hover:text-white hover:bg-red-500/20"
+            className="bg-dark-surface/50 border-red-500/30 text-futuristic-gray hover:text-white hover:bg-red-500/20 px-3 sm:px-4 py-2 text-xs sm:text-sm"
           >
-            <LogOut className="w-4 h-4 mr-2" />
+            <LogOut className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             Sair
           </Button>
         </div>

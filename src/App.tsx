@@ -32,7 +32,7 @@ const Newsletter = lazy(() => import('./pages/Newsletter'));
 const Privacy = lazy(() => import('./pages/Privacy'));
 const Admin = lazy(() => import('./pages/Admin'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
-const AdminLayout = lazy(() => import('./components/Admin/AdminLayout'));
+const AdminLayout = lazy(() => import('./pages/admin/layout'));
 const AdminDashboard = lazy(() => import('./pages/admin/index'));
 const AdminFeedback = lazy(() => import('./pages/admin/feedback'));
 const AdminArticles = lazy(() => import('./pages/admin/articles'));

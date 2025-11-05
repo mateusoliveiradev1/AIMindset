@@ -4,6 +4,7 @@ import { Button } from '@/components/UI/Button';
 import { Users as UsersIcon, Search, ChevronLeft, ChevronRight, UserCheck, UserX, AlertTriangle, Calendar } from 'lucide-react';
 import { useUsers } from '@/hooks/useUsers';
 import { toast } from 'sonner';
+import SEOManager from '@/components/SEO/SEOManager';
 
 function getInitials(name?: string, email?: string) {
   if (name && name.trim().length > 0) {
@@ -84,6 +85,19 @@ export default function AdminUsers() {
 
   return (
     <div className="space-y-8">
+      <SEOManager metadata={{
+        title: 'Usuários - Admin AIMindset',
+        description: 'Gerencie usuários, status e atividade em tempo real.',
+        keywords: ['usuários', 'gestão', 'status', 'admin'],
+        canonicalUrl: 'https://aimindset.com.br/admin/users',
+        type: 'webpage',
+        language: 'pt-BR',
+        robots: 'noindex, nofollow',
+        breadcrumbs: [
+          { name: 'Admin', url: 'https://aimindset.com.br/admin', position: 1 },
+          { name: 'Usuários', url: 'https://aimindset.com.br/admin/users', position: 2 }
+        ]
+      }} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -258,140 +272,46 @@ export default function AdminUsers() {
             {paginatedUsers.map((user) => {
               const initials = getInitials(user.name, user.email);
               const isSelected = selectedIds.has(user.id);
-              const allPageSelected = paginatedUsers.every((u) => selectedIds.has(u.id));
               return (
-                <div
-                  key={user.id}
-                  className="group rounded-2xl overflow-hidden bg-gradient-to-br from-white/5 via-transparent to-transparent border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all duration-200 ease-out hover:translate-y-[-1px] hover:shadow-[0_8px_22px_rgba(99,102,241,0.12)] p-4 sm:p-5"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 min-w-0">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleSelect(user.id)}
-                        aria-label={`Selecionar ${user.name || user.email}`}
-                        className="accent-neon-purple/70 w-4 h-4 rounded"
-                      />
-                      <div className="relative">
-                        <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full grid place-items-center font-orbitron text-white text-sm bg-gradient-to-br from-neon-purple/30 via-blue-500/20 to-transparent border border-white/10">
-                          {initials}
-                        </div>
-                        {user.status === 'banned' && (
-                          <span className="absolute -bottom-1 -right-1 text-red-400 bg-red-500/20 border border-red-400/30 rounded-full p-1">
-                            <AlertTriangle className="w-3 h-3" />
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-white font-medium truncate">{user.name || 'Usuário'}</h4>
-                        <p className="text-futuristic-gray text-sm truncate">{user.email}</p>
-                        <div className="flex flex-wrap gap-3 mt-2 text-xs text-futuristic-gray">
-                          <span>Cadastrado: {new Date(user.created_at).toLocaleDateString('pt-BR')}</span>
-                          {user.last_sign_in_at && (
-                            <span>Último acesso: {new Date(user.last_sign_in_at).toLocaleString('pt-BR')}</span>
-                          )}
-                        </div>
-                      </div>
+                <div key={user.id} className={`rounded-2xl overflow-hidden bg-gradient-to-br from-white/5 via-transparent to-transparent border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all p-4 ${isSelected ? 'ring-neon-purple/40 border-neon-purple/40' : ''}`}>
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white font-semibold">{initials}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-medium truncate">{user.name || user.email || 'Usuário'}</p>
+                      <p className="text-futuristic-gray text-xs truncate">{user.email}</p>
                     </div>
-
                     <div className="flex items-center gap-2">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-[11px] uppercase tracking-wide border flex items-center gap-1 ${
-                          user.status === 'active'
-                            ? 'bg-lime-green/15 text-lime-green border-lime-green/30'
-                            : user.status === 'inactive'
-                            ? 'bg-yellow-500/15 text-yellow-400 border-yellow-400/30'
-                            : 'bg-red-500/15 text-red-400 border-red-400/30'
-                        }`}
-                        aria-label={`Status: ${user.status}`}
+                      <Button size="sm" variant="outline" className="rounded-full" onClick={() => toggleSelect(user.id)} aria-label="Selecionar usuário" title="Selecionar usuário">{isSelected ? 'Desmarcar' : 'Selecionar'}</Button>
+                      <select
+                        value={user.status || 'active'}
+                        onChange={(e) => handleStatusChange(user.id, e.target.value as any)}
+                        className="px-2 py-1 bg-darker-surface/50 border border-white/10 rounded-full text-white text-xs"
+                        aria-label="Alterar status do usuário"
+                        title="Alterar status do usuário"
                       >
-                        {user.status === 'active' ? (
-                          <UserCheck className="w-3.5 h-3.5" />
-                        ) : user.status === 'inactive' ? (
-                          <UserX className="w-3.5 h-3.5" />
-                        ) : (
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                        )}
-                        {user.status === 'active' ? 'Ativo' : user.status === 'inactive' ? 'Inativo' : 'Banido'}
-                      </span>
-
-                      {user.status !== 'active' && (
-                        <Button
-                          title="Ativar usuário"
-                          aria-label="Ativar usuário"
-                          size="sm"
-                          onClick={() => handleStatusChange(user.id, 'active')}
-                          className="rounded-full bg-lime-green/20 text-lime-green hover:bg-lime-green/30 transition-all duration-200 ease-out hover:scale-105"
-                        >
-                          <UserCheck className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {user.status === 'active' && (
-                        <Button
-                          title="Inativar usuário"
-                          aria-label="Inativar usuário"
-                          size="sm"
-                          onClick={() => handleStatusChange(user.id, 'inactive')}
-                          className="rounded-full bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-all duration-200 ease-out hover:scale-105"
-                        >
-                          <UserX className="w-4 h-4" />
-                        </Button>
-                      )}
-                      {user.status !== 'banned' && (
-                        <Button
-                          title="Banir usuário"
-                          aria-label="Banir usuário"
-                          size="sm"
-                          onClick={() => handleStatusChange(user.id, 'banned')}
-                          className="rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all duration-200 ease-out hover:scale-105"
-                        >
-                          <AlertTriangle className="w-4 h-4" />
-                        </Button>
-                      )}
+                        <option value="active">Ativo</option>
+                        <option value="inactive">Inativo</option>
+                        <option value="banned">Banido</option>
+                      </select>
                     </div>
                   </div>
                 </div>
               );
             })}
-
-            {/* Seleção da página */}
-            {paginatedUsers.length > 0 && (
-              <div className="flex items-center gap-2 text-sm text-futuristic-gray">
-                <input type="checkbox" checked={paginatedUsers.every((u) => selectedIds.has(u.id))} onChange={selectAllPage} aria-label="Selecionar todos da página" className="accent-neon-purple/70 w-4 h-4 rounded" />
-                <span>Selecionar todos da página</span>
-              </div>
-            )}
           </div>
 
           {/* Paginação */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center space-x-2 mt-6">
-              <Button size="sm" variant="outline" onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1} aria-label="Página anterior" title="Página anterior">
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <span className="text-white">Página {currentPage} de {totalPages}</span>
-              <Button size="sm" variant="outline" onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} aria-label="Próxima página" title="Próxima página">
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
+          <div className="mt-4 flex items-center justify-between">
+            <Button variant="outline" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} aria-label="Página anterior" title="Página anterior" className="rounded-full">
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <span className="text-sm text-futuristic-gray">Página {currentPage} de {totalPages}</span>
+            <Button variant="outline" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} aria-label="Próxima página" title="Próxima página" className="rounded-full">
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </Card>
-
-      {/* Modal de confirmação */}
-      {confirmAction && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 backdrop-blur-sm">
-          <Card className="max-w-md w-[92%] rounded-2xl border border-white/10 bg-gradient-to-br from-white/10 via-transparent to-transparent p-6">
-            <h3 className="text-white font-orbitron text-lg">Confirmação</h3>
-            <p className="text-futuristic-gray mt-2">{confirmAction.message}</p>
-            <div className="mt-4 flex items-center justify-end gap-2">
-              <Button variant="outline" onClick={() => setConfirmAction(null)} aria-label="Cancelar" title="Cancelar">Cancelar</Button>
-              <Button onClick={performAction} aria-label="Confirmar" title="Confirmar" className="bg-neon-purple/20 text-neon-purple hover:bg-neon-purple/30">Confirmar</Button>
-            </div>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }

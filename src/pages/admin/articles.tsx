@@ -6,6 +6,7 @@ import { useArticles } from '@/hooks/useArticles';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useDebounce } from '@/hooks/useDebounce';
+import SEOManager from '@/components/SEO/SEOManager';
 
 // Skeleton para linha de artigo (refinado)
 const ArticleRowSkeleton: React.FC = () => (
@@ -149,6 +150,19 @@ export default function AdminArticles() {
 
   return (
     <div className="space-y-6">
+      <SEOManager metadata={{
+        title: 'Artigos - Admin AIMindset',
+        description: 'Gerencie artigos, publicação, destaques e métricas.',
+        keywords: ['artigos', 'publicação', 'destaque', 'admin'],
+        canonicalUrl: 'https://aimindset.com.br/admin/articles',
+        type: 'webpage',
+        language: 'pt-BR',
+        robots: 'noindex, nofollow',
+        breadcrumbs: [
+          { name: 'Admin', url: 'https://aimindset.com.br/admin', position: 1 },
+          { name: 'Artigos', url: 'https://aimindset.com.br/admin/articles', position: 2 }
+        ]
+      }} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-2xl sm:text-3xl font-orbitron font-bold text-white tracking-tight">Gerenciamento de Artigos</h3>
@@ -236,7 +250,7 @@ export default function AdminArticles() {
             {filteredArticles.map((article) => (
               <div
                 key={article.id}
-                className="flex flex-col lg:flex-row lg:items-center justify-between p-4 bg-darker-surface/30 rounded-lg hover:bg-darker-surface/50 transition-all duration-200 hover:shadow-lg hover:shadow-neon-purple/20 hover:-translate-y-[1px] ring-1 ring-transparent hover:ring-neon-purple/20 gap-4"
+                className="flex flex-col lg:flex-row lg:items-center justify-between p-4 bg-darker-surface/30 rounded-lg hover:bg-darker-surface/50 transition-all duração-200 hover:shadow-lg hover:shadow-neon-purple/20 hover:-translate-y-[1px] ring-1 ring-transparent hover:ring-neon-purple/20 gap-4"
               >
                 <div className="flex-1 min-w-0">
                   <h4 className="text-white font-semibold text-base sm:text-lg mb-1 truncate">{article.title}</h4>
@@ -248,79 +262,25 @@ export default function AdminArticles() {
                     {article.created_at && (
                       <span>Criado: {new Date(article.created_at).toLocaleDateString('pt-BR')}</span>
                     )}
-                    {article.updated_at && (
-                      <span className="hidden sm:inline">Atualizado: {new Date(article.updated_at).toLocaleDateString('pt-BR')}</span>
-                    )}
                   </div>
                 </div>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-2 lg:gap-3 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-transform ${
-                        article.published 
-                          ? 'bg-lime-green/20 text-lime-green hover:scale-[1.03]' 
-                          : 'bg-yellow-500/20 text-yellow-400 hover:scale-[1.03]'
-                      }`}
-                    >
-                      {article.published ? 'Publicado' : 'Rascunho'}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2 sm:space-x-1 lg:space-x-2">
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      className="text-blue-400 hover:text-blue-300 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2 transition-all duration-200 hover:scale-[1.05] focus:ring-2 focus:ring-neon-purple/30"
-                      onClick={() => navigate(`/artigo/${article.slug}`)}
-                      title="Visualizar artigo"
-                      aria-label="Visualizar artigo"
-                    >
-                      <Eye className="w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      className={`min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2 transition-all duration-200 hover:scale-[1.05] focus:ring-2 focus:ring-neon-purple/30 ${
-                        article.is_featured_manual === true
-                          ? 'text-neon-purple hover:text-neon-purple/80 bg-neon-purple/10' 
-                          : 'text-futuristic-gray hover:text-neon-purple'
-                      }`}
-                      onClick={() => handleToggleFeaturedManual(article)}
-                      title={article.is_featured_manual === true ? 'Remover do destaque fixo' : 'Marcar como destaque fixo (Hero)'}
-                      aria-label={article.is_featured_manual === true ? 'Remover do destaque fixo' : 'Marcar como destaque fixo (Hero)'}
-                    >
-                      <Star className={`w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4 ${article.is_featured_manual === true ? 'fill-current' : ''}`} />
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      className="text-yellow-400 hover:text-yellow-300 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2 transition-all duration-200 hover:scale-[1.05] focus:ring-2 focus:ring-neon-purple/30"
-                      onClick={() => handleEditArticle(article)}
-                      title="Editar artigo"
-                      aria-label="Editar artigo"
-                    >
-                      <Edit3 className="w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      className={`${article.published ? 'text-orange-400 hover:text-orange-300' : 'text-green-400 hover:text-green-300'} min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2 transition-all duration-200 hover:scale-[1.05] focus:ring-2 focus:ring-neon-purple/30`}
-                      onClick={() => handleTogglePublish(article.id, article.published)}
-                      title={article.published ? 'Despublicar artigo' : 'Publicar artigo'}
-                      aria-label={article.published ? 'Despublicar artigo' : 'Publicar artigo'}
-                    >
-                      {article.published ? 'Despublicar' : 'Publicar'}
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      className="text-red-400 hover:text-red-300 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2 transition-all duration-200 hover:scale-[1.05] focus:ring-2 focus:ring-neon-purple/30"
-                      onClick={() => handleDeleteArticle(article.id)}
-                      title="Excluir artigo"
-                      aria-label="Excluir artigo"
-                    >
-                      <Trash2 className="w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
-                    </Button>
-                  </div>
+
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" className="rounded-full" onClick={() => handleEditArticle(article)} aria-label="Editar artigo" title="Editar artigo">
+                    <Edit3 className="w-4 h-4" />
+                    <span className="ml-1 hidden sm:inline">Editar</span>
+                  </Button>
+                  <Button size="sm" variant="outline" className="rounded-full" onClick={() => handleTogglePublish(article.id, article.published)} aria-label={article.published ? 'Despublicar' : 'Publicar'} title={article.published ? 'Despublicar' : 'Publicar'}>
+                    {article.published ? 'Despublicar' : 'Publicar'}
+                  </Button>
+                  <Button size="sm" variant="outline" className="rounded-full" onClick={() => handleToggleFeaturedManual(article)} aria-label={article.is_featured_manual ? 'Remover destaque' : 'Marcar como destaque'} title={article.is_featured_manual ? 'Remover destaque' : 'Marcar como destaque'}>
+                    <Star className={`w-4 h-4 ${article.is_featured_manual ? 'text-yellow-400' : 'text-futuristic-gray'}`} />
+                    <span className="ml-1 hidden sm:inline">{article.is_featured_manual ? 'Remover destaque' : 'Destacar'}</span>
+                  </Button>
+                  <Button size="sm" variant="destructive" className="rounded-full" onClick={() => handleDeleteArticle(article.id)} aria-label="Excluir artigo" title="Excluir artigo">
+                    <Trash2 className="w-4 h-4" />
+                    <span className="ml-1 hidden sm:inline">Excluir</span>
+                  </Button>
                 </div>
               </div>
             ))}
