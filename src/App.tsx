@@ -32,6 +32,17 @@ const Newsletter = lazy(() => import('./pages/Newsletter'));
 const Privacy = lazy(() => import('./pages/Privacy'));
 const Admin = lazy(() => import('./pages/Admin'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
+const AdminLayout = lazy(() => import('./components/Admin/AdminLayout'));
+const AdminDashboard = lazy(() => import('./pages/admin/index'));
+const AdminFeedback = lazy(() => import('./pages/admin/feedback'));
+const AdminArticles = lazy(() => import('./pages/admin/articles'));
+const AdminEditor = lazy(() => import('./pages/admin/editor'));
+const AdminNewsletter = lazy(() => import('./pages/admin/newsletter'));
+const AdminUsers = lazy(() => import('./pages/admin/users'));
+const AdminCategories = lazy(() => import('./pages/admin/categories'));
+const AdminSEO = lazy(() => import('./pages/admin/seo'));
+const AdminLogs = lazy(() => import('./pages/admin/logs'));
+const AdminBackup = lazy(() => import('./pages/admin/backup'));
 
 // Loading component otimizado
 const PageLoader = () => (
@@ -93,7 +104,23 @@ function AppContent() {
         
         {/* Admin routes without Layout */}
         <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+        
+        {/* Rota antiga - redirect para nova estrutura */}
+        <Route path="/admin-old" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+        
+        {/* Novas rotas admin modulares */}
+        <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="articles" element={<AdminArticles />} />
+          <Route path="editor" element={<AdminEditor />} />
+          <Route path="newsletter" element={<AdminNewsletter />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="categories" element={<AdminCategories />} />
+          <Route path="feedback" element={<AdminFeedback />} />
+          <Route path="seo" element={<AdminSEO />} />
+          <Route path="logs" element={<AdminLogs />} />
+          <Route path="backup" element={<AdminBackup />} />
+        </Route>
         
         {/* Performance Test routes - usando componentes lazy otimizados */}
         <Route path="/performance-test" element={<Layout><LazyComponents.PerformanceTest /></Layout>} />
