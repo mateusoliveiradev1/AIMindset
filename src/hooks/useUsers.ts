@@ -37,6 +37,30 @@ export const useUsers = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Função para calcular estatísticas
+  const calculateStats = (data: User[]) => {
+    const total = data.length;
+    const active = data.filter(u => u.status === 'active').length;
+    const inactive = data.filter(u => u.status === 'inactive').length;
+
+    // Novos usuários por intervalo (simplificado)
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const newUsersThisWeek = data.filter(u => new Date(u.created_at) >= startOfWeek).length;
+    const newUsersThisMonth = data.filter(u => new Date(u.created_at) >= startOfMonth).length;
+
+    setStats({
+      totalUsers: total,
+      activeUsers: active,
+      inactiveUsers: inactive,
+      newUsersThisWeek,
+      newUsersThisMonth
+    });
+  };
+
   // Função para buscar usuários do Supabase Auth
   const fetchUsers = async () => {
     try {
@@ -161,23 +185,6 @@ export const useUsers = () => {
     }
   };
 
-  // Calcular estatísticas
-  const calculateStats = (usersList: User[]) => {
-    const now = new Date();
-    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-    const newStats: UserStats = {
-      totalUsers: usersList.length,
-      activeUsers: usersList.filter(u => u.status === 'active').length,
-      inactiveUsers: usersList.filter(u => u.status === 'inactive').length,
-      newUsersThisWeek: usersList.filter(u => new Date(u.created_at) >= oneWeekAgo).length,
-      newUsersThisMonth: usersList.filter(u => new Date(u.created_at) >= oneMonthAgo).length
-    };
-
-    setStats(newStats);
-  };
-
   // Função para atualizar status do usuário
   const updateUserStatus = async (userId: string, newStatus: 'active' | 'inactive' | 'banned') => {
     try {
@@ -234,6 +241,117 @@ export const useUsers = () => {
     fetchUsers();
   }, []);
 
+  // Função para remover todos usuários não-super_admin
+  const purgeNonAdminUsers = async (superAdminEmail: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Garantir lista atualizada do Auth
+      const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+      if (authError) throw authError;
+
+      // Encontrar super admin
+      const superAdmin = authUsers.users.find(u => (u.email || '').toLowerCase() === superAdminEmail.toLowerCase());
+      if (!superAdmin) {
+        toast.error('Super admin não encontrado no Auth');
+        setLoading(false);
+        return false;
+      }
+
+      // Remover todos que não sejam o super admin
+      const targets = authUsers.users.filter(u => (u.email || '').toLowerCase() !== superAdminEmail.toLowerCase());
+      for (const u of targets) {
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(u.id);
+        } catch (e) {
+          console.warn('Falha ao excluir usuário', u.email, e);
+        }
+      }
+
+      // Opcional: limpar registros associados em tabelas auxiliares (profiles, contacts, subscribers)
+      await supabaseAdmin.from('user_profiles').delete().neq('email', superAdminEmail);
+      await supabaseAdmin.from('contacts').delete().neq('email', superAdminEmail);
+      await supabaseAdmin.from('newsletter_subscribers').delete().neq('email', superAdminEmail);
+
+      // Atualizar estado local
+      const remaining: User[] = [{
+        id: superAdmin.id,
+        email: superAdmin.email || superAdminEmail,
+        name: superAdmin.user_metadata?.name || superAdmin.user_metadata?.full_name || 'Super Admin',
+        created_at: superAdmin.created_at,
+        last_sign_in_at: superAdmin.last_sign_in_at,
+        email_confirmed_at: superAdmin.email_confirmed_at,
+        status: 'active',
+        role: 'super_admin',
+        phone: superAdmin.phone,
+        app_metadata: superAdmin.app_metadata,
+        user_metadata: superAdmin.user_metadata
+      }];
+
+      setUsers(remaining);
+      calculateStats(remaining);
+      toast.success('Usuários de teste removidos. Mantido apenas o super admin.');
+      return true;
+    } catch (error) {
+      console.error('Erro ao limpar usuários não-admin:', error);
+      toast.error('Erro ao remover usuários de teste');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Função para atualizar o nome do usuário pelo email
+  const updateUserNameByEmail = async (email: string, name: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+      if (authError) throw authError;
+
+      const user = authUsers.users.find(u => (u.email || '').toLowerCase() === email.toLowerCase());
+      if (!user) {
+        toast.error('Usuário não encontrado no Auth');
+        return false;
+      }
+
+      const newUserMetadata = { ...(user.user_metadata || {}), name, full_name: name };
+
+      // Atualizar metadados no Auth
+      const { error: updateErr } = await supabaseAdmin.auth.admin.updateUserById(user.id, { user_metadata: newUserMetadata });
+      if (updateErr) throw updateErr;
+
+      // Atualizar/garantir nome em user_profiles
+      const { data: profileData, error: profileErr } = await supabaseAdmin
+        .from('user_profiles')
+        .update({ name })
+        .eq('email', email);
+
+      if (profileErr) {
+        // Se não existir, faz upsert
+        await supabaseAdmin.from('user_profiles').upsert({ email, name });
+      } else if (!profileData || profileData.length === 0) {
+        await supabaseAdmin.from('user_profiles').upsert({ email, name });
+      }
+
+      // Atualizar estado local e estatísticas
+      const nextUsers = users.map(u => u.email.toLowerCase() === email.toLowerCase() ? { ...u, name } : u);
+      setUsers(nextUsers);
+      calculateStats(nextUsers);
+
+      toast.success(`Nome atualizado para ${name}`);
+      return true;
+    } catch (error) {
+      console.error('Erro ao atualizar nome:', error);
+      toast.error('Erro ao atualizar nome');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     users,
     stats,
@@ -243,6 +361,8 @@ export const useUsers = () => {
     updateUserStatus,
     getUserByEmail,
     filterUsers,
-    refreshUsers: fetchUsers
+    refreshUsers: fetchUsers,
+    purgeNonAdminUsers,
+    updateUserNameByEmail
   };
 };

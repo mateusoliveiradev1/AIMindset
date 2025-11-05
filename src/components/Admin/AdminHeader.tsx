@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Brain, Settings, LogOut, Bell, Menu, X, ChevronDown, Activity, FileText, Mail, Users, Search, Shield } from 'lucide-react';
+import { Brain, Settings, LogOut, Bell, Menu, X, ChevronDown, Activity, FileText, Mail, Users, Search, Shield, Home } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 
@@ -124,9 +124,18 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuToggle, sidebarOpen }) 
 
           {/* Ações do Usuário */}
           <div className="flex items-center space-x-3 md:space-x-4 justify-self-end pl-2 md:pl-4">
+            {/* Botão Home do Blog */}
+            <Link
+              to="/"
+              className="hidden sm:flex items-center space-x-2 px-3 py-2 rounded-lg text-futuristic-gray hover:text-white hover:bg-white/5 transition-all duration-300"
+              aria-label="Voltar para a home do blog"
+            >
+              <Home className="w-5 h-5" />
+              <span className="text-sm">Home</span>
+            </Link>
             {/* Notificações */}
             <div className="relative">
-              <button className="p-3 sm:p-2 text-futuristic-gray hover:text-lime-green transition-all duration-300 hover:bg-lime-green/10 rounded-lg relative min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0">
+              <button className="p-3 sm:p-2 text-futuristic-gray hover:text-lime-green transition-all duration-300 hover:bg-lime-green/10 rounded-lg relative min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0" onClick={() => navigate('/admin/notifications')} aria-label="Abrir notificações">
                 <Bell className="w-5 h-5" />
                 {hasUnreadNotifications && (
                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-red-500 to-pink-500 rounded-full animate-pulse"></div>
@@ -176,7 +185,7 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuToggle, sidebarOpen }) 
                   
                   <div className="p-2">
                     <Link
-                      to="/admin"
+                      to="/admin/settings"
                       className="flex items-center space-x-3 w-full px-3 py-2 text-left text-sm text-futuristic-gray hover:text-white hover:bg-white/5 rounded-lg transition-all duration-300"
                       onClick={() => setIsUserMenuOpen(false)}
                     >

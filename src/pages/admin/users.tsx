@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Card } from '@/components/UI/Card';
 import { Button } from '@/components/UI/Button';
-import { Users as UsersIcon, Search, ChevronLeft, ChevronRight, UserCheck, UserX, AlertTriangle, Calendar } from 'lucide-react';
+import { Users as UsersIcon, Search, ChevronLeft, ChevronRight, UserCheck, UserX, AlertTriangle, Calendar, Trash2, Pencil } from 'lucide-react';
 import { useUsers } from '@/hooks/useUsers';
 import { toast } from 'sonner';
 import SEOManager from '@/components/SEO/SEOManager';
@@ -20,7 +20,7 @@ function getInitials(name?: string, email?: string) {
 }
 
 export default function AdminUsers() {
-  const { users, stats, loading, error, updateUserStatus, filterUsers, refreshUsers } = useUsers();
+  const { users, stats, loading, error, updateUserStatus, filterUsers, refreshUsers, purgeNonAdminUsers, updateUserNameByEmail } = useUsers();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -29,58 +29,76 @@ export default function AdminUsers() {
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [confirmAction, setConfirmAction] = useState<null | { action: 'active' | 'inactive' | 'banned'; ids: string[]; message: string }>(null);
+  const [purgeConfirm, setPurgeConfirm] = useState(false);
 
-  const filteredUsers = useMemo(() => filterUsers(searchTerm, statusFilter), [searchTerm, statusFilter, filterUsers]);
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage) || 1;
-  const paginatedUsers = filteredUsers.slice((currentPage - 1) * usersPerPage, currentPage * usersPerPage);
+  const handlePurge = async () => {
+    if (!purgeConfirm) {
+      setPurgeConfirm(true);
+      toast.info('Confirme a exclusão clicando novamente');
+      return;
+    }
+    const superAdminEmail = users.find(u => u.role === 'super_admin')?.email || (window.localStorage.getItem('aimindset_user') ? JSON.parse(window.localStorage.getItem('aimindset_user') as string).email : '');
+    if (!superAdminEmail) {
+      toast.error('Email do super admin não encontrado');
+      return;
+    }
+    const ok = await purgeNonAdminUsers(superAdminEmail);
+    if (ok) {
+      setPurgeConfirm(false);
+    }
+  };
 
-  const handleStatusChange = async (id: string, status: 'active' | 'inactive' | 'banned') => {
-    setConfirmAction({ action: status, ids: [id], message: `Confirmar ${status === 'active' ? 'ativação' : status === 'inactive' ? 'inativação' : 'banimento'} do usuário selecionado?` });
+  const handleFixSuperAdminName = async () => {
+    const email = 'warface01031999@gmail.com';
+    const name = 'Mateus Oliveira';
+    const ok = await updateUserNameByEmail(email, name);
+    if (ok) {
+      toast.success('Nome do super admin atualizado para Mateus Oliveira');
+    }
+  };
+
+  // Helpers de filtro e paginação
+  const filteredUsers = useMemo(() => {
+    return filterUsers(searchTerm, statusFilter);
+  }, [users, searchTerm, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / usersPerPage));
+
+  const paginatedUsers = useMemo(() => {
+    const start = (currentPage - 1) * usersPerPage;
+    return filteredUsers.slice(start, start + usersPerPage);
+  }, [filteredUsers, currentPage]);
+
+  // Ações de usuário
+  const handleStatusChange = async (userId: string, newStatus: 'active' | 'inactive' | 'banned') => {
+    await updateUserStatus(userId, newStatus);
   };
 
   const handleRefresh = async () => {
     await refreshUsers();
-    toast.success('Usuários atualizados');
+    setCurrentPage(1);
+    setSelectedIds(new Set());
   };
 
   const toggleSelect = (id: string) => {
-    setSelectedIds((prev) => {
+    setSelectedIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };
 
-  const selectAllPage = () => {
-    const pageIds = paginatedUsers.map((u) => u.id);
-    setSelectedIds((prev) => {
-      const allSelected = pageIds.every((id) => prev.has(id));
-      if (allSelected) {
-        const next = new Set(prev);
-        pageIds.forEach((id) => next.delete(id));
-        return next;
-      }
-      const next = new Set(prev);
-      pageIds.forEach((id) => next.add(id));
-      return next;
-    });
-  };
-
   const clearSelection = () => setSelectedIds(new Set());
 
-  const performAction = async () => {
+  const applyBulkAction = async () => {
     if (!confirmAction) return;
     const { action, ids } = confirmAction;
-    const results = await Promise.all(ids.map(async (id) => updateUserStatus(id, action)));
-    const successCount = results.filter(Boolean).length;
-    if (successCount === ids.length) {
-      toast.success(`${action === 'active' ? 'Ativação' : action === 'inactive' ? 'Inativação' : 'Banimento'} concluído para ${successCount} usuário(s).`);
-    } else {
-      toast.error(`Falha em ${ids.length - successCount} usuário(s).`);
+    for (const id of ids) {
+      await updateUserStatus(id, action);
     }
+    toast.success('Ação em massa aplicada');
     setConfirmAction(null);
     clearSelection();
-    await refreshUsers();
   };
 
   return (
@@ -110,9 +128,17 @@ export default function AdminUsers() {
             Total: {stats.totalUsers} • Ativos: {stats.activeUsers} • Novos este mês: {stats.newUsersThisMonth}
           </p>
         </div>
-        <Button title="Atualizar lista de usuários" aria-label="Atualizar lista de usuários" onClick={handleRefresh} disabled={loading} className="bg-neon-purple/20 text-neon-purple hover:bg-neon-purple/30 hover:scale-[1.02] transition-transform duration-200 ease-out rounded-full px-4">
-          Atualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button title="Atualizar lista de usuários" aria-label="Atualizar lista de usuários" onClick={handleRefresh} disabled={loading} className="bg-neon-purple/20 text-neon-purple hover:bg-neon-purple/30 hover:scale-[1.02] transition-transform duration-200 ease-out rounded-full px-4">
+            Atualizar
+          </Button>
+          <Button title="Corrigir nome do super admin" aria-label="Corrigir nome do super admin" onClick={handleFixSuperAdminName} disabled={loading} className="bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 hover:scale-[1.02] transition-transform duration-200 ease-out rounded-full px-4">
+            <Pencil className="w-4 h-4 mr-2" /> Corrigir nome
+          </Button>
+          <Button title="Remover usuários de teste" aria-label="Remover usuários de teste" onClick={handlePurge} disabled={loading} className="bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:scale-[1.02] transition-transform duration-200 ease-out rounded-full px-4">
+            <Trash2 className="w-4 h-4 mr-2" /> Remover usuários de teste
+          </Button>
+        </div>
       </div>
 
       {/* Cards de Métricas - idênticos ao estilo do dashboard/newsletter */}
@@ -135,7 +161,7 @@ export default function AdminUsers() {
         </Card>
 
         {/* Usuários Ativos */}
-        <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-lime-green/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all duration-200 ease-out hover:translate-y-[-1px] hover:shadow-[0_8px_26px_rgba(34,197,94,0.22)]">
+        <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-lime-green/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all duração-200 ease-out hover:translate-y-[-1px] hover:shadow-[0_8px_26px_rgba(34,197,94,0.22)]">
           <div className="absolute -top-10 -right-10 h-24 w-24 rounded-full bg-lime-green/20 blur-2xl" aria-hidden="true" />
           <div className="p-4 sm:p-6">
             <div className="flex items-start justify-between">
@@ -229,6 +255,16 @@ export default function AdminUsers() {
                 <AlertTriangle className="w-4 h-4 mr-1" /> Banir
               </Button>
               <Button size="sm" onClick={clearSelection} aria-label="Limpar seleção" title="Limpar seleção" className="bg-white/10 text-white hover:bg-white/20">Limpar</Button>
+            </div>
+          </div>
+        )}
+
+        {confirmAction && (
+          <div className="mt-3 flex items-center justify-between gap-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3">
+            <span className="text-sm text-white">{confirmAction.message}</span>
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={applyBulkAction} className="bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30">Confirmar</Button>
+              <Button size="sm" variant="outline" onClick={() => setConfirmAction(null)}>Cancelar</Button>
             </div>
           </div>
         )}

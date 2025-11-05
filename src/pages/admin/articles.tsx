@@ -277,7 +277,7 @@ export default function AdminArticles() {
                     <Star className={`w-4 h-4 ${article.is_featured_manual ? 'text-yellow-400' : 'text-futuristic-gray'}`} />
                     <span className="ml-1 hidden sm:inline">{article.is_featured_manual ? 'Remover destaque' : 'Destacar'}</span>
                   </Button>
-                  <Button size="sm" variant="destructive" className="rounded-full" onClick={() => handleDeleteArticle(article.id)} aria-label="Excluir artigo" title="Excluir artigo">
+                  <Button size="sm" variant="outline" className="rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/30" onClick={() => handleDeleteArticle(article.id)} aria-label="Excluir artigo" title="Excluir artigo">
                     <Trash2 className="w-4 h-4" />
                     <span className="ml-1 hidden sm:inline">Excluir</span>
                   </Button>

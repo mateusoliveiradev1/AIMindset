@@ -43,6 +43,8 @@ const AdminCategories = lazy(() => import('./pages/admin/categories'));
 const AdminSEO = lazy(() => import('./pages/admin/seo'));
 const AdminLogs = lazy(() => import('./pages/admin/logs'));
 const AdminBackup = lazy(() => import('./pages/admin/backup'));
+const AdminNotifications = lazy(() => import('./pages/admin/notifications'));
+const AdminSettings = lazy(() => import('./pages/admin/settings'));
 
 // Loading component otimizado
 const PageLoader = () => (
@@ -120,6 +122,8 @@ function AppContent() {
           <Route path="seo" element={<AdminSEO />} />
           <Route path="logs" element={<AdminLogs />} />
           <Route path="backup" element={<AdminBackup />} />
+          <Route path="notifications" element={<AdminNotifications />} />
+          <Route path="settings" element={<AdminSettings />} />
         </Route>
         
         {/* Performance Test routes - usando componentes lazy otimizados */}

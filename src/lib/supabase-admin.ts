@@ -11,14 +11,16 @@ const EMERGENCY_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXB
 
 const isBrowser = typeof window !== 'undefined';
 const isDev = import.meta.env.DEV === true;
+// Detectar preview local (npm run preview) para permitir service role em ambiente local
+const isLocalPreview = isBrowser && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
 // Em produção no browser, nunca usar service role
-// Em desenvolvimento, permitir service role para desbloquear métricas
+// Em desenvolvimento ou preview local, permitir service role para desbloquear métricas/admin
 const supabaseKey = (() => {
   if (!isBrowser) {
     return serviceRoleKey || anonKey || EMERGENCY_SERVICE_ROLE_KEY;
   }
-  if (isDev) {
+  if (isDev || isLocalPreview) {
     return serviceRoleKey || EMERGENCY_SERVICE_ROLE_KEY;
   }
   return anonKey || EMERGENCY_ANON_KEY;
