@@ -111,7 +111,7 @@ const DateFilters: React.FC<DateFiltersProps> = ({ onDateRangeChange, className 
   const isActive = selectedPeriod !== 'all';
 
   return (
-    <Card className={`glass-effect p-3 sm:p-4 ${className}`}>
+    <Card className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 p-3 sm:p-4 ${className}`}>
       <div className="space-y-3 sm:space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">

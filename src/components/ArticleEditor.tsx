@@ -95,6 +95,12 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
     caption: ''
   });
 
+  // Estados funcionais: salvamento, rascunho e proteção
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [autoSaveMessage, setAutoSaveMessage] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+
   useEffect(() => {
     refreshArticles();
   }, [refreshArticles]);
@@ -296,162 +302,83 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
   ];
 
   const handleSave = async () => {
-    console.log('🔥 INICIANDO SALVAMENTO - ArticleEditor.handleSave()');
-    console.log('📊 DADOS INICIAIS:', {
-      title: title.length,
-      content: content.length,
-      excerpt: excerpt.length,
-      tags: tags.length,
-      timestamp: new Date().toISOString()
-    });
-
-    // Log do início da operação
-    await logEvent('info', 'ArticleEditor', 'save_article_start', {
-      user_id: supabaseUser?.id,
-      article_title: title.substring(0, 100),
-      is_editing: !!initialData?.id,
-      content_length: content.length,
-      has_featured_image: !!featuredImage
-    });
-
-    // Verificar rate limiting para salvamento de artigos
-    if (!RateLimiter.canPerformAction('article_save', 10, 60000)) { // 10 salvamentos por minuto
-      console.log('❌ RATE LIMIT ATINGIDO');
-      alert('Muitas tentativas de salvamento. Aguarde um momento.');
-      return;
-    }
-
-    // Validação básica
-    if (!validators.required(title.trim()) || !validators.required(content.trim())) {
-      console.log('❌ VALIDAÇÃO BÁSICA FALHOU:', {
-        titleValid: validators.required(title.trim()),
-        contentValid: validators.required(content.trim())
+    if (isSaving) return; // evitar duplicidade
+    setIsSaving(true);
+    try {
+      await logEvent('info', 'ArticleEditor', 'save_article_start', {
+        user_id: supabaseUser?.id,
+        article_title: title.substring(0, 100),
+        is_editing: !!initialData?.id,
+        content_length: content.length,
+        has_featured_image: !!featuredImage,
       });
-      alert('Por favor, preencha pelo menos o título e o conteúdo.');
-      return;
-    }
 
-    // Validar comprimento dos campos - removido limite de título para permitir textos longos
-    // if (title.trim().length > 500) { // Removido limite para permitir títulos longos
-    //   alert('O título deve ter no máximo 500 caracteres.');
-    //   return;
-    // }
+      if (!RateLimiter.canPerformAction('article_save', 10, 60000)) {
+        alert('Muitas tentativas de salvamento. Aguarde um momento.');
+        return;
+      }
 
-    // Removido limite de resumo para permitir textos longos
-    // if (excerpt.trim().length > 1000) { // Removido limite para permitir resumos longos
-    //   alert('O resumo deve ter no máximo 1000 caracteres.');
-    //   return;
-    // }
+      if (!validators.required(title.trim()) || !validators.required(content.trim())) {
+        alert('Por favor, preencha pelo menos o título e o conteúdo.');
+        return;
+      }
 
-    // Meta description removido - coluna não existe na tabela
-    // if (metaDescription.trim().length > 160) {
-    //   console.log('❌ META DESCRIPTION MUITO LONGA:', metaDescription.trim().length);
-    //   alert('A meta descrição deve ter no máximo 160 caracteres.');
-    //   return;
-    // }
+      const sanitizedTitle = sanitizeName(title.trim());
+      const sanitizedExcerpt = sanitizeMessage(excerpt.trim());
+      const sanitizedContent = sanitizeMessage(content.trim());
+      const sanitizedTags = sanitizeMessage(tags.trim());
+      const sanitizedFeaturedImage = featuredImage.trim() ? SecurityHeaders.sanitizeUrl(featuredImage.trim()) : '';
 
-    console.log('🧹 INICIANDO SANITIZAÇÃO DOS DADOS');
-    
-    // Sanitizar dados
-    const sanitizedTitle = sanitizeName(title.trim());
-    const sanitizedExcerpt = sanitizeMessage(excerpt.trim());
-    // const sanitizedMetaDescription = sanitizeMessage(metaDescription.trim()); // Removido
-    const sanitizedContent = sanitizeMessage(content.trim());
-    const sanitizedTags = sanitizeMessage(tags.trim());
-    const sanitizedFeaturedImage = featuredImage.trim() ? SecurityHeaders.sanitizeUrl(featuredImage.trim()) : '';
+      if (!sanitizedTitle || !sanitizedContent) {
+        alert('Dados inválidos detectados. Verifique o conteúdo.');
+        return;
+      }
 
-    console.log('📋 DADOS SANITIZADOS:', {
-      titleLength: sanitizedTitle.length,
-      excerptLength: sanitizedExcerpt.length,
-      contentLength: sanitizedContent.length,
-      tagsLength: sanitizedTags.length,
-      imageUrl: sanitizedFeaturedImage ? 'presente' : 'ausente'
-    });
+      const articleData: ArticleData = {
+        title: sanitizedTitle,
+        slug: slug.trim() || generateSlug(sanitizedTitle),
+        excerpt: sanitizedExcerpt,
+        content: sanitizedContent,
+        category: category,
+        tags: sanitizedTags,
+        featuredImage: sanitizedFeaturedImage,
+        published: isPublished,
+      };
 
-    if (!sanitizedTitle || !sanitizedContent) {
-      console.log('❌ SANITIZAÇÃO FALHOU:', {
-        sanitizedTitle: !!sanitizedTitle,
-        sanitizedContent: !!sanitizedContent
-      });
-      alert('Dados inválidos detectados. Verifique o conteúdo.');
-      return;
-    }
-
-    const articleData: ArticleData = {
-      title: sanitizedTitle,
-      slug: slug.trim() || generateSlug(sanitizedTitle),
-      excerpt: sanitizedExcerpt,
-      // metaDescription: sanitizedMetaDescription, // Removido - coluna não existe
-      content: sanitizedContent,
-      category: category,
-      tags: sanitizedTags,
-      featuredImage: sanitizedFeaturedImage,
-      published: isPublished
-    };
-
-    console.log('📦 DADOS FINAIS PARA SALVAMENTO:', {
-      title: articleData.title.substring(0, 50) + '...',
-      slug: articleData.slug,
-      contentSize: articleData.content.length,
-      contentSizeKB: (new TextEncoder().encode(articleData.content).length / 1024).toFixed(2),
-      totalDataSize: JSON.stringify(articleData).length,
-      totalDataSizeKB: (new TextEncoder().encode(JSON.stringify(articleData)).length / 1024).toFixed(2),
-      category: articleData.category,
-      published: articleData.published
-    });
-
-    console.log('🚀 CHAMANDO onSave() - PASSANDO PARA useArticles');
-    
-    if (onSave) {
-      try {
-        console.log('⏰ TIMESTAMP ANTES DO onSave:', new Date().toISOString());
+      if (onSave) {
         await onSave(articleData);
-        console.log('✅ onSave() CONCLUÍDO COM SUCESSO');
-        
-        // Log de sucesso
+        setLastSavedAt(Date.now());
+        setHasUnsavedChanges(false);
+        setAutoSaveMessage('Salvo');
+        setTimeout(() => setAutoSaveMessage(null), 1500);
         await logEvent('info', 'ArticleEditor', 'save_article_success', {
           user_id: supabaseUser?.id,
           article_title: articleData.title.substring(0, 100),
           article_slug: articleData.slug,
           is_editing: !!initialData?.id,
           published: articleData.published,
-          content_length: articleData.content.length
-        });
-      } catch (error) {
-        console.error('💥 ERRO NO onSave():', {
-          name: error.name,
-          message: error.message,
-          stack: error.stack?.substring(0, 500)
-        });
-        
-        // Log de erro
-        await logError(error, 'ArticleEditor', 'save_article_error', {
-          user_id: supabaseUser?.id,
-          article_title: title.substring(0, 100),
-          is_editing: !!initialData?.id
+          content_length: articleData.content.length,
         });
       }
-    } else {
-      console.log('⚠️ onSave não definido - nenhuma ação executada');
+    } catch (error: any) {
+      await logError(error, 'ArticleEditor', 'save_article_error', {
+        user_id: supabaseUser?.id,
+        article_title: title.substring(0, 100),
+        is_editing: !!initialData?.id,
+      });
+      alert(error?.message || 'Erro ao salvar');
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const getImageSizeStyle = () => {
-    const sizes = {
-      small: { width: '200px', height: '120px' },
-      medium: { width: '300px', height: '180px' },
-      large: { width: '400px', height: '240px' },
-      full: { width: '100%', height: '300px' }
-    };
+    const sizes = { small: { width: '200px', height: '120px' }, medium: { width: '300px', height: '180px' }, large: { width: '400px', height: '240px' }, full: { width: '100%', height: '300px' } };
     return sizes[imageSettings.size];
   };
 
   const getImageAlignmentStyle = () => {
-    const alignments = {
-      left: { textAlign: 'left' as const },
-      center: { textAlign: 'center' as const },
-      right: { textAlign: 'right' as const }
-    };
+    const alignments = { left: { textAlign: 'left' as const }, center: { textAlign: 'center' as const }, right: { textAlign: 'right' as const } };
     return alignments[imageSettings.alignment];
   };
 
@@ -484,12 +411,19 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
             size="sm"
             onClick={handleSave}
             className="flex items-center justify-center space-x-2 min-h-[44px]"
+            disabled={isSaving}
+            aria-busy={isSaving}
           >
-            <Save className="w-4 h-4" />
-            <span className="text-xs sm:text-sm">Salvar</span>
+            <Save className={`w-4 h-4 ${isSaving ? 'animate-spin' : ''}`} />
+            <span className="text-xs sm:text-sm">{isSaving ? 'Salvando...' : 'Salvar'}</span>
           </Button>
         </div>
       </div>
+
+      {/* Toast de autosave simples */}
+      {autoSaveMessage && (
+        <div className="text-xs text-futuristic-gray">{autoSaveMessage}{lastSavedAt ? ` • ${new Date(lastSavedAt).toLocaleTimeString()}` : ''}</div>
+      )}
 
       {showPreview ? (
         /* Preview Mode */
@@ -666,31 +600,6 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
                      placeholder="Breve descrição do artigo..."
                    />
                  </div>
-                 {/* Meta Description removido - coluna não existe na tabela
-                 <div>
-                   <label className="block text-sm font-montserrat font-medium text-white mb-2">
-                     Meta Description *
-                   </label>
-                   <textarea
-                     value={metaDescription}
-                     onChange={(e) => setMetaDescription(e.target.value)}
-                     rows={2}
-                     maxLength={160}
-                     className="w-full px-4 py-3 bg-darker-surface border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 focus:ring-lime-green focus:border-transparent resize-none"
-                     placeholder="Descrição para SEO (máximo 160 caracteres)..."
-                   />
-                   <div className="flex justify-between items-center mt-1">
-                     <p className="text-xs text-futuristic-gray">
-                       <span className={metaDescription.length > 150 ? 'text-yellow-400' : metaDescription.length > 160 ? 'text-red-400' : 'text-lime-green'}>
-                         {metaDescription.length}/160
-                       </span> caracteres
-                     </p>
-                     <p className="text-xs text-futuristic-gray">
-                       💡 Ideal: 150-160 caracteres para SEO
-                     </p>
-                   </div>
-                 </div>
-                 */}
               </div>
             </Card>
 
@@ -830,7 +739,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
                      onClick={() => document.getElementById('image-upload')?.click()}
                      disabled={isUploading}
                    >
-                     <Upload className={`w-4 h-4 ${isUploading ? 'animate-spin' : ''}`} />
+                     <Upload className={`${isUploading ? 'animate-spin' : ''} w-4 h-4`} />
                      <span>{isUploading ? 'Fazendo upload...' : 'Upload Direto'}</span>
                    </Button>
                  </div>

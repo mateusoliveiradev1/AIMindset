@@ -1,10 +1,31 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/UI/Card';
 import { Button } from '@/components/UI/Button';
 import { FileText, Search, Filter, Edit3, Trash2, Eye, Star } from 'lucide-react';
 import { useArticles } from '@/hooks/useArticles';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useDebounce } from '@/hooks/useDebounce';
+
+// Skeleton para linha de artigo (refinado)
+const ArticleRowSkeleton: React.FC = () => (
+  <div className="flex flex-col lg:flex-row lg:items-center justify-between p-4 bg-darker-surface/30 rounded-lg">
+    <div className="flex-1 min-w-0 space-y-2">
+      <div className="h-4 w-3/4 bg-gradient-to-r from-neon-purple/20 via-neon-purple/10 to-transparent animate-pulse rounded" />
+      <div className="h-3 w-full bg-gradient-to-r from-neon-purple/10 via-neon-purple/5 to-transparent animate-pulse rounded" />
+      <div className="flex gap-2">
+        <div className="h-3 w-24 bg-gradient-to-r from-neon-purple/10 via-neon-purple/5 to-transparent animate-pulse rounded" />
+        <div className="h-3 w-24 bg-gradient-to-r from-neon-purple/10 via-neon-purple/5 to-transparent animate-pulse rounded" />
+        <div className="h-3 w-24 bg-gradient-to-r from-neon-purple/10 via-neon-purple/5 to-transparent animate-pulse rounded hidden sm:block" />
+      </div>
+    </div>
+    <div className="flex items-center gap-2 mt-3 lg:mt-0">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="h-9 w-9 sm:h-8 sm:w-8 bg-gradient-to-br from-neon-purple/10 to-transparent animate-pulse rounded" />
+      ))}
+    </div>
+  </div>
+);
 
 export default function AdminArticles() {
   const navigate = useNavigate();
@@ -12,18 +33,60 @@ export default function AdminArticles() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'published' | 'draft'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'recent' | 'updated' | 'title' | 'views'>('updated');
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const debouncedSearch = useDebounce(searchTerm, 300);
+
+  // Atalhos de teclado: Ctrl+K ou "/" foca busca, "n" cria novo artigo
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+      const typing = tag === 'input' || tag === 'textarea' || tag === 'select';
+      if ((e.key === '/' || (e.ctrlKey && e.key.toLowerCase() === 'k')) && !typing) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      if (e.key.toLowerCase() === 'n' && !typing) {
+        e.preventDefault();
+        handleNewArticle();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const filteredArticles = useMemo(() => {
-    return (articles || [])
-      .filter((article) => {
-        const matchesSearch = article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (article.content || '').toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesFilter = filterStatus === 'all' ||
-          (filterStatus === 'published' && article.published) ||
-          (filterStatus === 'draft' && !article.published);
-        return matchesSearch && matchesFilter;
-      });
-  }, [articles, searchTerm, filterStatus]);
+    const arr = (articles || []).filter((article) => {
+      const needle = debouncedSearch.toLowerCase();
+      const matchesSearch = (article.title || '').toLowerCase().includes(needle) ||
+        (article.content || '').toLowerCase().includes(needle);
+      const matchesFilter = filterStatus === 'all' ||
+        (filterStatus === 'published' && article.published) ||
+        (filterStatus === 'draft' && !article.published);
+      const matchesCategory = categoryFilter === 'all' || String(article.category_id) === String(categoryFilter);
+      return matchesSearch && matchesFilter && matchesCategory;
+    });
+
+    const result = arr.slice();
+    result.sort((a: any, b: any) => {
+      switch (sortBy) {
+        case 'updated':
+          return new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime();
+        case 'recent':
+          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        case 'title':
+          return (a.title || '').localeCompare(b.title || '');
+        case 'views':
+          return (b.views_count || 0) - (a.views_count || 0);
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [articles, debouncedSearch, filterStatus, categoryFilter, sortBy]);
 
   const handleNewArticle = () => {
     navigate('/admin/editor');
@@ -88,8 +151,8 @@ export default function AdminArticles() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-2xl font-orbitron font-bold text-white">Gerenciamento de Artigos</h3>
-        <Button onClick={handleNewArticle} className="bg-neon-gradient hover:bg-neon-gradient/80">
+        <h3 className="text-2xl sm:text-3xl font-orbitron font-bold text-white tracking-tight">Gerenciamento de Artigos</h3>
+        <Button onClick={handleNewArticle} className="bg-neon-gradient hover:bg-neon-gradient/80 transition-all duration-200 hover:scale-[1.02] focus:ring-2 focus:ring-neon-purple/30">
           <FileText className="w-4 h-4 mr-2" />
           Novo Artigo
         </Button>
@@ -104,21 +167,42 @@ export default function AdminArticles() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-futuristic-gray w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Buscar artigos..."
+                  placeholder="Buscar artigos (Ctrl+K ou /)..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple text-sm sm:text-base"
+                  ref={searchInputRef}
+                  className="w-full pl-10 pr-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-neon-purple text-sm sm:text-base transition-colors"
                 />
               </div>
             </div>
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="px-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple text-sm sm:text-base min-w-0 sm:min-w-[160px]"
+              className="px-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple text-sm sm:text-base min-w-0 sm:min-w-[160px] transition-colors"
             >
               <option value="all">Todos</option>
               <option value="published">Publicados</option>
               <option value="draft">Rascunhos</option>
+            </select>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="px-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple text-sm sm:text-base min-w-0 sm:min-w-[180px] transition-colors"
+            >
+              <option value="all">Todas categorias</option>
+              {categories.map((c: any) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="px-4 py-2 bg-darker-surface/50 border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-neon-purple text-sm sm:text-base min-w-0 sm:min-w-[160px] transition-colors"
+            >
+              <option value="updated">Atualizados</option>
+              <option value="recent">Recentes</option>
+              <option value="title">Título (A–Z)</option>
+              <option value="views">Mais vistos</option>
             </select>
           </div>
         </div>
@@ -128,9 +212,10 @@ export default function AdminArticles() {
       <Card className="glass-effect">
         <div className="p-3 sm:p-6">
           {loading && (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neon-purple mx-auto mb-4"></div>
-              <p className="text-futuristic-gray">Carregando artigos...</p>
+            <div className="space-y-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <ArticleRowSkeleton key={i} />
+              ))}
             </div>
           )}
 
@@ -141,7 +226,7 @@ export default function AdminArticles() {
               </div>
               <p className="text-futuristic-gray font-medium">Nenhum artigo encontrado</p>
               <p className="text-futuristic-gray/60 text-sm mt-1">Crie seu primeiro artigo para começar</p>
-              <Button className="mt-3 bg-neon-gradient hover:bg-neon-gradient/80 min-h-[40px] px-4" onClick={handleNewArticle}>
+              <Button className="mt-3 bg-neon-gradient hover:bg-neon-gradient/80 min-h-[40px] px-4 transition-all duration-200 hover:scale-[1.02]" onClick={handleNewArticle}>
                 Novo Artigo
               </Button>
             </div>
@@ -149,9 +234,12 @@ export default function AdminArticles() {
 
           <div className="space-y-4 overflow-x-auto">
             {filteredArticles.map((article) => (
-              <div key={article.id} className="flex flex-col lg:flex-row lg:items-center justify-between p-4 bg-darker-surface/30 rounded-lg hover:bg-darker-surface/50 transition-colors gap-4">
+              <div
+                key={article.id}
+                className="flex flex-col lg:flex-row lg:items-center justify-between p-4 bg-darker-surface/30 rounded-lg hover:bg-darker-surface/50 transition-all duration-200 hover:shadow-lg hover:shadow-neon-purple/20 hover:-translate-y-[1px] ring-1 ring-transparent hover:ring-neon-purple/20 gap-4"
+              >
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-white font-medium text-base sm:text-lg mb-1 truncate">{article.title}</h4>
+                  <h4 className="text-white font-semibold text-base sm:text-lg mb-1 truncate">{article.title}</h4>
                   <p className="text-futuristic-gray text-xs sm:text-sm mb-2 line-clamp-2">
                     {(article.content || '').substring(0, 100)}...
                   </p>
@@ -165,13 +253,15 @@ export default function AdminArticles() {
                     )}
                   </div>
                 </div>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-2 lg:gap-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-2 lg:gap-3 flex-wrap">
                   <div className="flex items-center gap-2">
-                    <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
-                      article.published 
-                        ? 'bg-lime-green/20 text-lime-green' 
-                        : 'bg-yellow-500/20 text-yellow-400'
-                    }`}>
+                    <span
+                      className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-transform ${
+                        article.published 
+                          ? 'bg-lime-green/20 text-lime-green hover:scale-[1.03]' 
+                          : 'bg-yellow-500/20 text-yellow-400 hover:scale-[1.03]'
+                      }`}
+                    >
                       {article.published ? 'Publicado' : 'Rascunho'}
                     </span>
                   </div>
@@ -179,49 +269,54 @@ export default function AdminArticles() {
                     <Button 
                       size="sm" 
                       variant="ghost" 
-                      className="text-blue-400 hover:text-blue-300 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2"
+                      className="text-blue-400 hover:text-blue-300 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2 transition-all duration-200 hover:scale-[1.05] focus:ring-2 focus:ring-neon-purple/30"
                       onClick={() => navigate(`/artigo/${article.slug}`)}
                       title="Visualizar artigo"
+                      aria-label="Visualizar artigo"
                     >
                       <Eye className="w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                     </Button>
                     <Button 
                       size="sm" 
                       variant="ghost" 
-                      className={`min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2 ${
+                      className={`min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2 transition-all duration-200 hover:scale-[1.05] focus:ring-2 focus:ring-neon-purple/30 ${
                         article.is_featured_manual === true
                           ? 'text-neon-purple hover:text-neon-purple/80 bg-neon-purple/10' 
                           : 'text-futuristic-gray hover:text-neon-purple'
                       }`}
                       onClick={() => handleToggleFeaturedManual(article)}
                       title={article.is_featured_manual === true ? 'Remover do destaque fixo' : 'Marcar como destaque fixo (Hero)'}
+                      aria-label={article.is_featured_manual === true ? 'Remover do destaque fixo' : 'Marcar como destaque fixo (Hero)'}
                     >
                       <Star className={`w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4 ${article.is_featured_manual === true ? 'fill-current' : ''}`} />
                     </Button>
                     <Button 
                       size="sm" 
                       variant="ghost" 
-                      className="text-yellow-400 hover:text-yellow-300 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2"
+                      className="text-yellow-400 hover:text-yellow-300 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2 transition-all duration-200 hover:scale-[1.05] focus:ring-2 focus:ring-neon-purple/30"
                       onClick={() => handleEditArticle(article)}
                       title="Editar artigo"
+                      aria-label="Editar artigo"
                     >
                       <Edit3 className="w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                     </Button>
                     <Button 
                       size="sm" 
                       variant="ghost" 
-                      className={`${article.published ? 'text-orange-400 hover:text-orange-300' : 'text-green-400 hover:text-green-300'} min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2`}
+                      className={`${article.published ? 'text-orange-400 hover:text-orange-300' : 'text-green-400 hover:text-green-300'} min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2 transition-all duration-200 hover:scale-[1.05] focus:ring-2 focus:ring-neon-purple/30`}
                       onClick={() => handleTogglePublish(article.id, article.published)}
                       title={article.published ? 'Despublicar artigo' : 'Publicar artigo'}
+                      aria-label={article.published ? 'Despublicar artigo' : 'Publicar artigo'}
                     >
                       {article.published ? 'Despublicar' : 'Publicar'}
                     </Button>
                     <Button 
                       size="sm" 
                       variant="ghost" 
-                      className="text-red-400 hover:text-red-300 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2"
+                      className="text-red-400 hover:text-red-300 min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] p-2 sm:p-1 lg:p-2 transition-all duration-200 hover:scale-[1.05] focus:ring-2 focus:ring-neon-purple/30"
                       onClick={() => handleDeleteArticle(article.id)}
                       title="Excluir artigo"
+                      aria-label="Excluir artigo"
                     >
                       <Trash2 className="w-4 h-4 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                     </Button>
