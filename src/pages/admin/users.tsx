@@ -41,7 +41,7 @@ export default function AdminUsers() {
             Total: {stats.totalUsers} • Ativos: {stats.activeUsers} • Novos este mês: {stats.newUsersThisMonth}
           </p>
         </div>
-        <Button onClick={handleRefresh} disabled={loading} className="bg-neon-purple/20 text-neon-purple hover:bg-neon-purple/30">
+        <Button title="Atualizar lista de usuários" onClick={handleRefresh} disabled={loading} className="bg-neon-purple/20 text-neon-purple hover:bg-neon-purple/30 hover:scale-[1.02] transition-transform rounded-full px-4">
           Atualizar
         </Button>
       </div>
@@ -160,34 +160,66 @@ export default function AdminUsers() {
 
           <div className="space-y-4">
             {paginatedUsers.map((user) => (
-              <div key={user.id} className="flex items-center justify-between p-4 bg-darker-surface/30 rounded-lg border border-neon-purple/10 hover:bg-darker-surface/40 transition-colors">
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-white font-medium truncate">{user.name || 'Usuário'}</h4>
-                  <p className="text-futuristic-gray text-sm truncate">{user.email}</p>
-                  <p className="text-futuristic-gray text-xs">Cadastrado em: {new Date(user.created_at).toLocaleDateString('pt-BR')}</p>
-                  {user.last_sign_in_at && (
-                    <p className="text-futuristic-gray text-xs">Último acesso: {new Date(user.last_sign_in_at).toLocaleString('pt-BR')}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`px-2 py-1 rounded text-xs ${user.status === 'active' ? 'bg-lime-green/20 text-lime-green' : user.status === 'inactive' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}`}>
-                    {user.status === 'active' ? 'Ativo' : user.status === 'inactive' ? 'Inativo' : 'Banido'}
-                  </span>
-                  {user.status !== 'active' && (
-                    <Button size="sm" onClick={() => handleStatusChange(user.id, 'active')} className="bg-lime-green/20 text-lime-green hover:bg-lime-green/30">
-                      <UserCheck className="w-4 h-4" />
-                    </Button>
-                  )}
-                  {user.status === 'active' && (
-                    <Button size="sm" onClick={() => handleStatusChange(user.id, 'inactive')} className="bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30">
-                      <UserX className="w-4 h-4" />
-                    </Button>
-                  )}
-                  {user.status !== 'banned' && (
-                    <Button size="sm" onClick={() => handleStatusChange(user.id, 'banned')} className="bg-red-500/20 text-red-400 hover:bg-red-500/30">
-                      <AlertTriangle className="w-4 h-4" />
-                    </Button>
-                  )}
+              <div
+                key={user.id}
+                className="group rounded-2xl overflow-hidden bg-gradient-to-br from-white/5 via-transparent to-transparent border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)] p-4 sm:p-5"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-white font-medium truncate">{user.name || 'Usuário'}</h4>
+                    <p className="text-futuristic-gray text-sm truncate">{user.email}</p>
+                    <div className="flex flex-wrap gap-3 mt-2 text-xs text-futuristic-gray">
+                      <span>Cadastrado: {new Date(user.created_at).toLocaleDateString('pt-BR')}</span>
+                      {user.last_sign_in_at && (
+                        <span>Último acesso: {new Date(user.last_sign_in_at).toLocaleString('pt-BR')}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-[11px] uppercase tracking-wide border ${
+                        user.status === 'active'
+                          ? 'bg-lime-green/15 text-lime-green border-lime-green/30'
+                          : user.status === 'inactive'
+                          ? 'bg-yellow-500/15 text-yellow-400 border-yellow-400/30'
+                          : 'bg-red-500/15 text-red-400 border-red-400/30'
+                      }`}
+                    >
+                      {user.status === 'active' ? 'Ativo' : user.status === 'inactive' ? 'Inativo' : 'Banido'}
+                    </span>
+
+                    {user.status !== 'active' && (
+                      <Button
+                        title="Ativar usuário"
+                        size="sm"
+                        onClick={() => handleStatusChange(user.id, 'active')}
+                        className="rounded-full bg-lime-green/20 text-lime-green hover:bg-lime-green/30 transition-all hover:scale-105"
+                      >
+                        <UserCheck className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {user.status === 'active' && (
+                      <Button
+                        title="Inativar usuário"
+                        size="sm"
+                        onClick={() => handleStatusChange(user.id, 'inactive')}
+                        className="rounded-full bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 transition-all hover:scale-105"
+                      >
+                        <UserX className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {user.status !== 'banned' && (
+                      <Button
+                        title="Banir usuário"
+                        size="sm"
+                        onClick={() => handleStatusChange(user.id, 'banned')}
+                        className="rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all hover:scale-105"
+                      >
+                        <AlertTriangle className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
