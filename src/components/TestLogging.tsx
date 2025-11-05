@@ -139,7 +139,7 @@ const TestLogging: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* App Logs Tests */}
-        <Card className="glass-effect">
+        <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10">
           <div className="p-6">
             <h3 className="text-xl font-orbitron font-bold text-white mb-4 flex items-center">
               <Activity className="w-6 h-6 mr-2 text-neon-purple" />
@@ -181,7 +181,7 @@ const TestLogging: React.FC = () => {
         </Card>
 
         {/* System Logs Tests */}
-        <Card className="glass-effect">
+        <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10">
           <div className="p-6">
             <h3 className="text-xl font-orbitron font-bold text-white mb-4 flex items-center">
               <Database className="w-6 h-6 mr-2 text-neon-purple" />
@@ -224,7 +224,7 @@ const TestLogging: React.FC = () => {
       </div>
 
       {/* Bulk Test */}
-      <Card className="glass-effect">
+      <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10">
         <div className="p-6">
           <h3 className="text-xl font-orbitron font-bold text-white mb-4 flex items-center">
             <TestTube className="w-6 h-6 mr-2 text-neon-purple" />
@@ -255,7 +255,7 @@ const TestLogging: React.FC = () => {
       </Card>
 
       {/* Instructions */}
-      <Card className="glass-effect">
+      <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10">
         <div className="p-6">
           <h3 className="text-xl font-orbitron font-bold text-white mb-4">
             Instruções

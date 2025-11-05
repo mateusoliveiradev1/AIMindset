@@ -1026,7 +1026,7 @@ const LogsDashboard: React.FC = () => {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Controles */}
-      <Card className="glass-effect p-4 sm:p-6">
+      <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 p-4 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             <h2 className="text-lg sm:text-xl font-orbitron font-bold text-white flex items-center">
@@ -1071,7 +1071,7 @@ const LogsDashboard: React.FC = () => {
 
       {/* Métricas em Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-        <Card className="glass-effect p-4 sm:p-6">
+        <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div className="min-w-0 flex-1">
               <p className="text-futuristic-gray text-xs sm:text-sm truncate">Total de Logs</p>
@@ -1081,7 +1081,7 @@ const LogsDashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="glass-effect p-4 sm:p-6">
+        <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div className="min-w-0 flex-1">
               <p className="text-futuristic-gray text-xs sm:text-sm truncate">Logs de Sistema</p>
@@ -1091,7 +1091,7 @@ const LogsDashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="glass-effect p-4 sm:p-6">
+        <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div className="min-w-0 flex-1">
               <p className="text-futuristic-gray text-xs sm:text-sm truncate">Logs de Aplicação</p>
@@ -1101,7 +1101,7 @@ const LogsDashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="glass-effect p-4 sm:p-6">
+        <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div className="min-w-0 flex-1">
               <p className="text-futuristic-gray text-xs sm:text-sm truncate">Logs de Backend</p>
@@ -1115,7 +1115,7 @@ const LogsDashboard: React.FC = () => {
       {/* Gráficos - Layout Moderno e Responsivo */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
         {/* Gráfico de Linha Temporal */}
-        <Card className="glass-effect p-4 sm:p-6 lg:p-8 hover-lift transition-all duration-300">
+        <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 p-4 sm:p-6 lg:p-8 hover-lift transition-all duration-300">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
             <h3 className="text-lg sm:text-xl font-orbitron font-bold text-white flex items-center">
               <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3 text-neon-purple animate-pulse" />
@@ -1138,7 +1138,7 @@ const LogsDashboard: React.FC = () => {
         </Card>
 
         {/* Gráfico de Pizza */}
-        <Card className="glass-effect p-4 sm:p-6 lg:p-8 hover-lift transition-all duration-300">
+        <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 p-4 sm:p-6 lg:p-8 hover-lift transition-all duration-300">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
             <h3 className="text-lg sm:text-xl font-orbitron font-bold text-white flex items-center">
               <PieChart className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3 text-neon-purple animate-pulse" />
@@ -1162,7 +1162,7 @@ const LogsDashboard: React.FC = () => {
       </div>
 
       {/* Gráfico de Barras - Top Fontes */}
-      <Card className="glass-effect p-4 sm:p-6 lg:p-8 hover-lift transition-all duration-300">
+      <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 p-4 sm:p-6 lg:p-8 hover-lift transition-all duration-300">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
           <h3 className="text-lg sm:text-xl font-orbitron font-bold text-white flex items-center">
             <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3 text-neon-purple animate-pulse" />
