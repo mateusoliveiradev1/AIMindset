@@ -186,6 +186,26 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
     }
   }, [lastUpdate, article]);
 
+  // Bloquear scroll do body quando o modal estiver aberto (dentro do componente)
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      const originalPaddingRight = document.body.style.paddingRight;
+      const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+      document.body.style.overflow = 'hidden';
+      if (scrollBarWidth > 0) {
+        document.body.style.paddingRight = `${scrollBarWidth}px`;
+      }
+
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        document.body.style.paddingRight = originalPaddingRight;
+      };
+    }
+    return;
+  }, [isOpen]);
+
   const handleOverlayClick = (e: React.MouseEvent) => {
     // Só fechar se clicar diretamente no overlay, não nos filhos
     if (e.target === e.currentTarget) {
@@ -312,27 +332,22 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
     >
       {/* Modal Container */}
       <div 
-        className="relative w-full max-w-4xl max-h-[90vh] bg-gray-900 border-2 border-purple-500/30 rounded-xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-4xl max-h-[90vh] glass-effect backdrop-blur-sm rounded-xl overflow-hidden border border-white/10 ring-1 ring-white/10 shadow-[0_20px_60px_rgba(99,102,241,0.25)]"
         onClick={(e) => e.stopPropagation()}
-        style={{
-          backgroundColor: '#1a1a2e',
-          borderColor: '#8b5cf6',
-          boxShadow: '0 25px 50px -12px rgba(139, 92, 246, 0.25)'
-        }}
       >
         {/* Header */}
-        <div className="flex items-start justify-between p-6 border-b border-purple-500/20 bg-gray-800/50">
+        <div className="flex items-start justify-between p-6 border-b border-white/10 bg-black/20">
           <div className="flex-1 min-w-0">
-            <h3 className="text-xl font-bold text-white mb-2 font-mono">
+            <h3 className="text-xl font-orbitron font-bold text-white mb-2">
               Detalhes do Artigo
             </h3>
-            <p className="text-sm text-gray-300 truncate">
+            <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray truncate">
               {article.title}
             </p>
           </div>
           <button
             onClick={handleCloseClick}
-            className="ml-4 p-2 text-gray-400 hover:text-white hover:bg-purple-500/20 rounded-lg transition-all duration-200"
+            className="ml-4 p-2 text-futuristic-gray hover:text-white hover:bg-white/10 rounded-lg ring-1 ring-white/10 transition-all duration-200"
             style={{ zIndex: 10000 }}
           >
             <X className="h-6 w-6" />
@@ -343,89 +358,89 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
         <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
           {/* Error Message */}
           {error && (
-            <div className="m-6 p-4 bg-red-500/20 border border-red-500/40 rounded-lg flex items-center space-x-3">
+            <div className="m-6 p-4 bg-red-400/10 border border-red-400/30 ring-1 ring-red-400/10 rounded-lg flex items-center space-x-3">
               <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-red-400">Erro ao carregar dados</p>
-                <p className="text-xs text-red-300 mt-1">{error}</p>
+                <p className="text-[11px] font-orbitron tracking-wide text-red-300">Erro ao carregar dados</p>
+                <p className="text-[11px] font-orbitron tracking-wide text-red-300 mt-1">{error}</p>
               </div>
             </div>
           )}
 
           {/* Métricas Resumo */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 m-6">
-            <div className="bg-gray-800/50 rounded-lg p-4 text-center border border-purple-500/20">
+            <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-4 text-center border border-white/10 ring-1 ring-white/10 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)]">
               <div className="flex items-center justify-center mb-2">
                 <ThumbsUp className="h-5 w-5 text-green-400" />
               </div>
               <p className="text-2xl font-bold text-green-400">{positiveFeedbacks}</p>
-              <p className="text-xs text-gray-400">Positivos</p>
+              <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Positivos</p>
             </div>
-            <div className="bg-gray-800/50 rounded-lg p-4 text-center border border-purple-500/20">
+            <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-4 text-center border border-white/10 ring-1 ring-white/10 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)]">
               <div className="flex items-center justify-center mb-2">
                 <ThumbsDown className="h-5 w-5 text-red-400" />
               </div>
               <p className="text-2xl font-bold text-red-400">{negativeFeedbacks}</p>
-              <p className="text-xs text-gray-400">Negativos</p>
+              <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Negativos</p>
             </div>
-            <div className="bg-gray-800/50 rounded-lg p-4 text-center border border-purple-500/20">
+            <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-4 text-center border border-white/10 ring-1 ring-white/10 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)]">
               <div className="flex items-center justify-center mb-2">
                 <MessageCircle className="h-5 w-5 text-blue-400" />
               </div>
               <p className="text-2xl font-bold text-blue-400">{totalComments}</p>
-              <p className="text-xs text-gray-400">Comentários</p>
+              <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Comentários</p>
             </div>
-            <div className="bg-gray-800/50 rounded-lg p-4 text-center border border-purple-500/20">
+            <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-4 text-center border border-white/10 ring-1 ring-white/10 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)]">
               <div className="flex items-center justify-center mb-2">
                 <ThumbsUp className="h-5 w-5 text-yellow-400" />
               </div>
               <p className="text-2xl font-bold text-yellow-400">{totalLikes}</p>
-              <p className="text-xs text-gray-400">Curtidas</p>
+              <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Curtidas</p>
             </div>
-            <div className="bg-gray-800/50 rounded-lg p-4 text-center border border-purple-500/20">
+            <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-4 text-center border border-white/10 ring-1 ring-white/10 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)]">
               <div className="flex items-center justify-center mb-2">
                 <MessageCircle className="h-5 w-5 text-cyan-400" />
               </div>
               <p className="text-2xl font-bold text-cyan-400">{repliesCount}</p>
-              <p className="text-xs text-gray-400">Respostas</p>
+              <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Respostas</p>
             </div>
-            <div className="bg-gray-800/50 rounded-lg p-4 text-center border border-purple-500/20">
+            <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-4 text-center border border-white/10 ring-1 ring-white/10 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)]">
               <div className="flex items-center justify-center mb-2">
                 <TrendingUp className="h-5 w-5 text-purple-400" />
               </div>
               <p className="text-2xl font-bold text-purple-400">{averageLikesPerComment}</p>
-              <p className="text-xs text-gray-400">Média Curtidas</p>
+              <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Média Curtidas</p>
             </div>
           </div>
 
           {/* Tabs */}
-          <div className="flex border-b border-purple-500/20 mx-6">
+          <div className="flex border-b border-white/10 mx-6">
             <button
               onClick={() => setActiveTab('comments')}
-              className={`px-4 py-3 text-sm font-medium transition-all duration-200 ${
+              className={`px-4 py-3 text-[11px] font-orbitron tracking-wide transition-all duration-200 ${
                 activeTab === 'comments'
-                  ? 'text-purple-400 border-b-2 border-purple-400 bg-purple-500/10'
-                  : 'text-gray-400 hover:text-white hover:bg-purple-500/5'
+                  ? 'text-neon-purple border-b-2 border-neon-purple bg-neon-purple/10'
+                  : 'text-futuristic-gray hover:text-white hover:bg-white/5'
               }`}
             >
               Comentários ({totalComments})
             </button>
             <button
               onClick={() => setActiveTab('feedback')}
-              className={`px-4 py-3 text-sm font-medium transition-all duration-200 ${
+              className={`px-4 py-3 text-[11px] font-orbitron tracking-wide transition-all duration-200 ${
                 activeTab === 'feedback'
-                  ? 'text-purple-400 border-b-2 border-purple-400 bg-purple-500/10'
-                  : 'text-gray-400 hover:text-white hover:bg-purple-500/5'
+                  ? 'text-neon-purple border-b-2 border-neon-purple bg-neon-purple/10'
+                  : 'text-futuristic-gray hover:text-white hover:bg-white/5'
               }`}
             >
               Feedbacks ({feedbacks.length})
             </button>
             <button
               onClick={() => setActiveTab('stats')}
-              className={`px-4 py-3 text-sm font-medium transition-all duration-200 ${
+              className={`px-4 py-3 text-[11px] font-orbitron tracking-wide transition-all duration-200 ${
                 activeTab === 'stats'
-                  ? 'text-purple-400 border-b-2 border-purple-400 bg-purple-500/10'
-                  : 'text-gray-400 hover:text-white hover:bg-purple-500/5'
+                  ? 'text-neon-purple border-b-2 border-neon-purple bg-neon-purple/10'
+                  : 'text-futuristic-gray hover:text-white hover:bg-white/5'
               }`}
             >
               Estatísticas
@@ -436,8 +451,8 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
           <div className="p-6">
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400"></div>
-                <p className="ml-3 text-gray-400">Carregando dados...</p>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neon-purple"></div>
+                <p className="ml-3 text-futuristic-gray">Carregando dados...</p>
               </div>
             ) : (
               <>
@@ -447,28 +462,28 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
                       organizedComments.map((comment) => (
                         <div key={comment.id} className="space-y-3">
                           {/* Comentário Principal */}
-                          <div className="bg-gray-800/30 rounded-lg p-4 border border-purple-500/10">
+                          <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-4 border border-white/10 ring-1 ring-white/10 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)]">
                             <div className="flex items-start space-x-3">
                               <div className="flex-shrink-0">
-                                <div className="w-8 h-8 bg-purple-500/20 rounded-full flex items-center justify-center">
-                                  <User className="h-4 w-4 text-purple-400" />
+                                <div className="w-8 h-8 bg-neon-purple/20 rounded-full ring-1 ring-white/10 flex items-center justify-center">
+                                  <User className="h-4 w-4 text-neon-purple" />
                                 </div>
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center space-x-2 mb-1">
-                                  <p className="text-sm font-medium text-white">
+                                  <p className="text-sm font-semibold text-white">
                                     {comment.user_name}
                                   </p>
-                                  <div className="flex items-center text-xs text-gray-400">
+                                  <div className="flex items-center text-[11px] font-orbitron tracking-wide text-futuristic-gray">
                                     <Calendar className="h-3 w-3 mr-1" />
                                     {format(new Date(comment.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                                   </div>
-                                  <div className="flex items-center text-xs text-yellow-400 bg-yellow-500/10 px-2 py-1 rounded">
+                                  <div className="flex items-center text-[11px] font-orbitron tracking-wide text-yellow-400 bg-yellow-500/10 px-2 py-1 rounded-full ring-1 ring-white/10">
                                     <ThumbsUp className="h-3 w-3 mr-1" />
                                     {comment.likes || 0}
                                   </div>
                                 </div>
-                                <p className="text-sm text-gray-300">
+                                <p className="text-sm text-futuristic-gray">
                                   {comment.content}
                                 </p>
                               </div>
@@ -476,7 +491,7 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
                                 <button
                                   onClick={() => handleDeleteComment(comment.id)}
                                   disabled={deletingCommentId === comment.id}
-                                  className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="p-2 text-futuristic-gray hover:text-red-400 hover:bg-red-500/10 rounded-lg ring-1 ring-white/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                   title="Excluir comentário"
                                 >
                                   {deletingCommentId === comment.id ? (
@@ -493,47 +508,26 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
                           {comment.replies && comment.replies.length > 0 && (
                             <div className="ml-8 space-y-2">
                               {comment.replies.map((reply) => (
-                                <div key={reply.id} className="bg-gray-800/20 rounded-lg p-3 border border-cyan-500/20 border-l-4 border-l-cyan-400">
+                                <div key={reply.id} className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-3 border border-white/10 ring-1 ring-white/10 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)] border-l-4 border-l-cyan-400">
                                   <div className="flex items-start space-x-3">
                                     <div className="flex-shrink-0">
-                                      <div className="w-6 h-6 bg-cyan-500/20 rounded-full flex items-center justify-center">
+                                      <div className="w-6 h-6 bg-cyan-500/20 rounded-full ring-1 ring-white/10 flex items-center justify-center">
                                         <User className="h-3 w-3 text-cyan-400" />
                                       </div>
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center space-x-2 mb-1">
-                                        <p className="text-xs font-medium text-white">
+                                        <p className="text-sm font-semibold text-white">
                                           {reply.user_name}
                                         </p>
-                                        <span className="text-xs text-cyan-400 bg-cyan-500/10 px-1 py-0.5 rounded text-[10px]">
-                                          RESPOSTA
-                                        </span>
-                                        <div className="flex items-center text-xs text-gray-400">
-                                          <Calendar className="h-2.5 w-2.5 mr-1" />
-                                          {format(new Date(reply.created_at), 'dd/MM HH:mm', { locale: ptBR })}
-                                        </div>
-                                        <div className="flex items-center text-xs text-yellow-400 bg-yellow-500/10 px-1.5 py-0.5 rounded">
-                                          <ThumbsUp className="h-2.5 w-2.5 mr-1" />
-                                          {reply.likes || 0}
+                                        <div className="flex items-center text-[11px] font-orbitron tracking-wide text-futuristic-gray">
+                                          <Calendar className="h-3 w-3 mr-1" />
+                                          {format(new Date(reply.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                                         </div>
                                       </div>
-                                      <p className="text-xs text-gray-300">
+                                      <p className="text-sm text-futuristic-gray">
                                         {reply.content}
                                       </p>
-                                    </div>
-                                    <div className="flex-shrink-0">
-                                      <button
-                                        onClick={() => handleDeleteComment(reply.id)}
-                                        disabled={deletingCommentId === reply.id}
-                                        className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        title="Excluir resposta"
-                                      >
-                                        {deletingCommentId === reply.id ? (
-                                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-400"></div>
-                                        ) : (
-                                          <Trash2 className="h-3 w-3" />
-                                        )}
-                                      </button>
                                     </div>
                                   </div>
                                 </div>
@@ -543,10 +537,8 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
                         </div>
                       ))
                     ) : (
-                      <div className="text-center py-12">
-                        <MessageCircle className="h-16 w-16 text-gray-500 mx-auto mb-4" />
-                        <p className="text-gray-400 text-lg">Nenhum comentário encontrado</p>
-                        <p className="text-xs text-gray-500 mt-2">Este artigo ainda não recebeu comentários</p>
+                      <div className="text-center py-8">
+                        <p className="text-futuristic-gray">Este artigo ainda não recebeu comentários</p>
                       </div>
                     )}
                   </div>
@@ -556,10 +548,10 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
                   <div className="space-y-4">
                     {feedbacks.length > 0 ? (
                       feedbacks.map((feedback) => (
-                        <div key={feedback.id} className="bg-gray-800/30 rounded-lg p-4 border border-purple-500/10">
+                        <div key={feedback.id} className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-4 border border-white/10 ring-1 ring-white/10 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)]">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-3">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              <div className={`w-8 h-8 rounded-full ring-1 ring-white/10 flex items-center justify-center ${
                                 feedback.type === 'positive' ? 'bg-green-500/20' : 'bg-red-500/20'
                               }`}>
                                 {feedback.type === 'positive' ? (
@@ -574,7 +566,7 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
                                 {feedback.type === 'positive' ? 'Útil' : 'Não útil'}
                               </span>
                             </div>
-                            <div className="flex items-center text-xs text-gray-400">
+                            <div className="flex items-center text-[11px] font-orbitron tracking-wide text-futuristic-gray">
                               <Calendar className="h-3 w-3 mr-1" />
                               {format(new Date(feedback.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                             </div>
@@ -582,127 +574,46 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
                         </div>
                       ))
                     ) : (
-                      <div className="text-center py-12">
-                        <TrendingUp className="h-16 w-16 text-gray-500 mx-auto mb-4" />
-                        <p className="text-gray-400 text-lg">Nenhum feedback encontrado</p>
-                        <p className="text-xs text-gray-500 mt-2">Este artigo ainda não recebeu avaliações</p>
+                      <div className="text-center py-8">
+                        <p className="text-futuristic-gray">Nenhum feedback registrado</p>
                       </div>
                     )}
                   </div>
                 )}
 
                 {activeTab === 'stats' && (
-                  <div className="space-y-6">
-                    {/* Estatísticas de Engajamento */}
-                    <div className="bg-gray-800/30 rounded-lg p-6 border border-purple-500/10">
-                      <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-                        <TrendingUp className="h-5 w-5 text-purple-400 mr-2" />
-                        Estatísticas de Engajamento
-                      </h4>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Estatísticas de Comentários */}
-                        <div className="space-y-4">
-                          <h5 className="text-sm font-medium text-gray-300 uppercase tracking-wide">Comentários</h5>
-                          <div className="space-y-3">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400">Total de comentários:</span>
-                              <span className="text-sm font-medium text-blue-400">{totalComments}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400">Comentários principais:</span>
-                              <span className="text-sm font-medium text-purple-400">{mainCommentsCount}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400">Respostas:</span>
-                              <span className="text-sm font-medium text-cyan-400">{repliesCount}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400">Taxa de resposta:</span>
-                              <span className="text-sm font-medium text-green-400">
-                                {mainCommentsCount > 0 ? ((repliesCount / mainCommentsCount) * 100).toFixed(1) : '0'}%
-                              </span>
-                            </div>
-                          </div>
+                  <div className="space-y-4">
+                    <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-4 border border-white/10 ring-1 ring-white/10">
+                      <h5 className="text-[11px] font-orbitron tracking-wide text-futuristic-gray uppercase">Resumo</h5>
+                      <div className="space-y-2 mt-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Total de feedbacks:</span>
+                          <span className="text-sm font-medium text-white">{totalFeedbacks}</span>
                         </div>
-
-                        {/* Estatísticas de Curtidas */}
-                        <div className="space-y-4">
-                          <h5 className="text-sm font-medium text-gray-300 uppercase tracking-wide">Curtidas</h5>
-                          <div className="space-y-3">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400">Total de curtidas:</span>
-                              <span className="text-sm font-medium text-yellow-400">{totalLikes}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400">Média por comentário:</span>
-                              <span className="text-sm font-medium text-yellow-400">{averageLikesPerComment}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400">Comentários com curtidas:</span>
-                              <span className="text-sm font-medium text-orange-400">
-                                {comments.filter(c => (c.likes || 0) > 0).length}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400">Taxa de engajamento:</span>
-                              <span className="text-sm font-medium text-green-400">
-                                {totalComments > 0 ? ((comments.filter(c => (c.likes || 0) > 0).length / totalComments) * 100).toFixed(1) : '0'}%
-                              </span>
-                            </div>
-                          </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Feedbacks positivos:</span>
+                          <span className="text-sm font-medium text-lime-green">{positiveFeedbacks}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Feedbacks negativos:</span>
+                          <span className="text-sm font-medium text-red-400">{negativeFeedbacks}</span>
                         </div>
                       </div>
                     </div>
-
-                    {/* Estatísticas de Feedback */}
-                    <div className="bg-gray-800/30 rounded-lg p-6 border border-purple-500/10">
-                      <h4 className="text-lg font-semibold text-white mb-4 flex items-center">
-                        <ThumbsUp className="h-5 w-5 text-green-400 mr-2" />
-                        Análise de Feedback
-                      </h4>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                          <h5 className="text-sm font-medium text-gray-300 uppercase tracking-wide">Distribuição</h5>
-                          <div className="space-y-3">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400">Total de feedbacks:</span>
-                              <span className="text-sm font-medium text-white">{totalFeedbacks}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400">Feedbacks positivos:</span>
-                              <span className="text-sm font-medium text-green-400">{positiveFeedbacks}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400">Feedbacks negativos:</span>
-                              <span className="text-sm font-medium text-red-400">{negativeFeedbacks}</span>
-                            </div>
-                          </div>
+                    <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-4 border border-white/10 ring-1 ring-white/10">
+                      <h5 className="text-[11px] font-orbitron tracking-wide text-futuristic-gray uppercase">Métricas</h5>
+                      <div className="space-y-2 mt-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Taxa de aprovação:</span>
+                          <span className="text-sm font-medium text-neon-purple">{approvalRate.toFixed(0)}%</span>
                         </div>
-
-                        <div className="space-y-4">
-                          <h5 className="text-sm font-medium text-gray-300 uppercase tracking-wide">Métricas</h5>
-                          <div className="space-y-3">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400">Taxa de aprovação:</span>
-                              <span className="text-sm font-medium text-purple-400">
-                                {isNaN(approvalRate) ? '0' : Math.round(approvalRate)}%
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400">Ratio positivo/negativo:</span>
-                              <span className="text-sm font-medium text-blue-400">
-                                {negativeFeedbacks > 0 ? (positiveFeedbacks / negativeFeedbacks).toFixed(1) : positiveFeedbacks > 0 ? '∞' : '0'}:1
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-400">Engajamento total:</span>
-                              <span className="text-sm font-medium text-cyan-400">
-                                {totalComments + totalFeedbacks}
-                              </span>
-                            </div>
-                          </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Comentários principais:</span>
+                          <span className="text-sm font-medium text-white">{mainCommentsCount}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Curtidas totais:</span>
+                          <span className="text-sm font-medium text-yellow-400">{totalLikes}</span>
                         </div>
                       </div>
                     </div>
@@ -711,19 +622,6 @@ export const ArticleDetailsModal: React.FC<ArticleDetailsModalProps> = ({
               </>
             )}
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-between items-center p-6 border-t border-purple-500/20 bg-gray-800/50">
-          <div className="text-xs text-gray-400">
-            ID: {article.id} • Atualizado: {format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-          </div>
-          <button
-            onClick={handleCloseClick}
-            className="px-4 py-2 text-sm font-medium text-gray-400 hover:text-white hover:bg-purple-500/20 rounded-lg transition-all duration-200"
-          >
-            Fechar
-          </button>
         </div>
       </div>
     </div>

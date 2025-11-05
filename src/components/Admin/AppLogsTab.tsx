@@ -218,7 +218,7 @@ export const AppLogsTab: React.FC = () => {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Filtros e Controles */}
-      <Card className="glass-effect p-4 sm:p-6">
+      <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 p-4 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 flex-1">
             {/* Busca */}
@@ -316,7 +316,7 @@ export const AppLogsTab: React.FC = () => {
       <DateFilters onDateRangeChange={setDateRange} />
 
       {/* Lista de Logs */}
-      <Card className="glass-effect">
+      <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10">
         <div className="p-4 sm:p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
             <h3 className="text-base sm:text-lg font-orbitron font-bold text-white flex items-center">
@@ -424,45 +424,32 @@ export const AppLogsTab: React.FC = () => {
 
       {/* Modal de Detalhes do Log */}
       {selectedLog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-darker-surface border border-neon-purple/20 rounded-lg w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
-            <div className="p-4 sm:p-6 border-b border-neon-purple/10">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh]">
+            <div className="p-4 sm:p-6 border-b border-white/10">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-lg sm:text-xl font-orbitron font-bold text-white flex items-center">
-                  <Activity className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-neon-purple flex-shrink-0" />
+                  <Activity className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-blue-400 flex-shrink-0 animate-pulse" />
                   <span className="truncate">Detalhes do Log da Aplicação</span>
                 </h3>
-                <Button
-                  onClick={() => setSelectedLog(null)}
-                  variant="outline"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                >
-                  Fechar
-                </Button>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getLevelColor(selectedLog.level)}`}>{selectedLog.level.toUpperCase()}</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getSourceColor(selectedLog.source)}`}>{selectedLog.source}</span>
+                  <Button
+                    onClick={() => setSelectedLog(null)}
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                  >
+                    Fechar
+                  </Button>
+                </div>
               </div>
             </div>
             
             <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-120px)]">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 <div className="space-y-3 sm:space-y-4">
-                  <div>
-                    <label className="block text-futuristic-gray text-xs sm:text-sm mb-1">Nível</label>
-                    <div className="flex items-center gap-2">
-                      {getLevelIcon(selectedLog.level)}
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getLevelColor(selectedLog.level)}`}>
-                        {selectedLog.level.toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-futuristic-gray text-xs sm:text-sm mb-1">Fonte</label>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getSourceColor(selectedLog.source)}`}>
-                      {selectedLog.source}
-                    </span>
-                  </div>
-                  
                   <div>
                     <label className="block text-futuristic-gray text-xs sm:text-sm mb-1">Ação</label>
                     <span className="text-white font-medium text-sm sm:text-base break-words">{selectedLog.action}</span>
@@ -480,12 +467,19 @@ export const AppLogsTab: React.FC = () => {
                 </div>
 
                 <div className="space-y-3 sm:space-y-4">
-                  <div>
-                    <label className="block text-futuristic-gray text-xs sm:text-sm mb-2">Detalhes</label>
-                    <pre className="bg-darker-surface/50 border border-neon-purple/20 rounded-lg p-3 text-xs text-white overflow-x-auto break-words">
-                      {formatJsonData(selectedLog.details)}
-                    </pre>
-                  </div>
+                  {selectedLog.details ? (
+                    <div>
+                      <label className="block text-futuristic-gray text-xs sm:text-sm mb-2">Detalhes</label>
+                      <pre className="bg-darker-surface/50 border border-neon-purple/20 rounded-lg p-3 text-xs text-white overflow-x-auto break-words">
+                        {formatJsonData(selectedLog.details)}
+                      </pre>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 bg-dark-surface/40 rounded-lg border border-white/10">
+                      <Info className="w-6 h-6 text-futuristic-gray mx-auto mb-2 animate-pulse" />
+                      <p className="text-futuristic-gray text-sm">Sem detalhes adicionais</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

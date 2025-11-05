@@ -157,7 +157,8 @@ export const BackupMonitoring: React.FC = () => {
   }, []);
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('pt-BR');
+    const d = new Date(dateString);
+    return isNaN(d.getTime()) ? dateString : d.toLocaleString('pt-BR');
   };
 
   const formatTimeSince = (hours: number) => {
@@ -214,7 +215,7 @@ export const BackupMonitoring: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header com Status Geral */}
-      <div className="bg-darker-surface/50 rounded-lg p-6 border border-neon-purple/20">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 p-4 sm:p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <Shield className="w-8 h-8 text-neon-purple" />
@@ -322,7 +323,7 @@ export const BackupMonitoring: React.FC = () => {
       </div>
 
       {/* Cron Jobs Status */}
-      <div className="bg-darker-surface/50 rounded-lg p-6 border border-neon-purple/20">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 p-6">
         <h4 className="text-lg font-orbitron font-bold text-white mb-4 flex items-center">
           <Database className="w-5 h-5 mr-2 text-neon-purple" />
           Cron Jobs Configurados
@@ -356,7 +357,7 @@ export const BackupMonitoring: React.FC = () => {
       </div>
 
       {/* Logs Recentes */}
-      <div className="bg-darker-surface/50 rounded-lg p-6 border border-neon-purple/20">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 p-6">
         <h4 className="text-lg font-orbitron font-bold text-white mb-4 flex items-center">
           <Activity className="w-5 h-5 mr-2 text-neon-purple" />
           Logs Recentes de Backup
@@ -365,8 +366,11 @@ export const BackupMonitoring: React.FC = () => {
         {backupStatus.recent_logs.length > 0 ? (
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {backupStatus.recent_logs.map((log, index) => {
-              const getLogColor = (type: string) => {
-                switch (type) {
+              const type: string = (log && typeof log.type === 'string') ? log.type : 'backup_unknown';
+              const createdAt: string = (log && (log.created_at || log.timestamp)) ? (log.created_at || log.timestamp) : new Date().toISOString();
+
+              const getLogColor = (t: string) => {
+                switch (t) {
                   case 'backup_success': return 'text-green-400';
                   case 'backup_error': return 'text-red-400';
                   case 'backup_critical_error': return 'text-red-500';
@@ -375,8 +379,8 @@ export const BackupMonitoring: React.FC = () => {
                 }
               };
 
-              const getLogIcon = (type: string) => {
-                switch (type) {
+              const getLogIcon = (t: string) => {
+                switch (t) {
                   case 'backup_success': return CheckCircle;
                   case 'backup_error': 
                   case 'backup_critical_error': return XCircle;
@@ -385,23 +389,23 @@ export const BackupMonitoring: React.FC = () => {
                 }
               };
 
-              const LogIcon = getLogIcon(log.type);
+              const LogIcon = getLogIcon(type);
 
               return (
                 <div key={index} className="bg-dark-surface/30 rounded-lg p-3">
                   <div className="flex items-start space-x-3">
-                    <LogIcon className={`w-4 h-4 mt-0.5 ${getLogColor(log.type)}`} />
+                    <LogIcon className={`w-4 h-4 mt-0.5 ${getLogColor(type)}`} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <p className={`font-medium ${getLogColor(log.type)}`}>
-                          {log.type.replace('backup_', '').replace('_', ' ').toUpperCase()}
+                        <p className={`font-medium ${getLogColor(type)}`}>
+                          {type.replace('backup_', '').replace('_', ' ').toUpperCase()}
                         </p>
                         <span className="text-xs text-futuristic-gray">
-                          {formatDate(log.created_at)}
+                          {formatDate(createdAt)}
                         </span>
                       </div>
-                      <p className="text-sm text-futuristic-gray mt-1">{log.message}</p>
-                      {log.details && (
+                      <p className="text-sm text-futuristic-gray mt-1">{(log && log.message) ? log.message : 'Sem mensagem'}</p>
+                      {log && log.details && (
                         <pre className="text-xs text-futuristic-gray mt-2 bg-darker-surface/50 p-2 rounded overflow-x-auto">
                           {JSON.stringify(log.details, null, 2)}
                         </pre>

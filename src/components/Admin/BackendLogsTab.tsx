@@ -173,7 +173,7 @@ export const BackendLogsTab: React.FC = () => {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Filtros e Controles */}
-      <Card className="glass-effect p-4 sm:p-6">
+      <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 p-4 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 flex-1">
             {/* Busca */}
@@ -258,7 +258,7 @@ export const BackendLogsTab: React.FC = () => {
       <DateFilters onDateRangeChange={setDateRange} />
 
       {/* Lista de Logs */}
-      <Card className="glass-effect">
+      <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10">
         <div className="p-4 sm:p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6">
             <h3 className="text-base sm:text-lg font-orbitron font-bold text-white flex items-center">
@@ -354,22 +354,25 @@ export const BackendLogsTab: React.FC = () => {
 
       {/* Modal de Detalhes do Log */}
       {selectedLog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-darker-surface border border-neon-purple/20 rounded-lg w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
-            <div className="p-4 sm:p-6 border-b border-neon-purple/10">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh]">
+            <div className="p-4 sm:p-6 border-b border-white/10">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-lg sm:text-xl font-orbitron font-bold text-white flex items-center">
-                  <Database className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-neon-purple flex-shrink-0" />
+                  <Database className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-lime-green flex-shrink-0 animate-pulse" />
                   <span className="truncate">Detalhes do Log</span>
                 </h3>
-                <Button
-                  onClick={() => setSelectedLog(null)}
-                  variant="outline"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                >
-                  Fechar
-                </Button>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getActionColor(selectedLog.action)}`}>{selectedLog.action}</span>
+                  <Button
+                    onClick={() => setSelectedLog(null)}
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                  >
+                    Fechar
+                  </Button>
+                </div>
               </div>
             </div>
             
@@ -382,13 +385,6 @@ export const BackendLogsTab: React.FC = () => {
                       {getTableIcon(selectedLog.table_name)}
                       <span className="text-white font-medium text-sm sm:text-base break-words">{selectedLog.table_name}</span>
                     </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-futuristic-gray text-xs sm:text-sm mb-1">Ação</label>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getActionColor(selectedLog.action)}`}>
-                      {selectedLog.action}
-                    </span>
                   </div>
                   
                   <div>
@@ -408,21 +404,31 @@ export const BackendLogsTab: React.FC = () => {
                 </div>
 
                 <div className="space-y-3 sm:space-y-4">
-                  {selectedLog.old_data && (
+                  {selectedLog.old_data ? (
                     <div>
                       <label className="block text-futuristic-gray text-xs sm:text-sm mb-2">Dados Anteriores</label>
                       <pre className="bg-darker-surface/50 border border-red-400/20 rounded-lg p-3 text-xs text-red-300 overflow-x-auto break-words">
                         {formatJsonData(selectedLog.old_data)}
                       </pre>
                     </div>
+                  ) : (
+                    <div className="text-center py-6 bg-dark-surface/40 rounded-lg border border-white/10">
+                      <AlertCircle className="w-6 h-6 text-futuristic-gray mx-auto mb-2 animate-pulse" />
+                      <p className="text-futuristic-gray text-sm">Sem dados anteriores</p>
+                    </div>
                   )}
                   
-                  {selectedLog.new_data && (
+                  {selectedLog.new_data ? (
                     <div>
                       <label className="block text-futuristic-gray text-xs sm:text-sm mb-2">Dados Novos</label>
                       <pre className="bg-darker-surface/50 border border-lime-green/20 rounded-lg p-3 text-xs text-lime-green overflow-x-auto break-words">
                         {formatJsonData(selectedLog.new_data)}
                       </pre>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 bg-dark-surface/40 rounded-lg border border-white/10">
+                      <Info className="w-6 h-6 text-futuristic-gray mx-auto mb-2 animate-pulse" />
+                      <p className="text-futuristic-gray text-sm">Sem dados novos</p>
                     </div>
                   )}
                 </div>
