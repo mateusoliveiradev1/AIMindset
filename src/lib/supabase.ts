@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Suporte a variáveis de ambiente tanto VITE_* quanto NEXT_PUBLIC_* para produção na Vercel
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // Debug das variáveis de ambiente - LOGS EXTREMOS PARA PREVIEW
 console.log('🔍 [SUPABASE-INIT] Environment Variables Check:', {
@@ -9,8 +10,8 @@ console.log('🔍 [SUPABASE-INIT] Environment Variables Check:', {
   key: supabaseAnonKey ? 'SET' : 'NOT SET',
   fullUrl: supabaseUrl,
   keyPrefix: supabaseAnonKey?.substring(0, 20) + '...',
-  isPreview: window.location.href.includes('trae') || window.location.href.includes('preview'),
-  currentUrl: window.location.href
+  isPreview: typeof window !== 'undefined' && (window.location.href.includes('trae') || window.location.href.includes('preview')),
+  currentUrl: typeof window !== 'undefined' ? window.location.href : 'server'
 });
 
 // Fallback para valores hardcoded em caso de emergência
@@ -44,13 +45,13 @@ export const supabase = (() => {
   }
 
   // Verificar se já existe uma instância global
-  if (typeof window !== 'undefined' && window.__supabase_singleton__) {
-    supabaseInstance = window.__supabase_singleton__;
+  if (typeof window !== 'undefined' && (window as any).__supabase_singleton__) {
+    supabaseInstance = (window as any).__supabase_singleton__;
     return supabaseInstance;
   }
 
-  if (typeof global !== 'undefined' && global.__supabase_singleton__) {
-    supabaseInstance = global.__supabase_singleton__;
+  if (typeof global !== 'undefined' && (global as any).__supabase_singleton__) {
+    supabaseInstance = (global as any).__supabase_singleton__;
     return supabaseInstance;
   }
 
@@ -93,16 +94,18 @@ export const supabase = (() => {
 
   // Armazenar a instância globalmente
   if (typeof window !== 'undefined') {
-    window.__supabase_singleton__ = supabaseInstance;
+    (window as any).__supabase_singleton__ = supabaseInstance;
     // Expor também como window.supabase para facilitar testes
     (window as any).supabase = supabaseInstance;
   } else if (typeof global !== 'undefined') {
-    global.__supabase_singleton__ = supabaseInstance;
+    (global as any).__supabase_singleton__ = supabaseInstance;
   }
 
   return supabaseInstance;
 })();
 
+// Cliente de serviço usando a mesma instância principal
+export const supabaseServiceClient = supabase;
 
 // Função para verificar conectividade
 export async function checkSupabaseConnection() {
@@ -153,9 +156,6 @@ export interface Contact {
   message: string;
   created_at: string;
 }
-
-// Criar cliente de serviço usando a mesma instância principal
-export const supabaseServiceClient = supabase;
 
 // Tipos para TypeScript
 export type Database = {

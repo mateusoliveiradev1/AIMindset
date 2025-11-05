@@ -23,7 +23,8 @@
     <link rel="preload" href="/src/index.css" as="style">
     <link rel="preload" href="/src/styles/mobile-usability.css" as="style">
     
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' data:; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src 'self' fonts.gstatic.com; img-src 'self' data: blob: https: videos.openai.com images.unsplash.com; connect-src 'self' http://localhost:* *.supabase.co wss://*.supabase.co videos.openai.com images.unsplash.com; media-src 'self' blob: data: videos.openai.com; object-src 'none'; base-uri 'self'; form-action 'self';" />
+    <!-- CSP ajustada para compatibilidade com Vercel Live e Supabase -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdn.jsdelivr.net https://unpkg.com https://vercel.live https://*.vercel.app https://*.vercel.com; script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdn.jsdelivr.net https://unpkg.com https://vercel.live https://*.vercel.app https://*.vercel.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: images.unsplash.com; connect-src 'self' http://localhost:* https://*.supabase.co wss://*.supabase.co https://vercel.live https://*.vercel.app https://*.vercel.com videos.openai.com images.unsplash.com; media-src 'self' blob: data: videos.openai.com; object-src 'none'; frame-src 'self' https://vercel.live https://*.vercel.app https://*.vercel.com; base-uri 'self'; form-action 'self';" />
     
     <!-- Critical CSS Inline para melhor FCP -->
     <style>
@@ -69,9 +70,7 @@
     <!-- <link rel="preload" href="https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiA.woff2" as="font" type="font/woff2" crossorigin> -->
     <!-- <link rel="preload" href="https://fonts.gstatic.com/s/inter/v18/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7.woff2" as="font" type="font/woff2" crossorigin> -->
     
-    <!-- Preload de recursos JavaScript críticos -->
-    <link rel="modulepreload" href="/src/main.tsx">
-    <link rel="modulepreload" href="/src/App.tsx">
+    <!-- Removido: modulepreload de arquivos .tsx que causavam MIME incorreto -->
     
     <!-- DNS prefetch para recursos externos -->
     <link rel="dns-prefetch" href="//fonts.googleapis.com">

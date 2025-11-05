@@ -1,12 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Cliente admin com fallback seguro: usa service role só em DEV, anon em PROD
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
-// Fallback emergencial somente para desenvolvimento local
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+// Fallback emergencial
 const EMERGENCY_SUPABASE_URL = 'https://jywjqzhqynhnhetidzsa.supabase.co';
 const EMERGENCY_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5d2pxemhxeW5obmhldGlkenNhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDkyOTEzNCwiZXhwIjoyMDc2NTA1MTM0fQ.04Y2US3KKeveKGi_8PvhqxS1EKiAB4xNjuFZTP1VLOQ';
+const EMERGENCY_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5d2pxemhxeW5obmhldGlkenNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5MjkxMzQsImV4cCI6MjA3NjUwNTEzNH0.oTZ6B-77NGBSqa_lN2YWCtnKwKc0glWnwfuN9xQjDl0';
 
 const isBrowser = typeof window !== 'undefined';
 const isDev = import.meta.env.DEV === true;
@@ -15,12 +16,12 @@ const isDev = import.meta.env.DEV === true;
 // Em desenvolvimento, permitir service role para desbloquear métricas
 const supabaseKey = (() => {
   if (!isBrowser) {
-    return serviceRoleKey || anonKey;
+    return serviceRoleKey || anonKey || EMERGENCY_SERVICE_ROLE_KEY;
   }
   if (isDev) {
     return serviceRoleKey || EMERGENCY_SERVICE_ROLE_KEY;
   }
-  return anonKey;
+  return anonKey || EMERGENCY_ANON_KEY;
 })();
 
 // Determinar URL final com fallback

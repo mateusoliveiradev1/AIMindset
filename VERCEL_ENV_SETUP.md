@@ -1,60 +1,33 @@
-# 🚀 Configuração de Variáveis de Ambiente no Vercel
+# Configuração de Variáveis de Ambiente no Vercel
 
-## ⚠️ IMPORTANTE: Configure estas variáveis no painel do Vercel
+Este guia descreve como configurar todas as variáveis necessárias para produção.
 
-Para que o sistema de backup funcione em produção, você precisa configurar as seguintes variáveis de ambiente no painel do Vercel:
+## Passo a Passo
 
-### 📋 Variáveis Obrigatórias
+1. Acesse seu projeto no Vercel
+2. Vá em `Settings → Environment Variables`
+3. Crie as variáveis abaixo:
 
-1. **NEXT_PUBLIC_SUPABASE_URL**
-   - Valor: `https://jywjqzhqynhnhetidzsa.supabase.co`
-   - Escopo: Production, Preview, Development
+### Supabase
+- `NEXT_PUBLIC_SUPABASE_URL` → URL do projeto
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` → Chave Anon
+- `SUPABASE_URL` → URL do projeto (server-side)
+- `SUPABASE_ANON_KEY` → Chave Anon (server-side)
+- `SUPABASE_SERVICE_ROLE_KEY` → Chave Service Role (server-side)
 
-2. **NEXT_PUBLIC_SUPABASE_ANON_KEY**
-   - Valor: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5d2pxemhxeW5obmhldGlkenNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5MjkxMzQsImV4cCI6MjA3NjUwNTEzNH0.oTZ6B-77NGBSqa_lN2YWCtnKwKc0glWnwfuN9xQjDl0`
-   - Escopo: Production, Preview, Development
+### Google Analytics 4 (Measurement Protocol)
+- `GA4_MEASUREMENT_ID` → ex: `G-T9CX5BME74`
+- `GA4_API_SECRET` → ex: `12354546232`
 
-3. **SUPABASE_SERVICE_ROLE_KEY**
-   - Valor: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5d2pxemhxeW5obmhldGlkenNhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDkyOTEzNCwiZXhwIjoyMDc2NTA1MTM0fQ.04Y2US3KKeveKGi_8PvhqxS1EKiAB4xNjuFZTP1VLOQ`
-   - Escopo: Production, Preview, Development
-   - ⚠️ **CRÍTICO**: Esta chave é necessária para as APIs de backup
+### Sistema de Alertas
+- `ENVIRONMENT` → `production`
+- `RESEND_API_KEY` → sua chave da Resend
 
-4. **ENVIRONMENT**
-   - Valor: `production`
-   - Escopo: Production
+## Observações
+- O endpoint `/api/analytics/web-vitals` usa `GA4_MEASUREMENT_ID` e `GA4_API_SECRET` no servidor.
+- O cliente só envia Web Vitals em produção (não em `localhost`).
+- Após adicionar as variáveis, rode um novo deploy para que fiquem disponíveis.
 
-5. **RESEND_API_KEY**
-   - Valor: `re_5y6JWySh_J6LFqLCLGhjkXyYhYvi7KQXW`
-   - Escopo: Production, Preview, Development
-
-### 🔧 Como Configurar no Vercel
-
-1. Acesse o painel do Vercel: https://vercel.com/dashboard
-2. Selecione o projeto AIMindset
-3. Vá em **Settings** > **Environment Variables**
-4. Adicione cada variável com os valores acima
-5. Certifique-se de marcar os escopos corretos
-6. Faça um novo deploy após configurar
-
-### ✅ Verificação
-
-Após configurar, as APIs devem funcionar:
-- `/api/backup-status` - Status do sistema de backup
-- `/api/auto-backup` - Executar backup automático
-
-### 🚨 Troubleshooting
-
-Se ainda houver erro "Variáveis de ambiente do Supabase não configuradas":
-1. Verifique se todas as variáveis foram adicionadas
-2. Confirme os valores exatos (sem espaços extras)
-3. Faça um novo deploy
-4. Aguarde alguns minutos para propagação
-
-## 🎯 Sistema Pronto
-
-Com as variáveis configuradas, o sistema terá:
-- ✅ Backup automático funcionando
-- ✅ Monitoramento em tempo real
-- ✅ Limpeza automática de logs
-- ✅ Interface de administração
-- ✅ APIs funcionais
+## Validação
+- Use o GA4 DebugView/Realtime para verificar evento `web_vitals` com parâmetros:
+  - `cls`, `inp`, `fcp`, `lcp`, `ttfb`, `page_location`.

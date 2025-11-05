@@ -183,6 +183,12 @@ export function usePerformanceMonitor(config: PerformanceConfig = {}) {
       '/fonts/inter-variable.woff2'
     ];
 
+    // Evitar warnings no preview/local
+    const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    if (isLocal) {
+      return;
+    }
+
     criticalStaticResources.forEach(resource => {
       const link = document.createElement('link');
       link.rel = 'preload';

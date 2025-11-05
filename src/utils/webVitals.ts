@@ -108,10 +108,16 @@ class WebVitalsMonitor {
     }
   }
 
+  private shouldSendAnalytics(): boolean {
+    const enabledEnv = (import.meta as any)?.env?.VITE_ENABLE_WEB_VITALS;
+    const enabled = enabledEnv === undefined ? true : String(enabledEnv) !== 'false';
+    const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+    return enabled && !isLocal;
+  }
+
   private handleMetric(metric: WebVitalsMetric) {
     this.metrics.set(metric.name, metric);
     
-    // Log para desenvolvimento
     if (process.env.NODE_ENV === 'development') {
       console.log(`[WebVitals] ${metric.name}:`, {
         value: metric.value,
@@ -120,13 +126,12 @@ class WebVitalsMonitor {
       });
     }
 
-    // Reportar métricas críticas
     if (metric.rating === 'poor') {
       this.reportPoorMetric(metric);
     }
 
-    // Enviar para analytics (apenas em produção)
-    if (process.env.NODE_ENV === 'production') {
+    // Enviar apenas se habilitado e não-localhost
+    if (this.shouldSendAnalytics()) {
       this.sendToAnalytics(metric);
     }
   }
@@ -188,15 +193,37 @@ class WebVitalsMonitor {
         userAgent: navigator.userAgent
       };
 
-      // Usar sendBeacon para envio confiável
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon(
-          '/api/analytics/web-vitals',
-          JSON.stringify(performanceData)
-        );
+      // Usar sendBeacon para envio confiável (verificar endpoint)
+      const endpoint = '/api/analytics/web-vitals';
+      const fullEndpoint = `${window.location.origin}${endpoint}`;
+      const exists = await this.endpointExists(fullEndpoint);
+      if (exists) {
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(endpoint, JSON.stringify(performanceData));
+        } else {
+          // Fallback para fetch
+          await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(performanceData),
+            keepalive: true
+          });
+        }
       }
     } catch (error) {
-      console.error('Failed to send analytics:', error);
+      // Silenciar erros 404 para evitar ruído em produção
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to send analytics:', error);
+      }
+    }
+  }
+
+  private async endpointExists(url: string): Promise<boolean> {
+    try {
+      const res = await fetch(url, { method: 'HEAD' });
+      return res.ok;
+    } catch {
+      return false;
     }
   }
 
