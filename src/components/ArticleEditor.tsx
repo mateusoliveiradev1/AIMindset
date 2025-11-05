@@ -95,6 +95,12 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
     caption: ''
   });
 
+  // Estados funcionais: salvamento, rascunho e proteção
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [autoSaveMessage, setAutoSaveMessage] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+
   useEffect(() => {
     refreshArticles();
   }, [refreshArticles]);
