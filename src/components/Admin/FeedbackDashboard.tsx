@@ -261,34 +261,31 @@ export const FeedbackDashboard: React.FC = () => {
          </button>
        </div>
 
-      {/* 🚀 NOVO: Status de Tempo Real */}
-      <div className="bg-darker-surface/30 rounded-lg p-4 mb-6 border border-neon-purple/20">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className={`p-2 rounded-full ${isConnected ? 'bg-lime-green/20' : 'bg-red-400/20'}`}>
-              <Zap className={`h-5 w-5 ${isConnected ? 'text-lime-green' : 'text-red-400'}`} />
+      {/* 🚀 Status de Tempo Real - Premium */}
+      <div className={`relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-6 mb-6 border border-white/10 ring-1 ring-white/10 transition-all duration-300 group hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)]`}>
+        <div className={`absolute -right-10 -top-10 w-32 h-32 rounded-full blur-2xl ${isConnected ? 'bg-lime-green/10' : 'bg-red-400/10'}`}></div>
+        <div className="flex items-center justify-between relative">
+          <div className="flex items-center space-x-4">
+            <div className={`p-3 rounded-full ring-1 ring-white/10 transition-transform duration-300 group-hover:scale-105 ${isConnected ? 'bg-lime-green/20' : 'bg-red-400/20'}`}>
+              <Zap className={`h-6 w-6 ${isConnected ? 'text-lime-green' : 'text-red-400'}`} />
             </div>
             <div>
-              <p className="text-sm font-medium text-futuristic-gray">
-                Status do Tempo Real
-              </p>
-              <p className={`text-lg font-bold ${isConnected ? 'text-lime-green' : 'text-red-400'}`}>
-                {isConnected ? 'Conectado' : 'Desconectado'}
-              </p>
+              <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Status do Tempo Real</p>
+              <p className={`text-xl font-bold ${isConnected ? 'text-lime-green' : 'text-red-400'}`}>{isConnected ? 'Conectado' : 'Desconectado'}</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-sm text-futuristic-gray">Interações</p>
-            <p className="text-xl font-bold text-neon-purple">{totalInteractions}</p>
+            <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Interações</p>
+            <p className="text-2xl font-bold text-neon-purple">{totalInteractions}</p>
             {lastInteraction && (
-              <p className="text-xs text-futuristic-gray">
+              <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">
                 Última: {new Date(lastInteraction.timestamp).toLocaleTimeString()}
               </p>
             )}
           </div>
         </div>
         {realTimeError && (
-          <div className="mt-3 p-2 bg-red-400/10 border border-red-400/20 rounded text-red-400 text-sm">
+          <div className="mt-3 p-3 rounded-lg border border-red-400/30 ring-1 ring-red-400/10 bg-red-400/10 text-red-300 text-[11px] font-orbitron">
             Erro: {realTimeError}
           </div>
         )}
@@ -296,149 +293,152 @@ export const FeedbackDashboard: React.FC = () => {
 
       {/* Estatísticas Gerais - EXPANDIDO */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-        <div className="bg-darker-surface/30 rounded-lg p-6">
-          <div className="flex items-center justify-between">
-             <div>
-               <p className="text-sm font-medium text-futuristic-gray">Feedback Positivo</p>
-               <p className="text-2xl font-bold text-lime-green">{totalStats.totalPositiveFeedback}</p>
-             </div>
-             <div className="p-3 bg-lime-green/20 rounded-full">
-               <ThumbsUp className="h-6 w-6 text-lime-green" />
-             </div>
-           </div>
+        {/* Feedback Positivo */}
+        <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-6 border border-white/10 ring-1 ring-white/10 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)] group">
+          <div className="absolute -right-10 -top-10 w-32 h-32 bg-lime-green/10 rounded-full blur-2xl"></div>
+          <div className="absolute -left-10 -bottom-10 w-24 h-24 bg-neon-purple/10 rounded-full blur-xl"></div>
+          <div className="flex items-center justify-between relative">
+            <div>
+              <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Feedback Positivo</p>
+              <p className="text-2xl font-bold text-lime-green">{totalStats.totalPositiveFeedback}</p>
+            </div>
+            <div className="p-3 rounded-full ring-1 ring-white/10 bg-lime-green/20 transition-transform duration-300 group-hover:scale-105">
+              <ThumbsUp className="h-6 w-6 text-lime-green" />
+            </div>
+          </div>
         </div>
 
-        <div className="bg-darker-surface/30 rounded-lg p-6">
-           <div className="flex items-center justify-between">
-             <div>
-               <p className="text-sm font-medium text-futuristic-gray">Feedback Negativo</p>
-               <p className="text-2xl font-bold text-red-400">{totalStats.totalNegativeFeedback}</p>
-             </div>
-             <div className="p-3 bg-red-400/20 rounded-full">
-               <ThumbsDown className="h-6 w-6 text-red-400" />
-             </div>
-           </div>
-         </div>
+        {/* Feedback Negativo */}
+        <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-6 border border-white/10 ring-1 ring-white/10 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)] group">
+          <div className="absolute -right-10 -top-10 w-32 h-32 bg-red-400/10 rounded-full blur-2xl"></div>
+          <div className="absolute -left-10 -bottom-10 w-24 h-24 bg-neon-purple/10 rounded-full blur-xl"></div>
+          <div className="flex items-center justify-between relative">
+            <div>
+              <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Feedback Negativo</p>
+              <p className="text-2xl font-bold text-red-400">{totalStats.totalNegativeFeedback}</p>
+            </div>
+            <div className="p-3 rounded-full ring-1 ring-white/10 bg-red-400/20 transition-transform duration-300 group-hover:scale-105">
+              <ThumbsDown className="h-6 w-6 text-red-400" />
+            </div>
+          </div>
+        </div>
 
-         <div className="bg-darker-surface/30 rounded-lg p-6">
-           <div className="flex items-center justify-between">
-             <div>
-               <p className="text-sm font-medium text-futuristic-gray">Total Comentários</p>
-               <p className="text-2xl font-bold text-blue-400">{totalStats.totalComments}</p>
-             </div>
-             <div className="p-3 bg-blue-400/20 rounded-full">
-               <MessageCircle className="h-6 w-6 text-blue-400" />
-             </div>
-           </div>
-         </div>
+        {/* Total Comentários */}
+        <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-6 border border-white/10 ring-1 ring-white/10 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)] group">
+          <div className="absolute -right-10 -top-10 w-32 h-32 bg-blue-400/10 rounded-full blur-2xl"></div>
+          <div className="absolute -left-10 -bottom-10 w-24 h-24 bg-neon-purple/10 rounded-full blur-xl"></div>
+          <div className="flex items-center justify-between relative">
+            <div>
+              <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Total Comentários</p>
+              <p className="text-2xl font-bold text-blue-400">{totalStats.totalComments}</p>
+            </div>
+            <div className="p-3 rounded-full ring-1 ring-white/10 bg-blue-400/20 transition-transform duration-300 group-hover:scale-105">
+              <MessageCircle className="h-6 w-6 text-blue-400" />
+            </div>
+          </div>
+        </div>
 
-         <div className="bg-darker-surface/30 rounded-lg p-6">
-           <div className="flex items-center justify-between">
-             <div>
-               <p className="text-sm font-medium text-futuristic-gray">Taxa de Aprovação</p>
-               <p className="text-2xl font-bold text-neon-purple">
-                 {isNaN(totalStats.overallApprovalRate) ? '0' : Math.round(totalStats.overallApprovalRate)}%
-               </p>
-             </div>
-             <div className="p-3 bg-neon-purple/20 rounded-full">
-               <TrendingUp className="h-6 w-6 text-neon-purple" />
-             </div>
-           </div>
-         </div>
+        {/* Taxa de Aprovação */}
+        <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-6 border border-white/10 ring-1 ring-white/10 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)] group">
+          <div className="absolute -right-10 -top-10 w-32 h-32 bg-neon-purple/10 rounded-full blur-2xl"></div>
+          <div className="absolute -left-10 -bottom-10 w-24 h-24 bg-blue-400/10 rounded-full blur-xl"></div>
+          <div className="flex items-center justify-between relative">
+            <div>
+              <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Taxa de Aprovação</p>
+              <p className="text-2xl font-bold text-neon-purple">{isNaN(totalStats.overallApprovalRate) ? '0' : Math.round(totalStats.overallApprovalRate)}%</p>
+            </div>
+            <div className="p-3 rounded-full ring-1 ring-white/10 bg-neon-purple/20 transition-transform duration-300 group-hover:scale-105">
+              <TrendingUp className="h-6 w-6 text-neon-purple" />
+            </div>
+          </div>
+        </div>
 
-         {/* NOVO: Card de Total de Curtidas */}
-         <div className="bg-darker-surface/30 rounded-lg p-6">
-           <div className="flex items-center justify-between">
-             <div>
-               <p className="text-sm font-medium text-futuristic-gray">Total de Curtidas</p>
-               <p className="text-2xl font-bold text-pink-400">{totalStats.totalLikes}</p>
-               <p className="text-xs text-pink-300 mt-1">
-                 {totalStats.totalComments > 0 ? (totalStats.totalLikes / totalStats.totalComments).toFixed(1) : '0'} por comentário
-               </p>
-             </div>
-             <div className="p-3 bg-pink-400/20 rounded-full">
-               <Heart className="h-6 w-6 text-pink-400" />
-             </div>
-           </div>
-         </div>
+        {/* Total de Curtidas */}
+        <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-6 border border-white/10 ring-1 ring-white/10 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)] group">
+          <div className="absolute -right-10 -top-10 w-32 h-32 bg-pink-400/10 rounded-full blur-2xl"></div>
+          <div className="absolute -left-10 -bottom-10 w-24 h-24 bg-neon-purple/10 rounded-full blur-xl"></div>
+          <div className="flex items-center justify-between relative">
+            <div>
+              <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Total de Curtidas</p>
+              <p className="text-2xl font-bold text-pink-400">{totalStats.totalLikes}</p>
+              <p className="text-[11px] font-orbitron tracking-wide text-pink-300 mt-1">
+                {totalStats.totalComments > 0 ? (totalStats.totalLikes / totalStats.totalComments).toFixed(1) : '0'} por comentário
+              </p>
+            </div>
+            <div className="p-3 rounded-full ring-1 ring-white/10 bg-pink-400/20 transition-transform duration-300 group-hover:scale-105">
+              <Heart className="h-6 w-6 text-pink-400" />
+            </div>
+          </div>
+        </div>
 
-         {/* NOVO: Card de Total de Respostas */}
-         <div className="bg-darker-surface/30 rounded-lg p-6">
-           <div className="flex items-center justify-between">
-             <div>
-               <p className="text-sm font-medium text-futuristic-gray">Total de Respostas</p>
-               <p className="text-2xl font-bold text-cyan-400">{totalStats.totalReplies}</p>
-               <p className="text-xs text-cyan-300 mt-1">
-                 {totalStats.totalComments > 0 ? (totalStats.totalReplies / totalStats.totalComments).toFixed(1) : '0'} por comentário
-               </p>
-             </div>
-             <div className="p-3 bg-cyan-400/20 rounded-full">
-               <Reply className="h-6 w-6 text-cyan-400" />
-             </div>
-           </div>
-         </div>
+        {/* Total de Respostas */}
+        <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-6 border border-white/10 ring-1 ring-white/10 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)] group">
+          <div className="absolute -right-10 -top-10 w-32 h-32 bg-cyan-400/10 rounded-full blur-2xl"></div>
+          <div className="absolute -left-10 -bottom-10 w-24 h-24 bg-neon-purple/10 rounded-full blur-xl"></div>
+          <div className="flex items-center justify-between relative">
+            <div>
+              <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Total de Respostas</p>
+              <p className="text-2xl font-bold text-cyan-400">{totalStats.totalReplies}</p>
+              <p className="text-[11px] font-orbitron tracking-wide text-cyan-300 mt-1">
+                {totalStats.totalComments > 0 ? (totalStats.totalReplies / totalStats.totalComments).toFixed(1) : '0'} por comentário
+              </p>
+            </div>
+            <div className="p-3 rounded-full ring-1 ring-white/10 bg-cyan-400/20 transition-transform duration-300 group-hover:scale-105">
+              <Reply className="h-6 w-6 text-cyan-400" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* NOVO: Segunda linha de estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* NOVO: Card de Taxa de Engajamento */}
-        <div className="bg-darker-surface/30 rounded-lg p-6">
-          <div className="flex items-center justify-between">
+        {/* Taxa de Engajamento */}
+        <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-6 border border-white/10 ring-1 ring-white/10 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)] group">
+          <div className="absolute -right-10 -top-10 w-32 h-32 bg-yellow-400/10 rounded-full blur-2xl"></div>
+          <div className="absolute -left-10 -bottom-10 w-24 h-24 bg-neon-purple/10 rounded-full blur-xl"></div>
+          <div className="flex items-center justify-between relative">
             <div>
-              <p className="text-sm font-medium text-futuristic-gray">Taxa de Engajamento</p>
-              <p className="text-2xl font-bold text-yellow-400">
-                {Math.round(totalStats.engagementRate)}%
-              </p>
-              <p className="text-xs text-yellow-300 mt-1">
-                Curtidas + Respostas / Comentários
-              </p>
+              <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Taxa de Engajamento</p>
+              <p className="text-2xl font-bold text-yellow-400">{Math.round(totalStats.engagementRate)}%</p>
+              <p className="text-[11px] font-orbitron tracking-wide text-yellow-300 mt-1">Curtidas + Respostas / Comentários</p>
             </div>
-            <div className="p-3 bg-yellow-400/20 rounded-full">
+            <div className="p-3 rounded-full ring-1 ring-white/10 bg-yellow-400/20 transition-transform duration-300 group-hover:scale-105">
               <TrendingUp className="h-6 w-6 text-yellow-400" />
             </div>
           </div>
         </div>
 
-        {/* NOVO: Card de Comentários Ativos */}
-        <div className="bg-darker-surface/30 rounded-lg p-6">
-          <div className="flex items-center justify-between">
+        {/* Comentários Ativos */}
+        <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-6 border border-white/10 ring-1 ring-white/10 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)] group">
+          <div className="absolute -right-10 -top-10 w-32 h-32 bg-green-400/10 rounded-full blur-2xl"></div>
+          <div className="absolute -left-10 -bottom-10 w-24 h-24 bg-neon-purple/10 rounded-full blur-xl"></div>
+          <div className="flex items-center justify-between relative">
             <div>
-              <p className="text-sm font-medium text-futuristic-gray">Comentários Ativos</p>
+              <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Comentários Ativos</p>
               <p className="text-2xl font-bold text-green-400">{totalStats.activeComments}</p>
-              <p className="text-xs text-green-300 mt-1">
-                Com curtidas ou respostas
-              </p>
+              <p className="text-[11px] font-orbitron tracking-wide text-green-300 mt-1">Com curtidas ou respostas</p>
             </div>
-            <div className="p-3 bg-green-400/20 rounded-full">
+            <div className="p-3 rounded-full ring-1 ring-white/10 bg-green-400/20 transition-transform duration-300 group-hover:scale-105">
               <MessageCircle className="h-6 w-6 text-green-400" />
             </div>
           </div>
         </div>
 
-        {/* NOVO: Card de Média de Engajamento por Artigo */}
-        <div className="bg-darker-surface/30 rounded-lg p-6">
-          <div className="flex items-center justify-between">
+        {/* Engajamento Médio */}
+        <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl p-6 border border-white/10 ring-1 ring-white/10 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)] group">
+          <div className="absolute -right-10 -top-10 w-32 h-32 bg-orange-400/10 rounded-full blur-2xl"></div>
+          <div className="absolute -left-10 -bottom-10 w-24 h-24 bg-neon-purple/10 rounded-full blur-xl"></div>
+          <div className="flex items-center justify-between relative">
             <div>
-              <p className="text-sm font-medium text-futuristic-gray">Engajamento Médio</p>
-              <p className="text-2xl font-bold text-orange-400">
-                {(() => {
-                  // Calcular apenas artigos com engajamento real (curtidas > 0 ou respostas > 0)
-                  const articlesWithEngagement = formattedMetrics?.filter(metric => 
-                    (metric.total_likes || 0) > 0 || (metric.total_replies || 0) > 0
-                  ).length || 0;
-                  
-                  // Se não há artigos com engajamento, retornar 0
-                  if (articlesWithEngagement === 0) return 0;
-                  
-                  // Calcular engajamento médio apenas para artigos ativos
-                  return Math.round((totalStats.totalLikes + totalStats.totalReplies) / articlesWithEngagement);
-                })()}
-              </p>
-              <p className="text-xs text-orange-300 mt-1">
-                Por artigo ativo
-              </p>
+              <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Engajamento Médio</p>
+              <p className="text-2xl font-bold text-orange-400">{(() => {
+                const articlesWithEngagement = formattedMetrics?.filter(metric => (metric.total_likes || 0) > 0 || (metric.total_replies || 0) > 0).length || 0;
+                if (articlesWithEngagement === 0) return 0;
+                return Math.round((totalStats.totalLikes + totalStats.totalReplies) / articlesWithEngagement);
+              })()}</p>
+              <p className="text-[11px] font-orbitron tracking-wide text-orange-300 mt-1">Por artigo ativo</p>
             </div>
-            <div className="p-3 bg-orange-400/20 rounded-full">
+            <div className="p-3 rounded-full ring-1 ring-white/10 bg-orange-400/20 transition-transform duration-300 group-hover:scale-105">
               <TrendingUp className="h-6 w-6 text-orange-400" />
             </div>
           </div>

@@ -81,83 +81,94 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
     return 'text-red-400';
   };
 
+  // Função utilitária para iniciais do título
+  const getInitials = (text: string) => {
+    const words = (text || '').split(' ').filter(Boolean);
+    const first = words[0]?.[0] || '';
+    const last = words.length > 1 ? words[words.length - 1][0] : '';
+    return (first + last).toUpperCase();
+  };
+
   return (
-    <div className="bg-darker-surface/30 rounded-lg overflow-hidden">
-      <div className="px-6 py-4 border-b border-darker-surface/50 flex justify-between items-center">
-        <h3 className="text-lg font-medium text-white">Métricas dos Artigos</h3>
-        <div className="flex items-center space-x-2 text-sm text-futuristic-gray">
+    <div className="relative overflow-hidden glass-effect backdrop-blur-sm rounded-xl overflow-hidden border border-white/10 ring-1 ring-white/10">
+      <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center">
+        <h3 className="text-lg font-orbitron font-bold text-white">Métricas dos Artigos</h3>
+        <div className="flex items-center space-x-2 text-[11px] font-orbitron tracking-wide text-futuristic-gray">
           <RefreshCw className="h-4 w-4" />
           <span>Última atualização: {lastUpdate.toLocaleTimeString()}</span>
         </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-darker-surface/50">
+          <thead className="bg-black/20">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-futuristic-gray uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-[11px] font-orbitron tracking-wide text-futuristic-gray uppercase">
                 Artigo
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-futuristic-gray uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-[11px] font-orbitron tracking-wide text-futuristic-gray uppercase">
                 <div className="flex items-center">
                   <ThumbsUp className="h-4 w-4 mr-1" />
                   Positivos
                 </div>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-futuristic-gray uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-[11px] font-orbitron tracking-wide text-futuristic-gray uppercase">
                 <div className="flex items-center">
                   <ThumbsDown className="h-4 w-4 mr-1" />
                   Negativos
                 </div>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-futuristic-gray uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-[11px] font-orbitron tracking-wide text-futuristic-gray uppercase">
                 <div className="flex items-center">
                   <MessageCircle className="h-4 w-4 mr-1" />
                   Comentários
                 </div>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-futuristic-gray uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-[11px] font-orbitron tracking-wide text-futuristic-gray uppercase">
                 <div className="flex items-center">
                   <Heart className="h-4 w-4 mr-1" />
                   Curtidas
                 </div>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-futuristic-gray uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-[11px] font-orbitron tracking-wide text-futuristic-gray uppercase">
                 <div className="flex items-center">
                   <MessageSquare className="h-4 w-4 mr-1" />
                   Respostas
                 </div>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-futuristic-gray uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-[11px] font-orbitron tracking-wide text-futuristic-gray uppercase">
                 <div className="flex items-center">
                   <TrendingUp className="h-4 w-4 mr-1" />
                   Taxa de Aprovação
                 </div>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-futuristic-gray uppercase tracking-wider">
-                Ações
-              </th>
+              <th className="px-4 py-3 text-left text-[11px] font-orbitron tracking-wide text-futuristic-gray uppercase">Ações</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-darker-surface/50">
+          <tbody className="divide-y divide-white/10">
             {articles.map((article) => {
               const articleMetrics = getMetricsForArticle(article.id);
               return (
-                <tr 
+                <tr
                   key={article.id}
                   onClick={() => onArticleClick(article)}
-                  className={`hover:bg-darker-surface/50 cursor-pointer transition-all duration-300 ${
-                    updatingArticles.has(article.id) 
-                      ? 'bg-futuristic-blue/10 border-l-4 border-futuristic-blue animate-pulse' 
+                  className={`group hover:bg-white/5 cursor-pointer transition-all duration-300 ${
+                    updatingArticles.has(article.id)
+                      ? 'bg-futuristic-blue/10 ring-1 ring-futuristic-blue/30'
                       : ''
                   }`}
                 >
                   <td className="px-4 py-4">
-                    <div className="flex items-start">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0">
+                        <div className="w-8 h-8 rounded-full ring-1 ring-white/10 bg-neon-purple/20 flex items-center justify-center text-[11px] font-orbitron text-neon-purple">
+                          {getInitials(article.title)}
+                        </div>
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white truncate max-w-xs">
+                        <p className="text-sm font-semibold text-white truncate max-w-xs">
                           {article.title}
                         </p>
-                        <p className="text-xs text-futuristic-gray">
+                        <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">
                           {new Date(article.created_at).toLocaleDateString('pt-BR')}
                         </p>
                       </div>
@@ -166,8 +177,8 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <span className={`text-sm font-medium transition-all duration-300 ${
-                        updatingArticles.has(article.id) 
-                          ? 'text-futuristic-blue animate-pulse' 
+                        updatingArticles.has(article.id)
+                          ? 'text-futuristic-blue animate-pulse'
                           : 'text-lime-green'
                       }`}>
                         {articleMetrics.positive_feedback}
@@ -177,8 +188,8 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <span className={`text-sm font-medium transition-all duration-300 ${
-                        updatingArticles.has(article.id) 
-                          ? 'text-futuristic-blue animate-pulse' 
+                        updatingArticles.has(article.id)
+                          ? 'text-futuristic-blue animate-pulse'
                           : 'text-red-400'
                       }`}>
                         {articleMetrics.negative_feedback}
@@ -191,8 +202,8 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <span className={`text-sm font-medium transition-all duration-300 ${
-                        updatingArticles.has(article.id) 
-                          ? 'text-futuristic-blue animate-pulse' 
+                        updatingArticles.has(article.id)
+                          ? 'text-futuristic-blue animate-pulse'
                           : 'text-blue-400'
                       }`}>
                         {articleMetrics.total_comments}
@@ -202,8 +213,8 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <span className={`text-sm font-medium transition-all duration-300 ${
-                        updatingArticles.has(article.id) 
-                          ? 'text-futuristic-blue animate-pulse' 
+                        updatingArticles.has(article.id)
+                          ? 'text-futuristic-blue animate-pulse'
                           : 'text-pink-400'
                       }`}>
                         {articleMetrics.total_likes || 0}
@@ -213,8 +224,8 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <span className={`text-sm font-medium transition-all duration-300 ${
-                        updatingArticles.has(article.id) 
-                          ? 'text-futuristic-blue animate-pulse' 
+                        updatingArticles.has(article.id)
+                          ? 'text-futuristic-blue animate-pulse'
                           : 'text-purple-400'
                       }`}>
                         {articleMetrics.total_replies || 0}
@@ -224,8 +235,8 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
                   <td className="px-4 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <span className={`text-sm font-medium transition-all duration-300 ${
-                        updatingArticles.has(article.id) 
-                          ? 'text-futuristic-blue animate-pulse' 
+                        updatingArticles.has(article.id)
+                          ? 'text-futuristic-blue animate-pulse'
                           : getApprovalRateColor(articleMetrics.approval_rate)
                       }`}>
                         {formatApprovalRate(articleMetrics.approval_rate)}
@@ -235,7 +246,7 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
                   <td className="px-4 py-4 whitespace-nowrap">
                     <button
                       onClick={() => onArticleClick(article)}
-                      className="inline-flex items-center px-3 py-1 border border-neon-purple/30 rounded-md text-xs font-medium text-neon-purple hover:bg-neon-purple/10 transition-colors duration-200"
+                      className="inline-flex items-center px-3 py-1 rounded-full border border-white/10 ring-1 ring-white/10 text-[11px] font-orbitron tracking-wide text-neon-purple hover:bg-neon-purple/10 transition-all duration-200 hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)]"
                     >
                       <Eye className="h-3 w-3 mr-1" />
                       Ver Detalhes
