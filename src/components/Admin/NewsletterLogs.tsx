@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Button from '../UI/Button';
+import { Card } from '../UI/Card';
 import { useNewsletterLogs, LogFilters } from '../../hooks/useNewsletterLogs';
 import { 
   Activity, 
@@ -129,95 +130,110 @@ const NewsletterLogs: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header com Estatísticas */}
-      {stats && (
+      {stats ? (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-darker-surface/50 p-4 rounded-lg border border-futuristic-gray/20">
+          <Card className="glass-effect p-4 hover-lift transition-all">
             <div className="flex items-center gap-2 mb-2">
               <BarChart3 className="w-5 h-5 text-lime-green" />
               <span className="text-sm text-futuristic-gray">Total de Eventos</span>
             </div>
-            <div className="text-2xl font-bold text-white">{stats.total_events.toLocaleString()}</div>
-          </div>
+            <div className="text-2xl font-orbitron font-bold text-white">{stats.total_events.toLocaleString()}</div>
+          </Card>
 
-          <div className="bg-darker-surface/50 p-4 rounded-lg border border-futuristic-gray/20">
+          <Card className="glass-effect p-4 hover-lift transition-all">
             <div className="flex items-center gap-2 mb-2">
               <CheckCircle className="w-5 h-5 text-green-400" />
               <span className="text-sm text-futuristic-gray">Taxa de Sucesso</span>
             </div>
-            <div className="text-2xl font-bold text-green-400">{stats.success_rate.toFixed(1)}%</div>
-          </div>
+            <div className="text-2xl font-orbitron font-bold text-green-400">{stats.success_rate.toFixed(1)}%</div>
+          </Card>
 
-          <div className="bg-darker-surface/50 p-4 rounded-lg border border-futuristic-gray/20">
+          <Card className="glass-effect p-4 hover-lift transition-all">
             <div className="flex items-center gap-2 mb-2">
               <AlertCircle className="w-5 h-5 text-red-400" />
               <span className="text-sm text-futuristic-gray">Taxa de Erro</span>
             </div>
-            <div className="text-2xl font-bold text-red-400">{stats.error_rate.toFixed(1)}%</div>
-          </div>
+            <div className="text-2xl font-orbitron font-bold text-red-400">{stats.error_rate.toFixed(1)}%</div>
+          </Card>
 
-          <div className="bg-darker-surface/50 p-4 rounded-lg border border-futuristic-gray/20">
+          <Card className="glass-effect p-4 hover-lift transition-all">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="w-5 h-5 text-yellow-400" />
               <span className="text-sm text-futuristic-gray">Erros Recentes</span>
             </div>
-            <div className="text-2xl font-bold text-yellow-400">{stats.recent_errors.length}</div>
-          </div>
+            <div className="text-2xl font-orbitron font-bold text-yellow-400">{stats.recent_errors.length}</div>
+          </Card>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="glass-effect p-4 animate-pulse">
+              <div className="flex items-center justify-between mb-2">
+                <div className="w-6 h-6 bg-futuristic-gray/20 rounded" />
+                <div className="w-8 h-4 bg-futuristic-gray/20 rounded" />
+              </div>
+              <div className="w-24 h-6 bg-futuristic-gray/20 rounded mb-2" />
+              <div className="w-36 h-4 bg-futuristic-gray/20 rounded" />
+            </Card>
+          ))}
         </div>
       )}
 
       {/* Controles */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h2 className="text-xl font-bold text-white">Logs da Newsletter</h2>
-          <Button
-            onClick={() => fetchLogs(filters, currentPage)}
-            variant="outline"
-            size="sm"
-            disabled={loading}
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
-        </div>
+      <Card className="glass-effect p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-orbitron font-bold text-white">Logs da Newsletter</h2>
+            <Button
+              onClick={() => fetchLogs(filters, currentPage)}
+              variant="outline"
+              size="sm"
+              disabled={loading}
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => setShowFilters(!showFilters)}
-            variant="outline"
-            size="sm"
-          >
-            <Filter className="w-4 h-4" />
-            Filtros
-          </Button>
-          
-          <Button
-            onClick={() => exportLogs(filters)}
-            variant="outline"
-            size="sm"
-            disabled={loading}
-          >
-            <Download className="w-4 h-4" />
-            Exportar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setShowFilters(!showFilters)}
+              variant="outline"
+              size="sm"
+            >
+              <Filter className="w-4 h-4" />
+              Filtros
+            </Button>
+            
+            <Button
+              onClick={() => exportLogs(filters)}
+              variant="outline"
+              size="sm"
+              disabled={loading}
+            >
+              <Download className="w-4 h-4" />
+              Exportar
+            </Button>
 
-          <Button
-            onClick={() => {
-              if (confirm('Deseja limpar logs antigos (mais de 6 meses)?')) {
-                cleanupOldLogs();
-              }
-            }}
-            variant="outline"
-            size="sm"
-            className="text-red-400 border-red-400/30 hover:bg-red-400/10"
-          >
-            <Trash2 className="w-4 h-4" />
-            Limpar
-          </Button>
+            <Button
+              onClick={() => {
+                if (confirm('Deseja limpar logs antigos (mais de 6 meses)?')) {
+                  cleanupOldLogs();
+                }
+              }}
+              variant="outline"
+              size="sm"
+              className="text-red-400 border-red-400/30 hover:bg-red-400/10"
+            >
+              <Trash2 className="w-4 h-4" />
+              Limpar
+            </Button>
+          </div>
         </div>
-      </div>
+      </Card>
 
       {/* Filtros */}
       {showFilters && (
-        <div className="bg-darker-surface/30 p-4 rounded-lg border border-futuristic-gray/20 space-y-4">
+        <Card className="glass-effect p-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Busca */}
             <div>
@@ -309,11 +325,11 @@ const NewsletterLogs: React.FC = () => {
               </select>
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Lista de Logs */}
-      <div className="bg-darker-surface/30 rounded-lg border border-futuristic-gray/20 overflow-hidden">
+      <Card className="glass-effect overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <RefreshCw className="w-6 h-6 animate-spin text-lime-green" />
@@ -348,7 +364,7 @@ const NewsletterLogs: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-futuristic-gray/10">
                 {logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-darker-surface/20">
+                  <tr key={log.id} className="hover:bg-darker-surface/20 transition-colors">
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm text-white">
                         {new Date(log.created_at).toLocaleString('pt-BR')}
@@ -423,39 +439,41 @@ const NewsletterLogs: React.FC = () => {
             </table>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Paginação */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-futuristic-gray">
-            Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, totalCount)} de {totalCount} logs
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1 || loading}
-              variant="outline"
-              size="sm"
-            >
-              Anterior
-            </Button>
+        <Card className="glass-effect p-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-futuristic-gray">
+              Mostrando {((currentPage - 1) * pageSize) + 1} a {Math.min(currentPage * pageSize, totalCount)} de {totalCount} logs
+            </div>
             
-            <span className="text-sm text-white px-3 py-1 bg-darker-surface/50 rounded">
-              {currentPage} de {totalPages}
-            </span>
-            
-            <Button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages || loading}
-              variant="outline"
-              size="sm"
-            >
-              Próxima
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1 || loading}
+                variant="outline"
+                size="sm"
+              >
+                Anterior
+              </Button>
+              
+              <span className="text-sm text-white px-3 py-1 bg-darker-surface/50 rounded">
+                {currentPage} de {totalPages}
+              </span>
+              
+              <Button
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages || loading}
+                variant="outline"
+                size="sm"
+              >
+                Próxima
+              </Button>
+            </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Modal de Detalhes do Log */}
@@ -464,7 +482,7 @@ const NewsletterLogs: React.FC = () => {
           <div className="bg-darker-surface rounded-lg border border-futuristic-gray/30 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-white">Detalhes do Log</h3>
+                <h3 className="text-xl font-orbitron font-bold text-white">Detalhes do Log</h3>
                 <Button
                   onClick={() => setShowLogDetails(false)}
                   variant="outline"
