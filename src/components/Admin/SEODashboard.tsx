@@ -1884,11 +1884,11 @@ export const SEODashboard: React.FC = () => {
         ) : stats ? (
           // Dados reais
           <>
-          <Card className="glass-effect hover-lift">
+          <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)]">
             <div className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-futuristic-gray text-sm">Score Médio</p>
+                  <p className="text-futuristic-gray font-orbitron text-[11px]">Score Médio</p>
                   <p className="text-2xl font-orbitron font-bold text-white">
                     {stats.averageScore}
                   </p>
@@ -1901,11 +1901,11 @@ export const SEODashboard: React.FC = () => {
             </div>
           </Card>
 
-          <Card className="glass-effect hover-lift">
+          <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(34,197,94,0.25)]">
             <div className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-futuristic-gray text-sm">Excelente</p>
+                  <p className="text-futuristic-gray font-orbitron text-[11px]">Excelente</p>
                   <p className="text-2xl font-orbitron font-bold text-green-400">
                     {stats.excellentPages}
                   </p>
@@ -1918,11 +1918,11 @@ export const SEODashboard: React.FC = () => {
             </div>
           </Card>
 
-          <Card className="glass-effect hover-lift">
+          <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-lime-green/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(132,204,22,0.25)]">
             <div className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-futuristic-gray text-sm">Bom</p>
+                  <p className="text-futuristic-gray font-orbitron text-[11px]">Bom</p>
                   <p className="text-2xl font-orbitron font-bold text-lime-green">
                     {stats.goodPages}
                   </p>
@@ -1935,11 +1935,11 @@ export const SEODashboard: React.FC = () => {
             </div>
           </Card>
 
-          <Card className="glass-effect hover-lift">
+          <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(250,204,21,0.25)]">
             <div className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-futuristic-gray text-sm">Precisa Melhorar</p>
+                  <p className="text-futuristic-gray font-orbitron text-[11px]">Precisa Melhorar</p>
                   <p className="text-2xl font-orbitron font-bold text-yellow-400">
                     {stats.needsImprovementPages}
                   </p>
@@ -1952,11 +1952,11 @@ export const SEODashboard: React.FC = () => {
             </div>
           </Card>
 
-          <Card className="glass-effect hover-lift">
+          <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(248,113,113,0.25)]">
             <div className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-futuristic-gray text-sm">Ruim</p>
+                  <p className="text-futuristic-gray font-orbitron text-[11px]">Ruim</p>
                   <p className="text-2xl font-orbitron font-bold text-red-400">
                     {stats.poorPages}
                   </p>
@@ -1981,11 +1981,11 @@ export const SEODashboard: React.FC = () => {
             Métricas Avançadas
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="glass-effect hover-lift">
+            <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(251,146,60,0.25)]">
               <div className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-futuristic-gray text-sm">Títulos Duplicados</p>
+                    <p className="text-futuristic-gray font-orbitron text-[11px]">Títulos Duplicados</p>
                     <p className="text-2xl font-orbitron font-bold text-orange-400">
                       {stats.duplicatedTitles}
                     </p>
@@ -1998,11 +1998,11 @@ export const SEODashboard: React.FC = () => {
               </div>
             </Card>
 
-            <Card className="glass-effect hover-lift">
+            <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(250,204,21,0.25)]">
               <div className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-futuristic-gray text-sm">URLs Longas</p>
+                    <p className="text-futuristic-gray font-orbitron text-[11px]">URLs Longas</p>
                     <p className="text-2xl font-orbitron font-bold text-yellow-400">
                       {stats.longUrls}
                     </p>
@@ -2015,11 +2015,11 @@ export const SEODashboard: React.FC = () => {
               </div>
             </Card>
 
-            <Card className="glass-effect hover-lift">
+            <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(248,113,113,0.25)]">
               <div className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-futuristic-gray text-sm">Sem Schema.org</p>
+                    <p className="text-futuristic-gray font-orbitron text-[11px]">Sem Schema.org</p>
                     <p className="text-2xl font-orbitron font-bold text-red-400">
                       {stats.withoutSchema}
                     </p>
@@ -2032,11 +2032,11 @@ export const SEODashboard: React.FC = () => {
               </div>
             </Card>
 
-            <Card className="glass-effect hover-lift">
+            <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(34,197,94,0.25)]">
               <div className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-futuristic-gray text-sm">Atualizações Recentes</p>
+                    <p className="text-futuristic-gray font-orbitron text-[11px]">Atualizações Recentes</p>
                     <p className="text-2xl font-orbitron font-bold text-green-400">
                       {stats.recentUpdates}
                     </p>
@@ -2054,7 +2054,7 @@ export const SEODashboard: React.FC = () => {
         <div className="mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Ações Prioritárias */}
-            <Card className="glass-effect">
+            <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 transition-all">
               <div className="p-4">
                 <h4 className="text-md font-medium text-white mb-4">Ações Prioritárias</h4>
                 <div className="space-y-3">
@@ -2453,7 +2453,7 @@ export const SEODashboard: React.FC = () => {
 
       {/* Barra de Ações em Lote */}
       {selectedPages.size > 0 && (
-        <Card className="glass-effect border-neon-purple/30">
+        <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)] border-neon-purple/30">
           <div className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
@@ -2545,7 +2545,7 @@ export const SEODashboard: React.FC = () => {
       <div className="grid grid-cols-1 gap-4">
         {paginatedData.map((page) => {
           return (
-            <Card key={page.id} className={`glass-effect hover-lift transition-all duration-200 ${selectedPages.has(page.id) ? 'border-lime-green/50 bg-lime-green/5' : ''}`}>
+            <Card key={page.id} className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 transition-all hover:border-white/20 hover:ring-white/20 hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)] ${selectedPages.has(page.id) ? 'border-lime-green/50 ring-lime-green/30 bg-lime-green/5' : ''}`}>
               <div className="p-4">
                 <div className="flex items-start gap-3 mb-3">
                   {/* Checkbox de Seleção */}
@@ -2560,9 +2560,16 @@ export const SEODashboard: React.FC = () => {
                     )}
                   </button>
 
+                  {/* Avatar/Iniciais */}
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="w-10 h-10 rounded-full bg-neon-gradient text-white font-orbitron text-sm flex items-center justify-center shadow-lg shadow-neon-purple/20">
+                      {page.title?.[0]?.toUpperCase() || page.page_type?.[0]?.toUpperCase() || 'P'}
+                    </div>
+                  </div>
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-lg font-medium text-white truncate">
+                      <h3 className="text-lg font-orbitron font-bold text-white truncate">
                         {page.title}
                       </h3>
                       <div className="flex items-center gap-2">
@@ -2589,6 +2596,26 @@ export const SEODashboard: React.FC = () => {
                             </div>
                           ));
                         })()}
+                        {/* Status Badge */}
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            page.analysis.status === 'excellent'
+                              ? 'bg-lime-green/20 text-lime-green border border-lime-green/30'
+                              : page.analysis.status === 'good'
+                              ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                              : page.analysis.status === 'needs-improvement'
+                              ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                              : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                          }`}
+                        >
+                          {page.analysis.status === 'excellent'
+                            ? 'Excelente'
+                            : page.analysis.status === 'good'
+                            ? 'Bom'
+                            : page.analysis.status === 'needs-improvement'
+                            ? 'Precisa Melhorar'
+                            : 'Ruim'}
+                        </span>
                         <SEOScoreBadge analysis={page.analysis} />
                       </div>
                     </div>
@@ -2607,9 +2634,9 @@ export const SEODashboard: React.FC = () => {
                         <FileText className="w-4 h-4 mr-1" />
                         {formatPageType(page.page_type)}
                       </span>
-                      <span className="flex items-center">
+                      <span className="flex items-center truncate max-w-[40%]">
                         <LinkIcon className="w-4 h-4 mr-1" />
-                        {page.page_url}
+                        <span className="truncate">{page.page_url}</span>
                       </span>
                       <span className="flex items-center">
                         <Clock className="w-4 h-4 mr-1" />
@@ -2629,13 +2656,13 @@ export const SEODashboard: React.FC = () => {
                         {page.keywords.slice(0, 5).map((keyword, index) => (
                           <span
                             key={index}
-                            className="px-2 py-1 bg-neon-purple/20 text-neon-purple text-xs rounded-full"
+                            className="px-2 py-1 bg-neon-purple/20 text-neon-purple text-xs rounded-full border border-neon-purple/30"
                           >
                             {keyword}
                           </span>
                         ))}
                         {page.keywords.length > 5 && (
-                          <span className="px-2 py-1 bg-gray-500/20 text-gray-400 text-xs rounded-full">
+                          <span className="px-2 py-1 bg-gray-500/20 text-gray-400 text-xs rounded-full border border-white/10">
                             +{page.keywords.length - 5}
                           </span>
                         )}
@@ -2648,14 +2675,14 @@ export const SEODashboard: React.FC = () => {
                         {page.analysis.issues.slice(0, 3).map((issue, index) => (
                           <span
                             key={index}
-                            className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center"
+                            className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center border border-red-500/30"
                           >
                             <AlertTriangle className="w-3 h-3 mr-1" />
                             {issue}
                           </span>
                         ))}
                         {page.analysis.issues.length > 3 && (
-                          <span className="px-2 py-1 bg-gray-500/20 text-gray-400 text-xs rounded-full">
+                          <span className="px-2 py-1 bg-gray-500/20 text-gray-400 text-xs rounded-full border border-white/10">
                             +{page.analysis.issues.length - 3} problemas
                           </span>
                         )}
@@ -2669,7 +2696,7 @@ export const SEODashboard: React.FC = () => {
                       size="sm"
                       variant="ghost"
                       onClick={() => setSelectedPage(page)}
-                      className="text-blue-400 hover:text-blue-300"
+                      className="text-blue-400 hover:text-blue-300 transition-transform hover:-translate-y-0.5"
                       title="Ver detalhes"
                     >
                       <Eye className="w-4 h-4" />
@@ -2678,7 +2705,7 @@ export const SEODashboard: React.FC = () => {
                       size="sm"
                       variant="ghost"
                       onClick={async () => await regenerateSEO(page.id)}
-                      className="text-lime-green hover:text-lime-green/80"
+                      className="text-lime-green hover:text-lime-green/80 transition-transform hover:-translate-y-0.5"
                       title="Regenerar SEO"
                       disabled={loading || bulkOperationInProgress}
                     >
@@ -2777,11 +2804,11 @@ export const SEODashboard: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {stats && (
               <>
-                <Card className="glass-effect hover-lift">
+                <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)]">
                   <div className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-futuristic-gray text-sm">Total de Páginas</p>
+                        <p className="text-futuristic-gray font-orbitron text-[11px]">Total de Páginas</p>
                         <p className="text-2xl font-orbitron font-bold text-white">
                           {stats.totalPages}
                         </p>
@@ -2791,11 +2818,11 @@ export const SEODashboard: React.FC = () => {
                   </div>
                 </Card>
 
-                <Card className="glass-effect hover-lift">
+                <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-lime-green/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(132,204,22,0.25)]">
                   <div className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-futuristic-gray text-sm">Score Médio</p>
+                        <p className="text-futuristic-gray font-orbitron text-[11px]">Score Médio</p>
                         <p className="text-2xl font-orbitron font-bold text-white">
                           {stats.averageScore}
                         </p>
@@ -2805,11 +2832,11 @@ export const SEODashboard: React.FC = () => {
                   </div>
                 </Card>
 
-                <Card className="glass-effect hover-lift">
+                <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(34,197,94,0.25)]">
                   <div className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-futuristic-gray text-sm">Páginas Excelentes</p>
+                        <p className="text-futuristic-gray font-orbitron text-[11px]">Páginas Excelentes</p>
                         <p className="text-2xl font-orbitron font-bold text-white">
                           {stats.excellentPages}
                         </p>
@@ -2819,11 +2846,11 @@ export const SEODashboard: React.FC = () => {
                   </div>
                 </Card>
 
-                <Card className="glass-effect hover-lift">
+                <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(250,204,21,0.25)]">
                   <div className="p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-futuristic-gray text-sm">Precisam Melhorar</p>
+                        <p className="text-futuristic-gray font-orbitron text-[11px]">Precisam Melhorar</p>
                         <p className="text-2xl font-orbitron font-bold text-white">
                           {stats.needsImprovementPages + stats.poorPages}
                         </p>
@@ -2837,7 +2864,7 @@ export const SEODashboard: React.FC = () => {
           </div>
 
           {/* Distribuição por Status */}
-          <Card className="glass-effect">
+          <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 mb-6">
             <div className="p-6">
               <h3 className="text-xl font-orbitron font-bold text-white mb-4">
                 Distribuição por Status SEO
@@ -2874,7 +2901,7 @@ export const SEODashboard: React.FC = () => {
           </Card>
 
           {/* Problemas Identificados */}
-          <Card className="glass-effect">
+          <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-orbitron font-bold text-white">
