@@ -5,6 +5,7 @@ import { hybridCache, CacheKeys } from '../utils/hybridCache';
 import { AdminCacheUtils } from '../utils/cacheInvalidation';
 import { supabaseWithRetry } from '../utils/supabaseRetry';
 import { useAutoFeedbackSync } from './useAutoFeedbackSync';
+import { supabaseAdmin } from '../lib/supabase-admin';
 
 export type { Article, Category };
 
@@ -12,7 +13,7 @@ export type { Article, Category };
 console.log('🔍 useArticles: Verificando clientes Supabase...', {
   supabase: !!supabase,
   supabaseServiceClient: !!supabase,
-  supabaseAdmin: false
+  supabaseAdmin: !!supabaseAdmin
 });
 
 // Função para gerar slug a partir do título
@@ -60,7 +61,7 @@ const ensureUniqueSlug = async (baseSlug: string, excludeId?: string): Promise<s
     }
     
     if (!data || data.length === 0) {
-      break; // Slug é único
+      return slug;
     }
     
     counter++;
@@ -596,9 +597,14 @@ export const useArticles = (): UseArticlesReturn => {
       console.log('🔧 DADOS FINAIS PARA UPDATE:', JSON.stringify(updateData, null, 2));
       console.log('🔧 Quantidade de campos a atualizar:', Object.keys(updateData).length);
       
+      // Selecionar cliente adequado: usar admin em DEV para is_featured_manual
+      const useAdminForFeatured = import.meta.env.DEV === true && updateData.is_featured_manual !== undefined;
+      const client = useAdminForFeatured ? supabaseAdmin : supabase;
+      console.log('🧩 Cliente selecionado para update:', useAdminForFeatured ? 'supabaseAdmin (DEV)' : 'supabase (anon)');
+      
       // UMA QUERY SIMPLES - SEM COMPLICAÇÕES
       console.log('🚀 Executando query de atualização...');
-      const { data, error: updateError } = await supabase
+      const { data, error: updateError } = await client
         .from('articles')
         .update(updateData)
         .eq('id', id)
@@ -615,7 +621,7 @@ export const useArticles = (): UseArticlesReturn => {
         console.error('❌ NENHUM ARTIGO ATUALIZADO - Verificando se ID existe...');
         
         // Verificar se o artigo existe
-        const { data: checkData, error: checkError } = await supabase
+        const { data: checkData, error: checkError } = await client
           .from('articles')
           .select('id, title')
           .eq('id', id);

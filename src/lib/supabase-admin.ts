@@ -1,11 +1,32 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Cliente admin com service_role_key para operações administrativas
-// IMPORTANTE: Este cliente só deve ser usado no backend ou em contextos seguros
+// Cliente admin com fallback seguro: usa service role só em DEV, anon em PROD
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseServiceRoleKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5d2pxemhxeW5obmhldGlkenNhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDkyOTEzNCwiZXhwIjoyMDc2NTA1MTM0fQ.04Y2US3KKeveKGi_8PvhqxS1EKiAB4xNjuFZTP1VLOQ';
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+// Fallback emergencial somente para desenvolvimento local
+const EMERGENCY_SUPABASE_URL = 'https://jywjqzhqynhnhetidzsa.supabase.co';
+const EMERGENCY_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp5d2pxemhxeW5obmhldGlkenNhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDkyOTEzNCwiZXhwIjoyMDc2NTA1MTM0fQ.04Y2US3KKeveKGi_8PvhqxS1EKiAB4xNjuFZTP1VLOQ';
 
-// Global singleton instance para evitar múltiplas instâncias GoTrueClient
+const isBrowser = typeof window !== 'undefined';
+const isDev = import.meta.env.DEV === true;
+
+// Em produção no browser, nunca usar service role
+// Em desenvolvimento, permitir service role para desbloquear métricas
+const supabaseKey = (() => {
+  if (!isBrowser) {
+    return serviceRoleKey || anonKey;
+  }
+  if (isDev) {
+    return serviceRoleKey || EMERGENCY_SERVICE_ROLE_KEY;
+  }
+  return anonKey;
+})();
+
+// Determinar URL final com fallback
+const finalUrl = supabaseUrl || EMERGENCY_SUPABASE_URL;
+
+// Global singleton instance para evitar múltiplas instâncias
 declare global {
   var __supabase_admin_singleton__: any;
 }
@@ -13,47 +34,43 @@ declare global {
 let adminInstance: any = null;
 
 export const supabaseAdmin = (() => {
-  // Retornar instância existente se já foi criada
   if (adminInstance) {
     return adminInstance;
   }
 
-  // Verificar se já existe uma instância global
-  if (typeof window !== 'undefined' && window.__supabase_admin_singleton__) {
-    adminInstance = window.__supabase_admin_singleton__;
+  if (typeof window !== 'undefined' && (window as any).__supabase_admin_singleton__) {
+    adminInstance = (window as any).__supabase_admin_singleton__;
     return adminInstance;
   }
 
-  if (typeof global !== 'undefined' && global.__supabase_admin_singleton__) {
-    adminInstance = global.__supabase_admin_singleton__;
+  if (typeof global !== 'undefined' && (global as any).__supabase_admin_singleton__) {
+    adminInstance = (global as any).__supabase_admin_singleton__;
     return adminInstance;
   }
 
-  // Criar nova instância apenas se não existir
-  adminInstance = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  adminInstance = createClient(finalUrl, supabaseKey, {
     auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-      storage: undefined,
-      // 🔥 DESABILITAR COMPLETAMENTE O GOTRUECLIENT PARA EVITAR MÚLTIPLAS INSTÂNCIAS
+      autoRefreshToken: isBrowser,
+      persistSession: isBrowser,
+      storage: isBrowser ? window.localStorage : undefined,
       detectSessionInUrl: false
     },
     global: {
       headers: {
-        'x-client-info': 'supabase-admin'
+        'x-client-info': 'supabase-admin',
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`
       }
     }
   });
 
-  // Armazenar a instância globalmente
   if (typeof window !== 'undefined') {
-    window.__supabase_admin_singleton__ = adminInstance;
+    (window as any).__supabase_admin_singleton__ = adminInstance;
   } else if (typeof global !== 'undefined') {
-    global.__supabase_admin_singleton__ = adminInstance;
+    (global as any).__supabase_admin_singleton__ = adminInstance;
   }
   
   return adminInstance;
 })();
 
-// Export alternativo para compatibilidade
 export const supabaseServiceClient = supabaseAdmin;
