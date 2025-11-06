@@ -586,6 +586,12 @@ export const useArticles = (): UseArticlesReturn => {
       // 🚨 EMERGÊNCIA: REMOVER PUBLISHED COMPLETAMENTE DA FUNÇÃO PRINCIPAL
       // O campo published será tratado em função separada para evitar erro 42883
       console.log('🚨 PUBLISHED REMOVIDO DA FUNÇÃO PRINCIPAL - será tratado separadamente');
+
+      // Evitar update vazio
+      if (Object.keys(updateData).length === 0) {
+        console.warn('Nenhum campo para atualizar. Operação ignorada.');
+        throw new Error('Nenhuma alteração detectada');
+      }
       
       // Gerar slug se título foi alterado
       if (updateData.title) {

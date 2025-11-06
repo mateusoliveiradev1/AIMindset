@@ -206,7 +206,7 @@ export const useMicroInteractions = () => {
  * Mantém o visual atual mas adiciona sutis melhorias
  */
 export const MicroInteractionsStyles = () => (
-  <style jsx global>{`
+  <style>{`
     /* Hover sutil em botões e cards */
     .micro-hover-active {
       transform: translateY(-1px);

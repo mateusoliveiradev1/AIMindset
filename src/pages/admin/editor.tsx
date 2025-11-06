@@ -121,6 +121,39 @@ export default function AdminEditor() {
 
       // Permitir salvar usando ID de param ou ID do dado inicial (caso slug)
       const targetId = articleId || initialData?.id;
+      // Guarda de não alteração: comparar payload com dados iniciais
+      if (targetId && initialData) {
+        const normalizeTags = (v: any) => Array.isArray(v) ? v : (typeof v === 'string' ? v.split(',').map((t: string) => t.trim()).filter(Boolean) : []);
+        const newSnap: any = {
+          title: payload.title,
+          excerpt: payload.excerpt,
+          content: payload.content,
+          image_url: payload.image_url,
+          category_id: payload.category_id,
+          author_id: payload.author_id,
+          published: payload.published,
+          tags: normalizeTags(payload.tags),
+          slug: payload.slug
+        };
+        const oldSnap: any = {
+          title: (initialData as any)?.title,
+          excerpt: (initialData as any)?.excerpt,
+          content: (initialData as any)?.content,
+          image_url: (initialData as any)?.image_url,
+          category_id: (initialData as any)?.category_id,
+          author_id: (initialData as any)?.author_id,
+          published: (initialData as any)?.published,
+          tags: normalizeTags((initialData as any)?.tags),
+          slug: (initialData as any)?.slug
+        };
+        const fields = ['title','excerpt','content','image_url','category_id','author_id','published','tags','slug'] as const;
+        const changed = fields.some((k) => JSON.stringify(newSnap[k]) !== JSON.stringify(oldSnap[k]));
+        if (!changed) {
+          toast.warning('Nenhuma alteração detectada. Nada foi salvo.');
+          return;
+        }
+      }
+
       const ok = targetId ? await updateArticle(targetId, payload) : await createArticle(payload as any);
 
       if (ok) {

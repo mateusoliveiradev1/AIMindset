@@ -19,6 +19,8 @@ import { ResponsiveContainer, BarChart, Bar, CartesianGrid, XAxis, YAxis, Toolti
 import { useNavigate } from 'react-router-dom';
 import { useArticles } from '@/hooks/useArticles';
 import { useDebounce } from '@/hooks/useDebounce';
+import { PerformanceMonitor } from '@/components/Admin/PerformanceMonitor';
+
 
 // Skeletons
 const ChartSkeleton = () => (
@@ -296,6 +298,14 @@ export default function AdminDashboard() {
         </Button>
       </div>
 
+      {/* Performance Monitor */}
+      <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10">
+        <div className="p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-orbitron font-bold text-white mb-3">Monitor de Performance</h3>
+          <PerformanceMonitor />
+        </div>
+      </Card>
+
       {/* Loading */}
       {loadingDashboard && (
         <div className="flex items-center justify-center py-12">
@@ -569,7 +579,7 @@ export default function AdminDashboard() {
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 ml-auto">
-                                <Button size="sm" variant="ghost" className="text-neon-purple hover:text-neon-purple/80 rounded-full" onClick={() => togglePin(activity)}>
+                                <Button size="sm" variant="ghost" className="text-neon-purple hover:text-neon-purple/80" onClick={() => togglePin(activity)}>
                                   {isPinned ? 'Desfixar' : 'Fixar'}
                                 </Button>
                                 <Button size="sm" variant="ghost" className="text-futuristic-gray hover:text-white/80 rounded-full" onClick={() => toggleRead(activity)}>

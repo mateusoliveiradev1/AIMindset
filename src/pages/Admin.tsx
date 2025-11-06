@@ -2800,11 +2800,40 @@ export const Admin: React.FC = () => {
                     author_id: user?.id || '',
                     published: Boolean(articleData.published), // Garantir que seja boolean
                     tags: typeof articleData.tags === 'string' ? articleData.tags.split(',').map(t => t.trim()) : articleData.tags || [],
-                    // views removido - coluna não existe na tabela
-                    // reading_time removido - coluna não existe na tabela
-                    // meta_title removido - coluna não existe na tabela
-                    // meta_description removido - coluna não existe na tabela
                   };
+
+                  // Guarda: não salvar se não houver mudanças
+                  if (editingArticle) {
+                    const normalizeTags = (v: any) => Array.isArray(v) ? v : (typeof v === 'string' ? v.split(',').map((t: string) => t.trim()).filter(Boolean) : []);
+                    const fields = ['title','excerpt','content','image_url','category_id','author_id','published','tags','slug'] as const;
+                    const newSnapshot: any = {
+                      title: supabaseArticle.title,
+                      excerpt: supabaseArticle.excerpt,
+                      content: supabaseArticle.content,
+                      image_url: supabaseArticle.image_url,
+                      category_id: supabaseArticle.category_id,
+                      author_id: supabaseArticle.author_id,
+                      published: supabaseArticle.published,
+                      tags: normalizeTags(supabaseArticle.tags),
+                      slug: supabaseArticle.slug
+                    };
+                    const oldSnapshot: any = {
+                      title: (editingArticle as any)?.title,
+                      excerpt: (editingArticle as any)?.excerpt,
+                      content: (editingArticle as any)?.content,
+                      image_url: (editingArticle as any)?.image_url,
+                      category_id: (editingArticle as any)?.category_id,
+                      author_id: (editingArticle as any)?.author_id,
+                      published: (editingArticle as any)?.published,
+                      tags: normalizeTags((editingArticle as any)?.tags),
+                      slug: (editingArticle as any)?.slug
+                    };
+                    const hasChanges = fields.some((k) => JSON.stringify(newSnapshot[k]) !== JSON.stringify(oldSnapshot[k]));
+                    if (!hasChanges) {
+                      toast.warning('Nenhuma alteração detectada. Nada foi salvo.');
+                      return;
+                    }
+                  }
 
                   console.log('📝 Dados do artigo para salvar:', supabaseArticle);
 

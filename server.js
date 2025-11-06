@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { z } from 'zod';
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -11,7 +12,7 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:5174'],
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:5174', 'http://localhost:5175'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -31,6 +32,64 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false
+  }
+});
+
+// Rate limiting simples por IP (janela de 1 min, 60 req)
+const rateLimitMap = new Map();
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const current = rateLimitMap.get(ip);
+  if (!current || now > current.reset) {
+    rateLimitMap.set(ip, { count: 1, reset: now + 60_000 });
+    return true;
+  }
+  if (current.count < 60) {
+    current.count += 1;
+    return true;
+  }
+  return false;
+}
+
+// Validação do payload de log
+const logSchema = z.object({
+  type: z.string().min(1),
+  message: z.string().min(1),
+  context: z.any().optional(),
+  created_at: z.string().datetime().optional()
+});
+
+// Endpoint para inserir logs do sistema (server-side usando service role)
+app.post('/api/system-logs', async (req, res) => {
+  try {
+    const ip = req.headers['x-forwarded-for']?.toString() || req.ip;
+    if (!checkRateLimit(ip)) {
+      return res.status(429).json({ success: false, error: 'Too Many Requests' });
+    }
+
+    const parseResult = logSchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ success: false, error: 'Invalid payload', issues: parseResult.error.errors });
+    }
+
+    const payload = parseResult.data;
+    const insertPayload = {
+      type: payload.type,
+      message: payload.message,
+      context: payload.context ?? null,
+      created_at: payload.created_at ?? new Date().toISOString()
+    };
+
+    const { error } = await supabase.from('system_logs').insert(insertPayload);
+    if (error) {
+      console.error('Erro Supabase ao inserir system_logs:', error);
+      return res.status(500).json({ success: false, error: error.message, code: error.code });
+    }
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('Erro no endpoint /api/system-logs:', err);
+    return res.status(500).json({ success: false, error: 'Internal Server Error' });
   }
 });
 

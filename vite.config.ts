@@ -33,12 +33,27 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        // Code splitting simplificado e mais estável
+        // Code splitting otimizado para Fase 1.3
         manualChunks: {
           // Vendor chunks básicos
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'ui-vendor': ['lucide-react', 'sonner', 'react-helmet-async'],
-          'supabase-vendor': ['@supabase/supabase-js']
+          'supabase-vendor': ['@supabase/supabase-js'],
+          
+          // Chunks específicos para módulos pesados do admin (Fase 1.3)
+          'admin-heavy': [
+            './src/pages/admin/logs',
+            './src/pages/admin/backup'
+          ],
+          'admin-monitor': [
+            './src/pages/admin/feedback',
+            './src/pages/admin/seo'
+          ],
+          'admin-core': [
+            './src/pages/admin/index',
+            './src/pages/admin/articles',
+            './src/pages/admin/users'
+          ]
         },
         // Nomes de chunks mais limpos
         chunkFileNames: (chunkInfo) => {
@@ -95,6 +110,11 @@ export default defineConfig({
         secure: false
       },
       '/api/backup-health': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false
+      },
+      '/api/system-logs': {
         target: 'http://localhost:3001',
         changeOrigin: true,
         secure: false
