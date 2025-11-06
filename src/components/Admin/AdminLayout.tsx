@@ -13,7 +13,8 @@ import {
   Shield,
   Activity,
   LogOut,
-  Home
+  Home,
+  Zap
 } from 'lucide-react';
 import { Button } from '@/components/UI/Button';
 import { Card } from '@/components/UI/Card';
@@ -34,6 +35,7 @@ const sidebarItems: SidebarItem[] = [
   { id: 'categories', label: 'Categorias', icon: TrendingUp, path: '/admin/categories' },
   { id: 'feedback', label: 'Feedback', icon: MessageSquare, path: '/admin/feedback' },
   { id: 'seo', label: 'SEO', icon: Search, path: '/admin/seo' },
+  { id: 'performance', label: 'Performance', icon: Zap, path: '/admin/performance' },
   { id: 'logs', label: 'Logs & Monitoramento', icon: Monitor, path: '/admin/logs' },
   { id: 'backup', label: 'Backup', icon: Shield, path: '/admin/backup' },
 ];

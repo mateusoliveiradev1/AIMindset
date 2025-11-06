@@ -6,6 +6,7 @@ import { AdminCacheUtils } from '../utils/cacheInvalidation';
 import { supabaseWithRetry } from '../utils/supabaseRetry';
 import { useAutoFeedbackSync } from './useAutoFeedbackSync';
 import { supabaseAdmin } from '../lib/supabase-admin';
+import { supabaseOptimizer } from '../utils/supabaseOptimizer';
 
 export type { Article, Category };
 
@@ -109,7 +110,73 @@ export const useArticles = (): UseArticlesReturn => {
   // Sistema 100% automático de sincronização de feedbacks
   const { forceSyncNow, isActive } = useAutoFeedbackSync();
 
-    // Cache-aware fetch articles
+    // Função otimizada para buscar artigos com queries seletivas
+  const fetchArticlesOptimized = useCallback(async (forceRefresh: boolean = false) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Verificar cache primeiro
+      if (!forceRefresh) {
+        const cached = await hybridCache.get<Article[]>(CacheKeys.ARTICLES_LIST);
+        if (cached.data) {
+          console.log(`🟢 [useArticles] Cache hit from ${cached.source}`);
+          setArticles(cached.data);
+          setLoading(false);
+          return;
+        }
+      }
+
+      console.log('🔄 [useArticles] Buscando artigos com query otimizada...');
+      
+      // Usar otimizador de queries para buscar apenas campos necessários
+      const { data, error, queryTime, fromCache } = await supabaseOptimizer.getOptimizedArticles(50, 0);
+      
+      if (error) {
+        throw new Error(`Erro ao buscar artigos: ${error.message}`);
+      }
+
+      if (!data || data.length === 0) {
+        console.warn('⚠️ [useArticles] Nenhum artigo encontrado');
+        setArticles([]);
+        return;
+      }
+
+      // Buscar categorias relacionadas de forma otimizada
+      const categoryIds = [...new Set(data.map(article => article.category_id).filter(Boolean))];
+      if (categoryIds.length > 0) {
+        const { data: categoriesData } = await supabaseOptimizer.optimizedQuery('categories', {
+          select: ['id', 'name', 'slug', 'description'],
+          filters: [{ column: 'id', operator: 'in', value: categoryIds }]
+        });
+
+        // Combinar artigos com categorias
+        const articlesWithCategories = data.map(article => ({
+          ...article,
+          category: categoriesData?.find(cat => cat.id === article.category_id) || null
+        }));
+
+        // Cachear resultados
+        await hybridCache.set(CacheKeys.ARTICLES_LIST, articlesWithCategories);
+        setArticles(articlesWithCategories);
+        
+        console.log(`✅ [useArticles] ${articlesWithCategories.length} artigos carregados (${queryTime}ms)${fromCache ? ' [CACHE]' : ''}`);
+      } else {
+        // Cachear sem categorias
+        await hybridCache.set(CacheKeys.ARTICLES_LIST, data);
+        setArticles(data);
+        
+        console.log(`✅ [useArticles] ${data.length} artigos carregados (${queryTime}ms)${fromCache ? ' [CACHE]' : ''}`);
+      }
+    } catch (err) {
+      console.error('❌ Error fetching optimized articles:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch articles');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Cache-aware fetch articles (função original como fallback)
     const fetchArticles = useCallback(async (forceRefresh: boolean = false) => {
       try {
         setLoading(true);
@@ -408,7 +475,7 @@ export const useArticles = (): UseArticlesReturn => {
     const loadData = async () => {
       setLoading(true);
       try {
-        await Promise.all([fetchArticles(), fetchCategories()]);
+        await Promise.all([fetchArticlesOptimized(), fetchCategories()]);
       } catch (error) {
         console.error('❌ Erro ao carregar dados:', error);
       } finally {
@@ -417,7 +484,7 @@ export const useArticles = (): UseArticlesReturn => {
     };
     
     loadData();
-  }, [fetchArticles, fetchCategories]);
+  }, [fetchArticlesOptimized, fetchCategories]);
 
   const createArticle = async (articleData: Omit<Article, 'id' | 'created_at' | 'updated_at'>): Promise<boolean> => {
     try {

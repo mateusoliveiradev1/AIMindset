@@ -1,0 +1,32 @@
+{
+  "timestamp": "2025-11-06T16:45:39.216Z",
+  "buildTime": 0,
+  "bundleSize": {},
+  "chunks": [],
+  "warnings": [],
+  "errors": [
+    {
+      "message": "Command failed: npm run build",
+      "stack": "Error: Command failed: npm run build\n    at genericNodeError (node:internal/errors:983:15)\n    at wrappedFn (node:internal/errors:537:14)\n    at checkExecSyncError (node:child_process:916:11)\n    at execSync (node:child_process:988:15)\n    at BuildPerformanceReporter.runBuild (file:///C:/Users/Administrador/Documents/estudos/AIMindset/scripts/build-performance.js:91:7)\n    at BuildPerformanceReporter.run (file:///C:/Users/Administrador/Documents/estudos/AIMindset/scripts/build-performance.js:41:18)",
+      "timestamp": "2025-11-06T16:45:40.635Z"
+    }
+  ],
+  "performance": {
+    "startTime": 1762447539216,
+    "memoryUsage": {
+      "rss": 46178304,
+      "heapTotal": 5873664,
+      "heapUsed": 5034936,
+      "external": 1967776,
+      "arrayBuffers": 25331
+    },
+    "nodeVersion": "v22.20.0",
+    "platform": "win32"
+  },
+  "preBuild": {
+    "srcSize": 2551734,
+    "dependencies": 26,
+    "devDependencies": 26,
+    "totalFiles": 229
+  }
+}

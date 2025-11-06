@@ -20,6 +20,13 @@ import { ProgressiveEnhancementProvider } from './components/ProgressiveEnhancem
 import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
 import { Card } from './components/UI/Card';
 import { Button } from './components/UI/Button';
+import { 
+  OptimizedAdminLogs, 
+  OptimizedAdminBackup, 
+  OptimizedAdminNewsletter, 
+  OptimizedAdminFeedback 
+} from './components/Performance/OptimizedLazyLoad';
+import { PerformanceDashboard } from '@/components/Admin/PerformanceDashboard';
 
 // Lazy loading otimizado com chunks nomeados
 import LazyComponents from './components/LazyComponents';
@@ -110,20 +117,21 @@ function AppContent() {
         {/* Rota antiga - redirect para nova estrutura */}
         <Route path="/admin-old" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
         
-        {/* Novas rotas admin modulares */}
+        {/* Novas rotas admin modulares com lazy loading otimizado */}
         <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
           <Route index element={<AdminDashboard />} />
           <Route path="articles" element={<AdminArticles />} />
           <Route path="editor" element={<AdminEditor />} />
-          <Route path="newsletter" element={<AdminNewsletter />} />
+          <Route path="newsletter" element={<OptimizedAdminNewsletter />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="categories" element={<AdminCategories />} />
-          <Route path="feedback" element={<AdminFeedback />} />
+          <Route path="feedback" element={<OptimizedAdminFeedback />} />
           <Route path="seo" element={<AdminSEO />} />
-          <Route path="logs" element={<AdminLogs />} />
-          <Route path="backup" element={<AdminBackup />} />
-          <Route path="notifications" element={<AdminNotifications />} />
-          <Route path="settings" element={<AdminSettings />} />
+                <Route path="performance" element={<PerformanceDashboard />} />
+                <Route path="logs" element={<OptimizedAdminLogs />} />
+                <Route path="backup" element={<OptimizedAdminBackup />} />
+                <Route path="notifications" element={<AdminNotifications />} />
+                <Route path="settings" element={<AdminSettings />} />
         </Route>
         
         {/* Performance Test routes - usando componentes lazy otimizados */}

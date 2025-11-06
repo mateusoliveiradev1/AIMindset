@@ -1,0 +1,717 @@
+{
+  "timestamp": "2025-11-06T17:04:39.342Z",
+  "config": {
+    "iterations": 10,
+    "timeout": 30000,
+    "thresholds": {
+      "lcp": 2500,
+      "fid": 100,
+      "cls": 0.1,
+      "loadTime": 3000
+    }
+  },
+  "summary": {
+    "totalIterations": 10,
+    "totalAlerts": 22,
+    "averages": {
+      "lcp": 2811.944576280706,
+      "fid": 145.37096098212044,
+      "cls": 0.1688986690509398,
+      "cacheHitRate": 74.30839781943708
+    },
+    "compliance": {
+      "lcp": 40,
+      "fid": 20,
+      "cls": 20,
+      "cache": 20
+    }
+  },
+  "details": [
+    {
+      "iteration": 1,
+      "timestamp": "2025-11-06T17:04:38.261Z",
+      "coreWebVitals": {
+        "lcp": 1796.1610994129967,
+        "fid": 189.91809507737696,
+        "cls": 0.22130699930614847,
+        "fcp": 1345.23512761062,
+        "ttfb": 820.1133606907247
+      },
+      "cacheMetrics": {
+        "hitRate": 78.75217012408586,
+        "hits": 523,
+        "misses": 142,
+        "totalRequests": 665
+      },
+      "queryMetrics": [
+        {
+          "table": "articles",
+          "avgTime": 309.0392483451911,
+          "count": 23,
+          "lastQuery": "2025-11-06T17:04:38.261Z"
+        },
+        {
+          "table": "users",
+          "avgTime": 483.78618249247893,
+          "count": 64,
+          "lastQuery": "2025-11-06T17:04:38.261Z"
+        },
+        {
+          "table": "categories",
+          "avgTime": 242.55013539312026,
+          "count": 48,
+          "lastQuery": "2025-11-06T17:04:38.261Z"
+        },
+        {
+          "table": "comments",
+          "avgTime": 171.08273721975792,
+          "count": 54,
+          "lastQuery": "2025-11-06T17:04:38.261Z"
+        },
+        {
+          "table": "analytics",
+          "avgTime": 170.9475068357445,
+          "count": 101,
+          "lastQuery": "2025-11-06T17:04:38.261Z"
+        }
+      ],
+      "alerts": [
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "FID alto: 190ms (meta: 100ms)",
+          "metric": "fid",
+          "value": 189.91809507737696,
+          "threshold": 100
+        },
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "CLS alto: 0.221 (meta: 0.1)",
+          "metric": "cls",
+          "value": 0.22130699930614847,
+          "threshold": 0.1
+        }
+      ]
+    },
+    {
+      "iteration": 2,
+      "timestamp": "2025-11-06T17:04:38.363Z",
+      "coreWebVitals": {
+        "lcp": 1671.2735266453053,
+        "fid": 177.644377121894,
+        "cls": 0.0863984510094521,
+        "fcp": 892.7867401142204,
+        "ttfb": 347.62728713654735
+      },
+      "cacheMetrics": {
+        "hitRate": 60.020856950423386,
+        "hits": 630,
+        "misses": 420,
+        "totalRequests": 1050
+      },
+      "queryMetrics": [
+        {
+          "table": "articles",
+          "avgTime": 479.5030330686367,
+          "count": 11,
+          "lastQuery": "2025-11-06T17:04:38.363Z"
+        },
+        {
+          "table": "users",
+          "avgTime": 354.99889075797904,
+          "count": 49,
+          "lastQuery": "2025-11-06T17:04:38.363Z"
+        },
+        {
+          "table": "categories",
+          "avgTime": 112.98803361513794,
+          "count": 93,
+          "lastQuery": "2025-11-06T17:04:38.363Z"
+        },
+        {
+          "table": "comments",
+          "avgTime": 535.1887255225506,
+          "count": 98,
+          "lastQuery": "2025-11-06T17:04:38.363Z"
+        },
+        {
+          "table": "analytics",
+          "avgTime": 246.48322404390117,
+          "count": 85,
+          "lastQuery": "2025-11-06T17:04:38.363Z"
+        }
+      ],
+      "alerts": [
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "FID alto: 178ms (meta: 100ms)",
+          "metric": "fid",
+          "value": 177.644377121894,
+          "threshold": 100
+        }
+      ]
+    },
+    {
+      "iteration": 3,
+      "timestamp": "2025-11-06T17:04:38.471Z",
+      "coreWebVitals": {
+        "lcp": 3383.4176601758454,
+        "fid": 83.3935251595502,
+        "cls": 0.13624393762128242,
+        "fcp": 1372.9281121879892,
+        "ttfb": 115.66505137087245
+      },
+      "cacheMetrics": {
+        "hitRate": 66.63947414902674,
+        "hits": 101,
+        "misses": 52,
+        "totalRequests": 153
+      },
+      "queryMetrics": [
+        {
+          "table": "articles",
+          "avgTime": 84.57976654444839,
+          "count": 33,
+          "lastQuery": "2025-11-06T17:04:38.471Z"
+        },
+        {
+          "table": "users",
+          "avgTime": 431.4762197395597,
+          "count": 71,
+          "lastQuery": "2025-11-06T17:04:38.471Z"
+        },
+        {
+          "table": "categories",
+          "avgTime": 383.81849293313104,
+          "count": 12,
+          "lastQuery": "2025-11-06T17:04:38.471Z"
+        },
+        {
+          "table": "comments",
+          "avgTime": 500.11152571806923,
+          "count": 44,
+          "lastQuery": "2025-11-06T17:04:38.471Z"
+        },
+        {
+          "table": "analytics",
+          "avgTime": 145.37360108034053,
+          "count": 58,
+          "lastQuery": "2025-11-06T17:04:38.471Z"
+        }
+      ],
+      "alerts": [
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "LCP alto: 3383ms (meta: 2500ms)",
+          "metric": "lcp",
+          "value": 3383.4176601758454,
+          "threshold": 2500
+        },
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "CLS alto: 0.136 (meta: 0.1)",
+          "metric": "cls",
+          "value": 0.13624393762128242,
+          "threshold": 0.1
+        }
+      ]
+    },
+    {
+      "iteration": 4,
+      "timestamp": "2025-11-06T17:04:38.578Z",
+      "coreWebVitals": {
+        "lcp": 1496.8507066959705,
+        "fid": 167.22101620198947,
+        "cls": 0.07709758614191616,
+        "fcp": 595.7772839840947,
+        "ttfb": 888.3620829562631
+      },
+      "cacheMetrics": {
+        "hitRate": 73.15950657491993,
+        "hits": 231,
+        "misses": 86,
+        "totalRequests": 317
+      },
+      "queryMetrics": [
+        {
+          "table": "articles",
+          "avgTime": 204.78993505612138,
+          "count": 61,
+          "lastQuery": "2025-11-06T17:04:38.578Z"
+        },
+        {
+          "table": "users",
+          "avgTime": 480.4631390414346,
+          "count": 50,
+          "lastQuery": "2025-11-06T17:04:38.578Z"
+        },
+        {
+          "table": "categories",
+          "avgTime": 477.75877605668387,
+          "count": 12,
+          "lastQuery": "2025-11-06T17:04:38.578Z"
+        },
+        {
+          "table": "comments",
+          "avgTime": 488.7218058425241,
+          "count": 85,
+          "lastQuery": "2025-11-06T17:04:38.578Z"
+        },
+        {
+          "table": "analytics",
+          "avgTime": 395.763896050763,
+          "count": 94,
+          "lastQuery": "2025-11-06T17:04:38.578Z"
+        }
+      ],
+      "alerts": [
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "FID alto: 167ms (meta: 100ms)",
+          "metric": "fid",
+          "value": 167.22101620198947,
+          "threshold": 100
+        }
+      ]
+    },
+    {
+      "iteration": 5,
+      "timestamp": "2025-11-06T17:04:38.687Z",
+      "coreWebVitals": {
+        "lcp": 4284.594348996781,
+        "fid": 186.00210655540047,
+        "cls": 0.10674267374288986,
+        "fcp": 1247.4432376748223,
+        "ttfb": 269.3659858341336
+      },
+      "cacheMetrics": {
+        "hitRate": 97.19536605257508,
+        "hits": 153,
+        "misses": 5,
+        "totalRequests": 158
+      },
+      "queryMetrics": [
+        {
+          "table": "articles",
+          "avgTime": 189.419177432081,
+          "count": 36,
+          "lastQuery": "2025-11-06T17:04:38.687Z"
+        },
+        {
+          "table": "users",
+          "avgTime": 524.1926767051332,
+          "count": 94,
+          "lastQuery": "2025-11-06T17:04:38.687Z"
+        },
+        {
+          "table": "categories",
+          "avgTime": 101.39238795397638,
+          "count": 27,
+          "lastQuery": "2025-11-06T17:04:38.687Z"
+        },
+        {
+          "table": "comments",
+          "avgTime": 217.2836775068931,
+          "count": 78,
+          "lastQuery": "2025-11-06T17:04:38.687Z"
+        },
+        {
+          "table": "analytics",
+          "avgTime": 210.75317018863944,
+          "count": 104,
+          "lastQuery": "2025-11-06T17:04:38.687Z"
+        }
+      ],
+      "alerts": [
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "LCP alto: 4285ms (meta: 2500ms)",
+          "metric": "lcp",
+          "value": 4284.594348996781,
+          "threshold": 2500
+        },
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "FID alto: 186ms (meta: 100ms)",
+          "metric": "fid",
+          "value": 186.00210655540047,
+          "threshold": 100
+        },
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "CLS alto: 0.107 (meta: 0.1)",
+          "metric": "cls",
+          "value": 0.10674267374288986,
+          "threshold": 0.1
+        }
+      ]
+    },
+    {
+      "iteration": 6,
+      "timestamp": "2025-11-06T17:04:38.797Z",
+      "coreWebVitals": {
+        "lcp": 3259.587323963748,
+        "fid": 118.7355291333314,
+        "cls": 0.23873069360308644,
+        "fcp": 2276.4703001512235,
+        "ttfb": 752.895060051087
+      },
+      "cacheMetrics": {
+        "hitRate": 70.22611821796025,
+        "hits": 95,
+        "misses": 41,
+        "totalRequests": 136
+      },
+      "queryMetrics": [
+        {
+          "table": "articles",
+          "avgTime": 408.8403462534945,
+          "count": 79,
+          "lastQuery": "2025-11-06T17:04:38.797Z"
+        },
+        {
+          "table": "users",
+          "avgTime": 344.27519890488463,
+          "count": 57,
+          "lastQuery": "2025-11-06T17:04:38.797Z"
+        },
+        {
+          "table": "categories",
+          "avgTime": 500.2832316857017,
+          "count": 37,
+          "lastQuery": "2025-11-06T17:04:38.797Z"
+        },
+        {
+          "table": "comments",
+          "avgTime": 146.843634334986,
+          "count": 81,
+          "lastQuery": "2025-11-06T17:04:38.797Z"
+        },
+        {
+          "table": "analytics",
+          "avgTime": 508.618547005917,
+          "count": 27,
+          "lastQuery": "2025-11-06T17:04:38.797Z"
+        }
+      ],
+      "alerts": [
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "LCP alto: 3260ms (meta: 2500ms)",
+          "metric": "lcp",
+          "value": 3259.587323963748,
+          "threshold": 2500
+        },
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "FID alto: 119ms (meta: 100ms)",
+          "metric": "fid",
+          "value": 118.7355291333314,
+          "threshold": 100
+        },
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "CLS alto: 0.239 (meta: 0.1)",
+          "metric": "cls",
+          "value": 0.23873069360308644,
+          "threshold": 0.1
+        }
+      ]
+    },
+    {
+      "iteration": 7,
+      "timestamp": "2025-11-06T17:04:38.907Z",
+      "coreWebVitals": {
+        "lcp": 1034.0623320232476,
+        "fid": 153.35444062392222,
+        "cls": 0.2798799419256074,
+        "fcp": 2231.6455602135375,
+        "ttfb": 848.564144268759
+      },
+      "cacheMetrics": {
+        "hitRate": 67.99812398809834,
+        "hits": 376,
+        "misses": 178,
+        "totalRequests": 554
+      },
+      "queryMetrics": [
+        {
+          "table": "articles",
+          "avgTime": 251.86287909852373,
+          "count": 37,
+          "lastQuery": "2025-11-06T17:04:38.907Z"
+        },
+        {
+          "table": "users",
+          "avgTime": 459.82472609868427,
+          "count": 17,
+          "lastQuery": "2025-11-06T17:04:38.907Z"
+        },
+        {
+          "table": "categories",
+          "avgTime": 105.23877507791485,
+          "count": 68,
+          "lastQuery": "2025-11-06T17:04:38.907Z"
+        },
+        {
+          "table": "comments",
+          "avgTime": 297.1892807362377,
+          "count": 17,
+          "lastQuery": "2025-11-06T17:04:38.907Z"
+        },
+        {
+          "table": "analytics",
+          "avgTime": 356.00017081809017,
+          "count": 64,
+          "lastQuery": "2025-11-06T17:04:38.907Z"
+        }
+      ],
+      "alerts": [
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "FID alto: 153ms (meta: 100ms)",
+          "metric": "fid",
+          "value": 153.35444062392222,
+          "threshold": 100
+        },
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "CLS alto: 0.280 (meta: 0.1)",
+          "metric": "cls",
+          "value": 0.2798799419256074,
+          "threshold": 0.1
+        }
+      ]
+    },
+    {
+      "iteration": 8,
+      "timestamp": "2025-11-06T17:04:39.015Z",
+      "coreWebVitals": {
+        "lcp": 4168.4918329869815,
+        "fid": 156.96996718214228,
+        "cls": 0.18175706395607538,
+        "fcp": 1205.5829715253005,
+        "ttfb": 221.13817266743342
+      },
+      "cacheMetrics": {
+        "hitRate": 72.76605137815167,
+        "hits": 475,
+        "misses": 178,
+        "totalRequests": 653
+      },
+      "queryMetrics": [
+        {
+          "table": "articles",
+          "avgTime": 291.38955203486944,
+          "count": 109,
+          "lastQuery": "2025-11-06T17:04:39.015Z"
+        },
+        {
+          "table": "users",
+          "avgTime": 149.20952385253958,
+          "count": 48,
+          "lastQuery": "2025-11-06T17:04:39.015Z"
+        },
+        {
+          "table": "categories",
+          "avgTime": 251.32447579969147,
+          "count": 38,
+          "lastQuery": "2025-11-06T17:04:39.015Z"
+        },
+        {
+          "table": "comments",
+          "avgTime": 476.7225241317724,
+          "count": 36,
+          "lastQuery": "2025-11-06T17:04:39.015Z"
+        },
+        {
+          "table": "analytics",
+          "avgTime": 522.7354300458385,
+          "count": 44,
+          "lastQuery": "2025-11-06T17:04:39.015Z"
+        }
+      ],
+      "alerts": [
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "LCP alto: 4168ms (meta: 2500ms)",
+          "metric": "lcp",
+          "value": 4168.4918329869815,
+          "threshold": 2500
+        },
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "FID alto: 157ms (meta: 100ms)",
+          "metric": "fid",
+          "value": 156.96996718214228,
+          "threshold": 100
+        },
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "CLS alto: 0.182 (meta: 0.1)",
+          "metric": "cls",
+          "value": 0.18175706395607538,
+          "threshold": 0.1
+        }
+      ]
+    },
+    {
+      "iteration": 9,
+      "timestamp": "2025-11-06T17:04:39.123Z",
+      "coreWebVitals": {
+        "lcp": 2875.4526122467705,
+        "fid": 149.38636297422113,
+        "cls": 0.23788651107747602,
+        "fcp": 448.71322775235774,
+        "ttfb": 410.24386685067265
+      },
+      "cacheMetrics": {
+        "hitRate": 72.81719271629696,
+        "hits": 723,
+        "misses": 271,
+        "totalRequests": 994
+      },
+      "queryMetrics": [
+        {
+          "table": "articles",
+          "avgTime": 118.78129154896406,
+          "count": 54,
+          "lastQuery": "2025-11-06T17:04:39.123Z"
+        },
+        {
+          "table": "users",
+          "avgTime": 153.52256318343822,
+          "count": 28,
+          "lastQuery": "2025-11-06T17:04:39.123Z"
+        },
+        {
+          "table": "categories",
+          "avgTime": 268.6346920661076,
+          "count": 91,
+          "lastQuery": "2025-11-06T17:04:39.123Z"
+        },
+        {
+          "table": "comments",
+          "avgTime": 191.8681124110386,
+          "count": 72,
+          "lastQuery": "2025-11-06T17:04:39.123Z"
+        },
+        {
+          "table": "analytics",
+          "avgTime": 217.2667109360707,
+          "count": 72,
+          "lastQuery": "2025-11-06T17:04:39.123Z"
+        }
+      ],
+      "alerts": [
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "LCP alto: 2875ms (meta: 2500ms)",
+          "metric": "lcp",
+          "value": 2875.4526122467705,
+          "threshold": 2500
+        },
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "FID alto: 149ms (meta: 100ms)",
+          "metric": "fid",
+          "value": 149.38636297422113,
+          "threshold": 100
+        },
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "CLS alto: 0.238 (meta: 0.1)",
+          "metric": "cls",
+          "value": 0.23788651107747602,
+          "threshold": 0.1
+        }
+      ]
+    },
+    {
+      "iteration": 10,
+      "timestamp": "2025-11-06T17:04:39.232Z",
+      "coreWebVitals": {
+        "lcp": 4149.554319659415,
+        "fid": 71.08418979137625,
+        "cls": 0.12294283212546392,
+        "fcp": 1947.8269057184996,
+        "ttfb": 203.069839989794
+      },
+      "cacheMetrics": {
+        "hitRate": 83.50911804283243,
+        "hits": 789,
+        "misses": 157,
+        "totalRequests": 946
+      },
+      "queryMetrics": [
+        {
+          "table": "articles",
+          "avgTime": 127.67268480851742,
+          "count": 84,
+          "lastQuery": "2025-11-06T17:04:39.232Z"
+        },
+        {
+          "table": "users",
+          "avgTime": 476.83555199985767,
+          "count": 17,
+          "lastQuery": "2025-11-06T17:04:39.232Z"
+        },
+        {
+          "table": "categories",
+          "avgTime": 354.75231024869555,
+          "count": 56,
+          "lastQuery": "2025-11-06T17:04:39.232Z"
+        },
+        {
+          "table": "comments",
+          "avgTime": 504.02139711855705,
+          "count": 95,
+          "lastQuery": "2025-11-06T17:04:39.232Z"
+        },
+        {
+          "table": "analytics",
+          "avgTime": 137.61150370697902,
+          "count": 16,
+          "lastQuery": "2025-11-06T17:04:39.232Z"
+        }
+      ],
+      "alerts": [
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "LCP alto: 4150ms (meta: 2500ms)",
+          "metric": "lcp",
+          "value": 4149.554319659415,
+          "threshold": 2500
+        },
+        {
+          "type": "performance",
+          "severity": "warning",
+          "message": "CLS alto: 0.123 (meta: 0.1)",
+          "metric": "cls",
+          "value": 0.12294283212546392,
+          "threshold": 0.1
+        }
+      ]
+    }
+  ]
+}
