@@ -144,10 +144,9 @@ const generateMetaDescription = (content: string, title: string, maxLength: numb
 };
 
 // Função para calcular tempo de leitura
+import { computeReadingTime } from './useReadingTime';
 const calculateReadingTime = (content: string): number => {
-  const wordsPerMinute = 200;
-  const wordCount = content.replace(/<[^>]*>/g, '').split(/\s+/).length;
-  return Math.ceil(wordCount / wordsPerMinute);
+  return computeReadingTime(content);
 };
 
 export const useSEO = (options: UseSEOOptions) => {

@@ -17,6 +17,7 @@ import { usePerformanceOptimization } from '../hooks/usePerformanceOptimization'
 import { hybridCache } from '../utils/hybridCache';
 import { SortBy } from '../types';
 import { useAutoFeedbackSync } from '../hooks/useAutoFeedbackSync';
+import { computeReadingTime } from '../hooks/useReadingTime';
 
 const AllArticles: React.FC = () => {
   // DEBUG: Log para verificar se o componente está sendo renderizado
@@ -187,9 +188,7 @@ const AllArticles: React.FC = () => {
   }, []);
 
   const calculateReadTime = useCallback((content: string) => {
-    const wordsPerMinute = 200;
-    const wordCount = content.split(' ').length;
-    return Math.ceil(wordCount / wordsPerMinute);
+    return computeReadingTime(content);
   }, []);
 
   // Sistema 100% automático de sincronização de feedbacks

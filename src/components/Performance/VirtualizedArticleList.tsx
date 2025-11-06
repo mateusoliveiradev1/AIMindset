@@ -2,6 +2,7 @@ import React, { memo, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Clock, Tag } from 'lucide-react';
 import Card from '../UI/Card';
+import { computeReadingTime } from '../../hooks/useReadingTime';
 import { useArticleVirtualScroll } from '../../hooks/useVirtualScroll';
 import { Article } from '../../types';
 
@@ -26,9 +27,7 @@ const ArticleCard = memo<{
 }>(({ article, categories, style }) => {
   // Calcular tempo de leitura
   const calculateReadTime = useMemo(() => {
-    const wordsPerMinute = 200;
-    const wordCount = article.content.split(' ').length;
-    return Math.ceil(wordCount / wordsPerMinute);
+    return computeReadingTime(article.content || '');
   }, [article.content]);
 
   // Formatar data

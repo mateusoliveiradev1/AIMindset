@@ -7,6 +7,7 @@ import { useSEO } from '../hooks/useSEO';
 import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import SEOManager from '../components/SEO/SEOManager';
+import { computeReadingTime } from '../hooks/useReadingTime';
 // import LazyImage from '../components/Performance/LazyImage';
 
 const Category: React.FC = () => {
@@ -140,7 +141,7 @@ const Category: React.FC = () => {
                     </div>
                     <div className="flex items-center">
                       <Clock className="h-4 w-4 mr-1" />
-                      {Math.ceil((article.content || '').split(' ').length / 200)} min
+                      {Math.max(1, computeReadingTime(article.content || ''))} min
                     </div>
                   </div>
 

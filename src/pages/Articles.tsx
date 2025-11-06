@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback, memo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Search, Filter, Calendar, Clock, Tag, ChevronLeft, ChevronRight } from 'lucide-react';
 import Card from '../components/UI/Card';
+import { computeReadingTime } from '../hooks/useReadingTime';
 import Button from '../components/UI/Button';
 import { useArticles } from '../hooks/useArticles';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
@@ -126,9 +127,7 @@ const Articles: React.FC = () => {
   }, []);
 
   const calculateReadTime = useCallback((content: string) => {
-    const wordsPerMinute = 200;
-    const wordCount = content.split(' ').length;
-    return Math.ceil(wordCount / wordsPerMinute);
+    return computeReadingTime(content);
   }, []);
 
   if (error) {
