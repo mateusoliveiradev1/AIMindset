@@ -81,6 +81,26 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    /* Evitar animações pesadas em usuários com preferência por movimento reduzido */
+  }
+
+  /* Otimizações de toque para mobile */
+  a, button, input, select, textarea {
+    touch-action: manipulation;
+  }
+  body {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
+    .animate-float, .animate-pulse-neon, .animate-bounce {
+      animation: none !important;
+    }
   }
   
   h1, h2, h3, h4, h5, h6 {

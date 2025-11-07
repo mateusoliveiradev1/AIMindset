@@ -241,7 +241,8 @@ export const SEOManager: React.FC<SEOManagerProps> = ({ metadata }) => {
       {/* Preconnect para performance */}
       {/* <link rel="preconnect" href="https://fonts.googleapis.com" /> */}
       {/* <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" /> */}
-      <link rel="preconnect" href="https://www.google-analytics.com" />
+      {/* Removido preconnect de GA para reduzir conexões em mobile */}
+      {/* <link rel="preconnect" href="https://www.google-analytics.com" /> */}
       <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
       
       {/* Carregamento das fontes Google Fonts - TEMPORARIAMENTE DESABILITADO PARA PREVIEW */}
@@ -252,7 +253,7 @@ export const SEOManager: React.FC<SEOManagerProps> = ({ metadata }) => {
       /> */}
       
       {/* DNS Prefetch */}
-      <link rel="dns-prefetch" href="//www.google-analytics.com" />
+      {/* <link rel="dns-prefetch" href="//www.google-analytics.com" /> */}
       <link rel="dns-prefetch" href="//images.unsplash.com" />
       {/* <link rel="dns-prefetch" href="//fonts.googleapis.com" /> */}
       {/* <link rel="dns-prefetch" href="//fonts.gstatic.com" /> */}

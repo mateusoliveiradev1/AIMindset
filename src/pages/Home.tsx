@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useCallback } from 'react';
+import { Helmet } from 'react-helmet-async';
 import Hero from '../components/Home/Hero';
 import FeaturedArticles from '../components/Home/FeaturedArticles';
 import Categories from '../components/Home/Categories';
@@ -15,7 +16,7 @@ const Home: React.FC = () => {
   console.log('🏠 [Home] Componente Home renderizado!');
   
   const { categories } = useArticles();
-  const { debouncedRefresh, observerRef } = useHomeOptimization();
+  const { debouncedRefresh, observerRef, featuredArticles } = useHomeOptimization();
   const { getMetadata, preloadCategorySEO } = useSEO({ 
     pageType: 'home',
     fallbackTitle: 'AIMindset - Inteligência Artificial e Produtividade',
@@ -64,6 +65,12 @@ const Home: React.FC = () => {
 
   // Memoizar metadados para evitar recálculos desnecessários
   const metadata = useMemo(() => getMetadata(), [getMetadata]);
+  const preloadImages = useMemo(() => {
+    return (featuredArticles || [])
+      .filter(a => !!a?.image_url)
+      .slice(0, 3)
+      .map(a => a.image_url as string);
+  }, [featuredArticles]);
 
   return (
     <div 
@@ -80,6 +87,14 @@ const Home: React.FC = () => {
         style={refreshIndicatorStyle}
       />
       <SEOManager metadata={metadata} />
+      {/* Preload das primeiras imagens em destaque para LCP menor no mobile */}
+      {preloadImages.length > 0 && (
+        <Helmet>
+          {preloadImages.map((href, i) => (
+            <link key={i} rel="preload" as="image" href={href} />
+          ))}
+        </Helmet>
+      )}
       <Hero />
       <FeaturedArticles />
       <Categories />
