@@ -11,7 +11,7 @@
       "destination": "/api/sitemap-xml"
     },
     {
-      "source": "/((?!api|_next|_static|favicon.ico|robots.txt|site.webmanifest|sw.js|offline.html|assets).*)",
+      "source": "/((?!api|_next|_static|favicon.ico|robots.txt|site.webmanifest|sw.js|offline.html|assets|js|css|images).*)",
       "destination": "/index.html"
     }
   ],
