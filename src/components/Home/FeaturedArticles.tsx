@@ -7,7 +7,7 @@ import { useAutoFeedbackSync } from '../../hooks/useAutoFeedbackSync';
 import { Article } from '../../types';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
-import OptimizedImage from '../Performance/OptimizedImage';
+import { OptimizedImage } from '../Performance/OptimizedImage';
 import { FeaturedArticlesSkeleton } from '../UI/HomeSkeleton';
 // import LazyImage from '../Performance/LazyImage';
 
