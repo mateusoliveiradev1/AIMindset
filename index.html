@@ -4,24 +4,20 @@
     <meta charset="UTF-8" />
     
     <!-- Resource Hints EXTREMOS para performance máxima -->
-    <link rel="dns-prefetch" href="//fonts.googleapis.com">
-    <link rel="dns-prefetch" href="//fonts.gstatic.com">
+    <!-- Removido: DNS prefetch de Google Fonts para evitar warnings -->
     <link rel="dns-prefetch" href="//supabase.co">
     <link rel="dns-prefetch" href="//images.unsplash.com">
     <link rel="dns-prefetch" href="//videos.openai.com">
     
-    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Removido: preconnect para Google Fonts -->
     <link rel="preconnect" href="https://supabase.co" crossorigin>
     
     <!-- Preload recursos críticos removido - causava ERR_ABORTED em produção -->
     
-    <!-- Preload fontes críticas -->
-    <link rel="preload" href="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2" as="font" type="font/woff2" crossorigin>
+    <!-- Removido: preload de fonte Inter não utilizado -->
     
-    <!-- Preload CSS crítico -->
-    <link rel="preload" href="/src/index.css" as="style">
-    <link rel="preload" href="/src/styles/mobile-usability.css" as="style">
+    <!-- Preload CSS crítico: manter apenas index.css via onload -->
+    <!-- Removido: preload de mobile-usability.css para evitar warning -->
     
     <!-- CSP ajustada para compatibilidade com Vercel Live e Supabase -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdn.jsdelivr.net https://unpkg.com https://vercel.live https://*.vercel.app https://*.vercel.com; script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdn.jsdelivr.net https://unpkg.com https://vercel.live https://*.vercel.app https://*.vercel.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: images.unsplash.com; connect-src 'self' http://localhost:* https://*.supabase.co wss://*.supabase.co https://vercel.live https://*.vercel.app https://*.vercel.com videos.openai.com images.unsplash.com; media-src 'self' blob: data: videos.openai.com; object-src 'none'; frame-src 'self' https://vercel.live https://*.vercel.app https://*.vercel.com; base-uri 'self'; form-action 'self';" />
@@ -72,9 +68,7 @@
     
     <!-- Removido: modulepreload de arquivos .tsx que causavam MIME incorreto -->
     
-    <!-- DNS prefetch para recursos externos -->
-    <link rel="dns-prefetch" href="//fonts.googleapis.com">
-    <link rel="dns-prefetch" href="//fonts.gstatic.com">
+    <!-- DNS prefetch para recursos externos (limpo) -->
     <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
     
     <!-- Favicons -->

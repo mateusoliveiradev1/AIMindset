@@ -339,8 +339,8 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
               {toc && toc.length > 0 ? (
                 <nav>
                   <ul className="space-y-3">
-                    {toc.map((item) => (
-                      <li key={item.id}>
+                    {toc.map((item, index) => (
+                      <li key={`${item.id}-${index}`}>
                         <button
                           onClick={(e) => {
                             e.preventDefault();
@@ -417,8 +417,8 @@ export const TableOfContents: React.FC<TableOfContentsProps> = ({
               {toc && toc.length > 0 ? (
                 <nav>
                   <ul className="space-y-2">
-                    {toc.map((item) => (
-                      <li key={item.id}>
+                    {toc.map((item, index) => (
+                      <li key={`${item.id}-${index}`}>
                         <button
                           onClick={(e) => {
                             e.preventDefault();

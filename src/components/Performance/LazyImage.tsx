@@ -238,6 +238,8 @@ const LazyImage: React.FC<LazyImageProps> = ({
         onError={handleError}
         decoding="async"
         fetchPriority={loading === 'eager' ? 'high' : 'low'}
+        crossOrigin={optimizedSrc?.includes('images.unsplash.com') ? 'anonymous' : undefined}
+        referrerPolicy={optimizedSrc?.includes('images.unsplash.com') ? 'no-referrer' : undefined}
       />
 
       {/* Fallback para erro */}

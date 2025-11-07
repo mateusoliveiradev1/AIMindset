@@ -7,9 +7,89 @@
 
 import { supabase } from './supabase';
 
+// Fila offline simples baseada em localStorage
+interface QueuedAppLog {
+  level: LogLevel;
+  source: string;
+  action: string;
+  details: AppLogDetails;
+}
+
+interface QueuedSystemLog {
+  type: SystemLogType;
+  message: string;
+  context: SystemLogContext;
+}
+
+const APP_LOG_QUEUE_KEY = 'aimindset_app_log_queue';
+const SYSTEM_LOG_QUEUE_KEY = 'aimindset_system_log_queue';
+
+function enqueueAppLog(log: QueuedAppLog) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(APP_LOG_QUEUE_KEY) || '[]');
+    existing.push({ ...log, queued_at: Date.now() });
+    localStorage.setItem(APP_LOG_QUEUE_KEY, JSON.stringify(existing));
+  } catch {}
+}
+
+function enqueueSystemLog(log: QueuedSystemLog) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(SYSTEM_LOG_QUEUE_KEY) || '[]');
+    existing.push({ ...log, queued_at: Date.now() });
+    localStorage.setItem(SYSTEM_LOG_QUEUE_KEY, JSON.stringify(existing));
+  } catch {}
+}
+
+async function flushAppLogQueue() {
+  try {
+    const raw = localStorage.getItem(APP_LOG_QUEUE_KEY);
+    if (!raw) return;
+    const queue: any[] = JSON.parse(raw);
+    if (!Array.isArray(queue) || queue.length === 0) return;
+
+    const remaining: any[] = [];
+    for (const item of queue) {
+      try {
+        await logEvent(item.level, item.source, item.action, item.details);
+      } catch (err) {
+        // manter na fila em caso de falha
+        remaining.push(item);
+      }
+    }
+    localStorage.setItem(APP_LOG_QUEUE_KEY, JSON.stringify(remaining));
+  } catch {}
+}
+
+async function flushSystemLogQueue() {
+  try {
+    const raw = localStorage.getItem(SYSTEM_LOG_QUEUE_KEY);
+    if (!raw) return;
+    const queue: any[] = JSON.parse(raw);
+    if (!Array.isArray(queue) || queue.length === 0) return;
+
+    const remaining: any[] = [];
+    for (const item of queue) {
+      try {
+        await logSystem(item.type, item.message, item.context);
+      } catch (err) {
+        remaining.push(item);
+      }
+    }
+    localStorage.setItem(SYSTEM_LOG_QUEUE_KEY, JSON.stringify(remaining));
+  } catch {}
+}
+
+function isOnline(): boolean {
+  try {
+    return typeof navigator !== 'undefined' ? navigator.onLine : true;
+  } catch {
+    return true;
+  }
+}
+
 // Tipos para os logs
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
-export type SystemLogType = 'auth' | 'database' | 'api' | 'cache' | 'performance' | 'security' | 'backup' | 'email' | 'general';
+export type SystemLogType = 'auth' | 'database' | 'api' | 'cache' | 'performance' | 'security' | 'backup' | 'email' | 'general' | 'cache_hit' | 'cache_miss';
 
 // Interface para detalhes do log de aplicação
 export interface AppLogDetails {
@@ -60,6 +140,15 @@ export async function logEvent(
       session_id: details.session_id || generateSessionId()
     };
 
+    // Se offline, enfileirar imediatamente
+    if (!isOnline()) {
+      enqueueAppLog({ level, source, action, details: enrichedDetails });
+      if (import.meta.env.DEV) {
+        console.log(`📥 [APP-LOG QUEUED] ${level.toUpperCase()} | ${source} | ${action}`, enrichedDetails);
+      }
+      return { success: true };
+    }
+
     // Chamar função RPC do Supabase
     const { data, error } = await supabase.rpc('insert_app_log', {
       p_level: level,
@@ -71,6 +160,8 @@ export async function logEvent(
 
     if (error) {
       console.error('❌ [LOG-EVENT] Erro ao registrar log de aplicação:', error);
+      // Enfileirar para retry
+      enqueueAppLog({ level, source, action, details: enrichedDetails });
       return { success: false, error: error.message };
     }
 
@@ -82,6 +173,10 @@ export async function logEvent(
     return { success: true };
   } catch (error) {
     console.error('❌ [LOG-EVENT] Erro crítico ao registrar log:', error);
+    // Enfileirar para retry
+    try {
+      enqueueAppLog({ level, source, action, details });
+    } catch {}
     return { success: false, error: error instanceof Error ? error.message : 'Erro desconhecido' };
   }
 }
@@ -110,6 +205,15 @@ export async function logSystem(
       performance_now: typeof performance !== 'undefined' ? performance.now() : undefined
     };
 
+    // Se offline, enfileirar
+    if (!isOnline()) {
+      enqueueSystemLog({ type, message, context: enrichedContext });
+      if (import.meta.env.DEV) {
+        console.log(`📥 [SYSTEM-LOG QUEUED] ${type.toUpperCase()} | ${message}`, enrichedContext);
+      }
+      return { success: true };
+    }
+
     // Chamar função RPC do Supabase
     const { data, error } = await supabase.rpc('insert_system_log', {
       p_type: type,
@@ -119,6 +223,8 @@ export async function logSystem(
 
     if (error) {
       console.error('❌ [LOG-SYSTEM] Erro ao registrar log de sistema:', error);
+      // Enfileirar para retry
+      enqueueSystemLog({ type, message, context: enrichedContext });
       return { success: false, error: error.message };
     }
 
@@ -130,6 +236,9 @@ export async function logSystem(
     return { success: true };
   } catch (error) {
     console.error('❌ [LOG-SYSTEM] Erro crítico ao registrar log:', error);
+    try {
+      enqueueSystemLog({ type, message, context });
+    } catch {}
     return { success: false, error: error instanceof Error ? error.message : 'Erro desconhecido' };
   }
 }
@@ -242,6 +351,16 @@ export async function initializeLogging(): Promise<void> {
       environment: import.meta.env.MODE,
       timestamp: new Date().toISOString()
     });
+
+    // Tentar flush imediato e configurar listeners
+    await flushAppLogQueue();
+    await flushSystemLogQueue();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => {
+        flushAppLogQueue();
+        flushSystemLogQueue();
+      });
+    }
   } catch (error) {
     console.error('❌ [INIT-LOGGING] Erro ao inicializar sistema de logs:', error);
   }

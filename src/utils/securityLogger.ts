@@ -283,9 +283,17 @@ export class SecurityLogger {
    * Notifica sobre alerta (pode ser expandido)
    */
   private static notifyAlert(alert: SecurityAlert): void {
+    // Suprimir avisos no console para fontes internas em ambiente de desenvolvimento
+    const source = alert.events[0]?.details?.source as string | undefined;
+    const suppressedSources = ['sanitizeInput', 'security_test'];
+    const isSuppressedSource = !!source && suppressedSources.includes(source);
+    const isProd = typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'production';
+
     // Log no console apenas para alertas críticos reais
     if (alert.level === SecurityLevel.CRITICAL && this.isRealThreat(alert)) {
-      console.warn(`[SECURITY ALERT] ${alert.level.toUpperCase()}: ${alert.message}`);
+      if (isProd || !isSuppressedSource) {
+        console.warn(`[SECURITY ALERT] ${alert.level.toUpperCase()}: ${alert.message}`);
+      }
     }
     
     // Em produção, aqui poderia enviar email, webhook, etc.

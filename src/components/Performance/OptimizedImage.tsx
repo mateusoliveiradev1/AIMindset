@@ -152,6 +152,8 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = memo(({
         loading={priority ? 'eager' : 'lazy'}
         fetchPriority={priority ? 'high' : 'low'}
         decoding="async"
+        crossOrigin={lazySrc?.includes('images.unsplash.com') ? 'anonymous' : undefined}
+        referrerPolicy={lazySrc?.includes('images.unsplash.com') ? 'no-referrer' : undefined}
         style={{
           contentVisibility: 'auto',
           containIntrinsicSize: width && height ? `${width}px ${height}px` : 'auto'

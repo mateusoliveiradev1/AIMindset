@@ -4,8 +4,7 @@ import Button from './UI/Button';
 import { useArticles } from '../hooks/useArticles';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { MarkdownLazy } from './Performance/MarkdownLazy';
 // import LazyImage from './Performance/LazyImage';
 import { 
   Save, 
@@ -470,10 +469,9 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
               
               {/* Article Content */}
               <div className="prose-content">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  className="text-gray-200 leading-relaxed"
-                  components={{
+                  <MarkdownLazy
+                    className="text-gray-200 leading-relaxed"
+                    components={{
                     h1: ({ children }) => (
                       <h1 className="text-3xl font-montserrat font-bold text-white mt-8 mb-4 border-b border-neon-purple/20 pb-2">
                         {children}
@@ -761,6 +759,8 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
                            width={400}
                            height={200}
                            loading="eager"
+                           crossOrigin={featuredImage?.includes('images.unsplash.com') ? 'anonymous' : undefined}
+                           referrerPolicy={featuredImage?.includes('images.unsplash.com') ? 'no-referrer' : undefined}
                          />
                        </div>
                      </div>

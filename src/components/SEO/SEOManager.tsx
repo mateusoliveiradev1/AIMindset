@@ -238,10 +238,11 @@ export const SEOManager: React.FC<SEOManagerProps> = ({ metadata }) => {
       <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       <meta name="apple-mobile-web-app-title" content="AIMindset" />
       
-      {/* Preconnect para performance - TEMPORARIAMENTE DESABILITADO PARA PREVIEW */}
+      {/* Preconnect para performance */}
       {/* <link rel="preconnect" href="https://fonts.googleapis.com" /> */}
       {/* <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" /> */}
       <link rel="preconnect" href="https://www.google-analytics.com" />
+      <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
       
       {/* Carregamento das fontes Google Fonts - TEMPORARIAMENTE DESABILITADO PARA PREVIEW */}
       {/* <link 
@@ -250,8 +251,9 @@ export const SEOManager: React.FC<SEOManagerProps> = ({ metadata }) => {
         crossOrigin="anonymous"
       /> */}
       
-      {/* DNS Prefetch - TEMPORARIAMENTE DESABILITADO PARA PREVIEW */}
+      {/* DNS Prefetch */}
       <link rel="dns-prefetch" href="//www.google-analytics.com" />
+      <link rel="dns-prefetch" href="//images.unsplash.com" />
       {/* <link rel="dns-prefetch" href="//fonts.googleapis.com" /> */}
       {/* <link rel="dns-prefetch" href="//fonts.gstatic.com" /> */}
       

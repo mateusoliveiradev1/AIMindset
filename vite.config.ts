@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import { visualizer } from 'rollup-plugin-visualizer'
+import fs from 'fs'
+import { gzipSync, brotliCompressSync } from 'zlib'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -13,7 +15,57 @@ export default defineConfig({
       open: true,
       gzipSize: true,
       brotliSize: true,
-    })
+    }),
+    // Plugin para gerar relatório real de bundle e emitir ativos comprimidos
+    {
+      name: 'bundle-performance-report',
+      generateBundle(options, bundle) {
+        try {
+          const outDir = (options.dir || 'dist') as string;
+          let totalSize = 0;
+          let totalGzip = 0;
+          let totalBr = 0;
+          const assets: Array<{ fileName: string; size: number; gzipSize: number; brSize: number }> = [];
+
+          for (const [fileName, chunk] of Object.entries(bundle)) {
+            if (chunk.type === 'chunk' || chunk.type === 'asset') {
+              const source: any = (chunk as any).code || (chunk as any).source || '';
+              const content = typeof source === 'string' ? Buffer.from(source) : Buffer.from(source || '');
+              const size = content.length;
+              totalSize += size;
+
+              let gzipSize = 0;
+              let brSize = 0;
+              try { gzipSize = gzipSync(content).length; totalGzip += gzipSize; } catch {}
+              try { brSize = brotliCompressSync(content).length; totalBr += brSize; } catch {}
+
+              assets.push({ fileName, size, gzipSize, brSize });
+
+              // Emitir versões comprimidas para JS/CSS
+              if (/\.(js|css)$/.test(fileName)) {
+                try { this.emitFile({ type: 'asset', fileName: `${fileName}.gz`, source: gzipSync(content) }); } catch {}
+                try { this.emitFile({ type: 'asset', fileName: `${fileName}.br`, source: brotliCompressSync(content) }); } catch {}
+              }
+            }
+          }
+
+          const report = {
+            generatedAt: new Date().toISOString(),
+            totalSize,
+            totalGzip,
+            totalBr,
+            assets
+          };
+
+          try {
+            if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
+            fs.writeFileSync(path.join(outDir, 'performance-report.json'), JSON.stringify(report, null, 2));
+          } catch {}
+        } catch (err) {
+          console.error('[bundle-performance-report] erro ao gerar relatório:', err);
+        }
+      }
+    }
   ],
   resolve: {
     alias: {
@@ -21,6 +73,7 @@ export default defineConfig({
     },
   },
   build: {
+    reportCompressedSize: true,
     // Otimizações de build para performance
     target: 'es2020',
     minify: 'terser',
@@ -33,26 +86,46 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        // Code splitting otimizado para Fase 1.3
+        // Code splitting agressivo com chunks dedicados
         manualChunks: {
-          // Vendor chunks básicos
+          // Vendors base
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'ui-vendor': ['lucide-react', 'sonner', 'react-helmet-async'],
+          'charts-vendor': ['recharts', 'chart.js', 'react-chartjs-2'],
+          'markdown-vendor': ['react-markdown', 'remark-gfm'],
           'supabase-vendor': ['@supabase/supabase-js'],
-          
-          // Chunks específicos para módulos pesados do admin (Fase 1.3)
-          'admin-heavy': [
-            './src/pages/admin/logs',
-            './src/pages/admin/backup'
-          ],
-          'admin-monitor': [
-            './src/pages/admin/feedback',
-            './src/pages/admin/seo'
-          ],
+
+          // Admin: separar áreas pesadas
           'admin-core': [
             './src/pages/admin/index',
             './src/pages/admin/articles',
             './src/pages/admin/users'
+          ],
+          'admin-logs': [
+            './src/components/Admin/SystemLogsTab',
+            './src/components/Admin/LogsDashboard',
+            './src/components/Admin/BackendLogsTab',
+            './src/components/Admin/AppLogsTab'
+          ],
+          'admin-monitor': [
+            './src/pages/admin/feedback',
+            './src/pages/admin/seo',
+            './src/components/Admin/PerformanceDashboard',
+            './src/components/Admin/UnifiedPerformanceDashboard'
+          ],
+          'admin-backup': [
+            './src/pages/admin/backup',
+            './src/components/Admin/BackupMonitoring'
+          ],
+
+          // Artigos e editores
+          'articles-core': [
+            './src/pages/AllArticles',
+            './src/pages/Article',
+            './src/hooks/useArticles'
+          ],
+          'editor-core': [
+            './src/components/ArticleEditor'
           ]
         },
         // Nomes de chunks mais limpos
@@ -75,11 +148,11 @@ export default defineConfig({
           return `assets/[name]-[hash][extname]`
         }
       },
-      // Tree shaking mais conservador
+      // Tree shaking agressivo
       treeshake: {
-        moduleSideEffects: 'no-external',
-        propertyReadSideEffects: true,
-        unknownGlobalSideEffects: true
+        moduleSideEffects: false,
+        propertyReadSideEffects: false,
+        unknownGlobalSideEffects: false
       }
     },
     // Configurações de chunk size

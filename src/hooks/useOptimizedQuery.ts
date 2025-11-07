@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useSystemLogs } from './useSystemLogs';
+import { queryMetricsTracker } from '@/utils/queryMetrics';
 import { useCache } from './useCache';
 
 interface QueryConfig {
@@ -223,6 +224,9 @@ export const useOptimizedQuery = <T = any>(
           timestamp: now
         });
 
+        // Registrar métricas locais
+        queryMetricsTracker.record(queryKey, executionTime, dataSize);
+
         await logInfo('Query served from cache', {
           queryKey,
           cacheAge: now - cachedData.timestamp,
@@ -271,6 +275,9 @@ export const useOptimizedQuery = <T = any>(
               deduped: false,
               timestamp: now
             });
+
+            // Registrar métricas locais
+            queryMetricsTracker.record(queryKey, executionTime, dataSize);
 
             // Otimizar índices se aplicável
             if (optimizeIndexes && queryKey.includes('from_')) {

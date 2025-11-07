@@ -87,6 +87,9 @@ export const useLazyImage = (src: string, options: LazyLoadingOptions = {}) => {
   useEffect(() => {
     if (isVisible && src && !imageSrc) {
       const img = new Image();
+      if (src.includes('images.unsplash.com')) {
+        img.crossOrigin = 'anonymous';
+      }
       
       img.onload = () => {
         setImageSrc(src);

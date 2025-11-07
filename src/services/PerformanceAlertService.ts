@@ -152,9 +152,9 @@ class PerformanceAlertService {
     
     const { data, error } = await supabase
       .from('system_logs')
-      .select('created_at, event_type, metadata')
+      .select('created_at, type, context')
       .gte('created_at', oneHourAgo)
-      .in('event_type', ['performance_audit', 'query_performance', 'cache_hit', 'cache_miss'])
+      .in('type', ['performance_audit', 'query_performance', 'cache_hit', 'cache_miss'])
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -173,7 +173,7 @@ class PerformanceAlertService {
     const counts: any = {};
 
     metrics.forEach(metric => {
-      const metadata = metric.metadata || {};
+      const metadata = metric.context || {};
       
       Object.entries(metadata).forEach(([key, value]) => {
         if (typeof value === 'number') {
@@ -231,14 +231,14 @@ class PerformanceAlertService {
     
     const { data, error } = await supabase
       .from('system_logs')
-      .select('event_type')
-      .gte('timestamp', sixHoursAgo)
-      .in('event_type', ['cache_hit', 'cache_miss']);
+      .select('type')
+      .gte('created_at', sixHoursAgo)
+      .in('type', ['cache_hit', 'cache_miss']);
 
     if (error || !data || data.length === 0) return;
 
-    const hits = data.filter(log => log.event_type === 'cache_hit').length;
-    const misses = data.filter(log => log.event_type === 'cache_miss').length;
+    const hits = data.filter(log => log.type === 'cache_hit').length;
+    const misses = data.filter(log => log.type === 'cache_miss').length;
     const total = hits + misses;
     
     if (total === 0) return;
@@ -279,20 +279,20 @@ class PerformanceAlertService {
     
     const { data, error } = await supabase
       .from('system_logs')
-      .select('metadata')
+      .select('context')
       .gte('created_at', oneHourAgo)
-      .eq('event_type', 'query_performance');
+      .eq('type', 'query_performance');
 
     if (error || !data || data.length === 0) return;
 
     const slowQueries = data.filter(log => {
-      const queryTime = log.metadata?.queryTime || 0;
+      const queryTime = log.context?.queryTime || 0;
       return queryTime > this.config.thresholds.queryTime;
     });
 
     if (slowQueries.length > 0) {
       const avgSlowQueryTime = slowQueries.reduce((sum, log) => 
-        sum + (log.metadata?.queryTime || 0), 0) / slowQueries.length;
+        sum + (log.context?.queryTime || 0), 0) / slowQueries.length;
       
       const severity = avgSlowQueryTime > this.config.thresholds.queryTime * 2 ? 'critical' : 'warning';
       
@@ -361,18 +361,18 @@ class PerformanceAlertService {
       const { error } = await supabase
         .from('system_logs')
         .insert({
-          event_type: 'performance_alert',
-          level: alert.severity,
+          type: 'performance_alert',
           message: alert.message,
-          metadata: {
+          context: {
             alert_type: alert.type,
             metric: alert.metric,
             current_value: alert.currentValue,
             threshold: alert.threshold,
-            context: alert.context,
-            acknowledged: alert.acknowledged
-          },
-          source: 'performance_alert_service'
+            details: alert.context,
+            acknowledged: alert.acknowledged,
+            severity: alert.severity,
+            source: 'performance_alert_service'
+          }
         });
 
       if (error) {
@@ -409,8 +409,8 @@ class PerformanceAlertService {
     const { data, error } = await supabase
       .from('system_logs')
       .select('*')
-      .eq('event_type', 'performance_alert')
-      .eq('metadata->>acknowledged', 'false')
+      .eq('type', 'performance_alert')
+      .eq('context->>acknowledged', 'false')
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -421,14 +421,14 @@ class PerformanceAlertService {
 
     return (data || []).map(log => ({
       id: log.id,
-      type: log.metadata?.alert_type || 'unknown',
-      severity: log.level || 'info',
-      metric: log.metadata?.metric || 'unknown',
-      currentValue: log.metadata?.current_value || 0,
-      threshold: log.metadata?.threshold || 0,
+      type: log.context?.alert_type || 'unknown',
+      severity: log.context?.severity || 'info',
+      metric: log.context?.metric || 'unknown',
+      currentValue: log.context?.current_value || 0,
+      threshold: log.context?.threshold || 0,
       message: log.message,
-      context: log.metadata?.context,
-      acknowledged: log.metadata?.acknowledged || false,
+      context: log.context?.details,
+      acknowledged: log.context?.acknowledged || false,
       created_at: log.created_at
     }));
   }
@@ -440,8 +440,8 @@ class PerformanceAlertService {
     const { error } = await supabase
       .from('system_logs')
       .update({
-        metadata: {
-          ...((await supabase.from('system_logs').select('metadata').eq('id', alertId).single()).data?.metadata || {}),
+        context: {
+          ...((await supabase.from('system_logs').select('context').eq('id', alertId).single()).data?.context || {}),
           acknowledged: true,
           acknowledged_at: new Date().toISOString()
         }

@@ -63,11 +63,12 @@ const PreloadManager: React.FC<PreloadManagerProps> = ({
       document.head.appendChild(link);
     });
 
-    // DNS prefetch para domínios externos - TEMPORARIAMENTE DESABILITADO PARA PREVIEW
+    // DNS prefetch para domínios externos
     // const externalDomains = [
     //   'fonts.googleapis.com',
     //   'fonts.gstatic.com',
-    //   'trae-api-us.mchost.guru'
+    //   'trae-api-us.mchost.guru',
+    //   'images.unsplash.com'
     // ];
 
     // externalDomains.forEach(domain => {
@@ -77,19 +78,20 @@ const PreloadManager: React.FC<PreloadManagerProps> = ({
     //   document.head.appendChild(link);
     // });
 
-    // Preconnect para recursos críticos externos - TEMPORARIAMENTE DESABILITADO PARA PREVIEW
-    // const criticalDomains = [
-    //   'fonts.googleapis.com',
-    //   'fonts.gstatic.com'
-    // ];
+    // Preconnect para recursos críticos externos
+    const criticalDomains = [
+      // 'fonts.googleapis.com',
+      // 'fonts.gstatic.com',
+      'images.unsplash.com'
+    ];
 
-    // criticalDomains.forEach(domain => {
-    //   const link = document.createElement('link');
-    //   link.rel = 'preconnect';
-    //   link.href = `https://${domain}`;
-    //   link.crossOrigin = 'anonymous';
-    //   document.head.appendChild(link);
-    // });
+    criticalDomains.forEach(domain => {
+      const link = document.createElement('link');
+      link.rel = 'preconnect';
+      link.href = `https://${domain}`;
+      link.crossOrigin = 'anonymous';
+      document.head.appendChild(link);
+    });
 
   }, [criticalResources, prefetchResources]);
 

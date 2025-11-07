@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { hybridCache } from './hybridCache';
+import { logSystem } from '../lib/logging';
 
 // Performance metrics interface
 export interface PerformanceMetrics {
@@ -112,6 +113,20 @@ class PerformanceMonitor {
     // Log inteligente baseado no evento
     this.smartLog(event, options);
 
+    // Persistir eventos críticos de cache com amostragem para evitar excesso de logs
+    if (event === 'cache_hit' || event === 'cache_miss') {
+      const shouldPersist = this.shouldPersistCacheEvent();
+      if (shouldPersist) {
+        const type = event === 'cache_hit' ? 'cache_hit' : 'cache_miss';
+        logSystem(type, `Cache ${event}`, {
+          cacheLayer: options?.cacheLayer,
+          key: options?.key,
+          duration_ms: options?.duration,
+          cacheName: options?.cacheLayer,
+        }).catch(() => {});
+      }
+    }
+
     // Notificar listeners apenas se necessário
     if (this.listeners.length > 0) {
       const metrics = this.getMetrics();
@@ -152,6 +167,13 @@ class PerformanceMonitor {
         }
         break;
     }
+  }
+
+  // Regra simples de amostragem: apenas 1 em cada 8 eventos de cache
+  private shouldPersistCacheEvent(): boolean {
+    const recent = this.dataPoints.slice(-16);
+    const cacheEvents = recent.filter(dp => dp.event === 'cache_hit' || dp.event === 'cache_miss');
+    return cacheEvents.length % 8 === 0;
   }
 
   // Get performance metrics with caching

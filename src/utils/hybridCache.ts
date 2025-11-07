@@ -64,11 +64,32 @@ class SmartTTLManager {
   private static readonly POPULAR_TTL = 15 * 60 * 1000; // 15 minutos para populares
   private static readonly NEW_TTL = 3 * 60 * 1000; // 3 minutos para novos
   private static readonly ADMIN_TTL = 30 * 1000; // 30 segundos para admin
-  
+  private static readonly LONG_TTL = 30 * 60 * 1000; // 30 minutos para listas principais
+
+  // Overrides específicos por chave
+  private static KEY_TTL_OVERRIDES: Record<string, number> = {
+    'articles_list': SmartTTLManager.LONG_TTL,
+    'categories_list': SmartTTLManager.LONG_TTL,
+    'categories_fast': SmartTTLManager.LONG_TTL,
+    'featured_articles': SmartTTLManager.LONG_TTL
+  };
+
   static calculateTTL(key: string, accessCount: number = 0, isAdminOperation = false): number {
     // Operações admin = TTL muito baixo para refresh rápido
     if (isAdminOperation) {
       return this.ADMIN_TTL;
+    }
+
+    // Normalizar chave removendo prefixos de user-role (ex.: "super_admin:articles_list")
+    const baseKey = (() => {
+      const idx = key.lastIndexOf(':');
+      return idx >= 0 ? key.substring(idx + 1) : key;
+    })();
+
+    // Overrides por chave (listas mais acessadas)
+    const override = this.KEY_TTL_OVERRIDES[baseKey];
+    if (override) {
+      return override;
     }
     
     // Artigos populares (mais de 5 acessos) = TTL maior
@@ -130,6 +151,8 @@ class RetryManager {
 class MemoryCache {
   private cache = new Map<string, CacheEntry<any>>();
   private cleanupInterval: NodeJS.Timeout | null = null;
+  private maxEntries = 100; // LRU: manter no máximo 100 entradas em memória
+  private lruList: Array<{ key: string; lastAccess: number }> = [];
   
   constructor() {
     this.startCleanupTimer();
@@ -148,6 +171,10 @@ class MemoryCache {
     };
     
     this.cache.set(key, entry);
+
+    // Atualizar LRU
+    this.updateLRU(key);
+    this.enforceLRULimit();
     
     // Log reduzido para admin
     if (!AdminModeManager.isInAdminMode()) {
@@ -172,12 +199,16 @@ class MemoryCache {
     // Atualizar estatísticas de acesso
     entry.accessCount = (entry.accessCount || 0) + 1;
     entry.lastAccess = Date.now();
+
+    // Atualizar LRU
+    this.updateLRU(key);
     
     return entry.data;
   }
   
   invalidate(key: string): void {
     const deleted = this.cache.delete(key);
+    this.removeFromLRU(key);
     if (deleted && !AdminModeManager.isInAdminMode()) {
       console.log(`🗑️ [L1 Cache] INVALIDATED: ${key}`);
     }
@@ -198,6 +229,7 @@ class MemoryCache {
   
   clear(): void {
     this.cache.clear();
+    this.lruList = [];
     if (!AdminModeManager.isInAdminMode()) {
       console.log(`🧹 [L1 Cache] CLEARED ALL`);
     }
@@ -224,6 +256,9 @@ class MemoryCache {
         cleanedCount++;
       }
     }
+
+    // Limpar LRU de chaves inexistentes
+    this.lruList = this.lruList.filter(item => this.cache.has(item.key));
     
     if (cleanedCount > 0 && !AdminModeManager.isInAdminMode()) {
       console.log(`🧹 [L1 Cache] Cleaned ${cleanedCount} expired entries`);
@@ -234,6 +269,27 @@ class MemoryCache {
     if (this.cleanupInterval) {
       clearInterval(this.cleanupInterval);
       this.cleanupInterval = null;
+    }
+  }
+
+  private updateLRU(key: string): void {
+    const now = Date.now();
+    // Remover existente
+    this.lruList = this.lruList.filter(item => item.key !== key);
+    // Inserir no topo
+    this.lruList.unshift({ key, lastAccess: now });
+  }
+
+  private removeFromLRU(key: string): void {
+    this.lruList = this.lruList.filter(item => item.key !== key);
+  }
+
+  private enforceLRULimit(): void {
+    while (this.lruList.length > this.maxEntries) {
+      const lru = this.lruList.pop();
+      if (lru) {
+        this.cache.delete(lru.key);
+      }
     }
   }
 }
@@ -437,6 +493,9 @@ class HybridCacheSystem {
     invalidations: 0,
     lastUpdate: Date.now()
   };
+  private keyPrefix: string = '';
+  private swrKeys = new Set<string>(['articles_list', 'categories_list', 'categories_fast']);
+  private refresherRegistry: Map<string, () => Promise<any>> = new Map();
   
   // Método para ativar modo admin (operações instantâneas)
   enableAdminMode(): void {
@@ -449,27 +508,48 @@ class HybridCacheSystem {
   
   async get<T>(key: string): Promise<{ hit: boolean; data: T | null; source: string }> {
     const startTime = performance.now();
+    const fullKey = this.getFullKey(key);
     
     // Tentar L1 primeiro
-    const l1Data = this.l1Cache.get<T>(key);
+    const l1Data = this.l1Cache.get<T>(fullKey);
     if (l1Data !== null) {
       this.metrics.hits++;
-      trackCacheOperation('cache_hit', 'L1', key, performance.now() - startTime);
+      trackCacheOperation('cache_hit', 'L1', fullKey, performance.now() - startTime);
       return { hit: true, data: l1Data, source: 'L1' };
     }
     
     // Tentar L2
-    const l2Data = await this.l2Cache.get<T>(key);
+    const l2Data = await this.l2Cache.get<T>(fullKey);
     if (l2Data !== null) {
       // Promover para L1
-      this.l1Cache.set(key, l2Data);
+      this.l1Cache.set(fullKey, l2Data);
       this.metrics.hits++;
-      trackCacheOperation('cache_hit', 'L2', key, performance.now() - startTime);
+      trackCacheOperation('cache_hit', 'L2', fullKey, performance.now() - startTime);
       return { hit: true, data: l2Data, source: 'L2' };
     }
-    
+
     this.metrics.misses++;
-    trackCacheOperation('cache_miss', 'L1', key, performance.now() - startTime);
+    trackCacheOperation('cache_miss', 'L1', fullKey, performance.now() - startTime);
+
+    // SWR: se chave elegível, tentar retornar dado stale de L2 e atualizar em background
+    if (this.swrKeys.has(key)) {
+      const stale = await this.l2Cache.get<T>(fullKey);
+      if (stale !== null) {
+        // Atualizar em background
+        const refresher = this.refresherRegistry.get(key);
+        if (refresher) {
+          refresher()
+            .then((fresh) => {
+              if (fresh) {
+                this.set(key, fresh, { accessCount: 10 }).catch(() => {});
+              }
+            })
+            .catch(() => {});
+        }
+        return { hit: true, data: stale, source: 'SWR' };
+      }
+    }
+
     return { hit: false, data: null, source: 'none' };
   }
   
@@ -485,36 +565,39 @@ class HybridCacheSystem {
     const startTime = performance.now();
     
     // Armazenar em L1
-    this.l1Cache.set(key, data, accessCount, isAdminOperation);
+    const fullKey = this.getFullKey(key);
+    this.l1Cache.set(fullKey, data, accessCount, isAdminOperation);
     
     // Armazenar em L2 (async, não bloquear)
-    this.l2Cache.set(key, data, accessCount, isAdminOperation).catch(error => {
-      console.error(`❌ [L2 Cache] Set failed for ${key}:`, error);
+    this.l2Cache.set(fullKey, data, accessCount, isAdminOperation).catch(error => {
+      console.error(`❌ [L2 Cache] Set failed for ${fullKey}:`, error);
     });
-    
-    trackCacheOperation('cache_set', 'L1', key, performance.now() - startTime);
+
+    trackCacheOperation('cache_set', 'L1', fullKey, performance.now() - startTime);
   }
   
   async invalidate(key: string): Promise<void> {
     const startTime = performance.now();
+    const fullKey = this.getFullKey(key);
     
     // Invalidar em ambos os níveis
-    this.l1Cache.invalidate(key);
-    await this.l2Cache.invalidate(key);
+    this.l1Cache.invalidate(fullKey);
+    await this.l2Cache.invalidate(fullKey);
     
     this.metrics.invalidations++;
-    trackCacheOperation('cache_invalidation', 'L1', key, performance.now() - startTime);
+    trackCacheOperation('cache_invalidation', 'L1', fullKey, performance.now() - startTime);
   }
   
   async invalidatePattern(pattern: string): Promise<void> {
     const startTime = performance.now();
     
     // Invalidar em ambos os níveis
-    this.l1Cache.invalidatePattern(pattern);
-    await this.l2Cache.invalidatePattern(pattern);
+    const fullPattern = this.keyPrefix ? `${this.keyPrefix}:${pattern}` : pattern;
+    this.l1Cache.invalidatePattern(fullPattern);
+    await this.l2Cache.invalidatePattern(fullPattern);
     
     this.metrics.invalidations++;
-    trackCacheOperation('cache_invalidation', 'L1', pattern, performance.now() - startTime);
+    trackCacheOperation('cache_invalidation', 'L1', fullPattern, performance.now() - startTime);
   }
   
   async clear(): Promise<void> {
@@ -591,6 +674,28 @@ class HybridCacheSystem {
       throw error;
     }
   }
+
+  // Prefixo de chaves por role (cache por user-role)
+  setKeyPrefix(prefix: string): void {
+    this.keyPrefix = prefix ? String(prefix) : '';
+  }
+
+  private getFullKey(key: string): string {
+    return this.keyPrefix ? `${this.keyPrefix}:${key}` : key;
+  }
+
+  // Registrar função de refresh para SWR
+  registerRefresher(key: string, refresher: () => Promise<any>): void {
+    this.refresherRegistry.set(key, refresher);
+  }
+
+  // Habilitar/Desabilitar SWR para chaves
+  enableSWRForKey(key: string): void {
+    this.swrKeys.add(key);
+  }
+  disableSWRForKey(key: string): void {
+    this.swrKeys.delete(key);
+  }
 }
 
 // Chaves de cache padronizadas
@@ -614,6 +719,20 @@ export const hybridCache = new HybridCacheSystem();
 
 // Exportar AdminModeManager para uso externo
 export { AdminModeManager };
+
+// Helpers para registro externo
+export const registerCacheRefresher = (key: string, refresher: () => Promise<any>) => {
+  hybridCache.registerRefresher(key, refresher);
+};
+export const setCacheKeyPrefix = (prefix: string) => {
+  hybridCache.setKeyPrefix(prefix);
+};
+export const enableSWRForKey = (key: string) => {
+  hybridCache.enableSWRForKey(key);
+};
+export const disableSWRForKey = (key: string) => {
+  hybridCache.disableSWRForKey(key);
+};
 
 // Cleanup ao sair
 if (typeof window !== 'undefined') {

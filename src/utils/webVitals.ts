@@ -1,5 +1,6 @@
 // Web Vitals EXTREMOS para monitoramento de performance
 import { onCLS, onINP, onFCP, onLCP, onTTFB } from 'web-vitals';
+import { logSystem } from '../lib/logging';
 
 interface WebVitalsMetric {
   name: string;
@@ -130,7 +131,10 @@ class WebVitalsMonitor {
       this.reportPoorMetric(metric);
     }
 
-    // Enviar apenas se habilitado e não-localhost
+    // Sempre logar no Supabase com dados reais
+    this.logToSupabase(metric).catch(() => {});
+
+    // Enviar para outros analytics apenas se habilitado e não-localhost
     if (this.shouldSendAnalytics()) {
       this.sendToAnalytics(metric);
     }
@@ -180,7 +184,6 @@ class WebVitalsMonitor {
           custom_parameter_1: metric.id
         });
       }
-
       // Enviar para endpoint personalizado
       const performanceData: PerformanceData = {
         cls: this.metrics.get('CLS')?.value || 0,
@@ -216,6 +219,26 @@ class WebVitalsMonitor {
         console.error('Failed to send analytics:', error);
       }
     }
+  }
+
+  private async logToSupabase(metric: WebVitalsMetric) {
+    const performanceData: PerformanceData = {
+      cls: this.metrics.get('CLS')?.value || 0,
+      inp: this.metrics.get('INP')?.value || 0,
+      fcp: this.metrics.get('FCP')?.value || 0,
+      lcp: this.metrics.get('LCP')?.value || 0,
+      ttfb: this.metrics.get('TTFB')?.value || 0,
+      timestamp: Date.now(),
+      url: window.location.href,
+      userAgent: navigator.userAgent
+    };
+
+    await logSystem('performance', 'web_vitals', {
+      webVitals: performanceData,
+      metricName: metric.name,
+      metricValue: metric.value,
+      rating: metric.rating
+    });
   }
 
   private async endpointExists(url: string): Promise<boolean> {

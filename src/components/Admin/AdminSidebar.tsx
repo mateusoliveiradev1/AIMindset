@@ -119,23 +119,17 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ collapsed, onToggle }) => {
       gradient: 'from-neon-yellow to-neon-yellow-light'
     },
     { 
-      name: 'SEO', 
-      href: '/admin/seo', 
-      icon: Search,
-      gradient: 'from-neon-indigo to-neon-indigo-light'
-    },
-    { 
-      name: 'Performance', 
-      href: '/admin/performance', 
-      icon: Activity,
-      gradient: 'from-lime-green to-lime-green-light'
-    },
-    { 
-      name: 'Logs', 
-      href: '/admin/logs', 
-      icon: Activity,
-      gradient: 'from-neon-red to-neon-red-light'
-    },
+    name: 'SEO', 
+    href: '/admin/seo', 
+    icon: Search,
+    gradient: 'from-neon-indigo to-neon-indigo-light'
+  },
+  { 
+    name: 'Logs', 
+    href: '/admin/logs', 
+    icon: Activity,
+    gradient: 'from-neon-red to-neon-red-light'
+  },
     { 
       name: 'Backup', 
       href: '/admin/backup', 

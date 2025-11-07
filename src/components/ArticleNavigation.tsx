@@ -75,6 +75,8 @@ const NavigationCard: React.FC<NavigationCardProps> = ({ article, direction }) =
             width={64}
             height={64}
             loading="lazy"
+            crossOrigin={article.image_url?.includes('images.unsplash.com') ? 'anonymous' : undefined}
+            referrerPolicy={article.image_url?.includes('images.unsplash.com') ? 'no-referrer' : undefined}
           />
         </div>
       )}

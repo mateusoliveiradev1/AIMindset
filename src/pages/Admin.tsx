@@ -62,6 +62,7 @@ import { SEODashboard } from '../components/Admin/SEODashboard';
 import { BackupTab } from '../components/Admin/BackupTab';
 import { LogsTab } from '../components/Admin/LogsTab';
 import { resetForFeedbackTesting, getLocalStorageInfo } from '../utils/localStorageReset';
+import UnifiedPerformanceDashboard from '../components/Admin/UnifiedPerformanceDashboard';
 
 
 export const Admin: React.FC = () => {

@@ -80,7 +80,7 @@ export default function AdminArticles() {
         case 'title':
           return (a.title || '').localeCompare(b.title || '');
         case 'views':
-          return (b.views_count || 0) - (a.views_count || 0);
+    return (b.total_views || 0) - (a.total_views || 0);
         default:
           return 0;
       }

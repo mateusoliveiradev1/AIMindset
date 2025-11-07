@@ -53,9 +53,11 @@ export const supabaseAdmin = (() => {
 
   adminInstance = createClient(finalUrl, supabaseKey, {
     auth: {
-      autoRefreshToken: isBrowser,
-      persistSession: isBrowser,
-      storage: isBrowser ? window.localStorage : undefined,
+      autoRefreshToken: false,
+      persistSession: false,
+      // Evitar conflito com cliente anon: usar storage isolado quando necessário
+      storage: isBrowser ? window.sessionStorage : undefined,
+      storageKey: 'aimindset.admin.auth.token',
       detectSessionInUrl: false
     },
     global: {

@@ -150,14 +150,14 @@ export class SupabaseQueryOptimizer {
         'title',
         'slug',
         'excerpt',
-        'featured_image',
+        'image_url',
         'created_at',
         'updated_at',
         'published',
         'category_id',
         'author_id',
         'likes_count',
-        'views_count'
+        'total_views'
       ],
       range: [offset, offset + limit - 1],
       orderBy: { column: orderBy, ascending: false },
@@ -184,17 +184,17 @@ export class SupabaseQueryOptimizer {
         'title',
         'slug',
         'excerpt',
-        'featured_image',
+        'image_url',
         'created_at',
         'category_id',
         'likes_count',
-        'views_count'
+        'total_views'
       ],
       limit,
       orderBy: { column: 'created_at', ascending: false },
       filters: [
         { column: 'published', operator: 'eq', value: true },
-        { column: 'featured_image', operator: 'neq', value: null }
+        { column: 'image_url', operator: 'neq', value: null }
       ],
       usePartitionRoot: false
     };

@@ -150,7 +150,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(handleArticleRequest(request));
   } else if (isAPIRequest(url)) {
     event.respondWith(handleAPIRequest(request));
-  } else if (isImageRequest(url)) {
+  } else if (request.destination === 'image' || isImageRequest(url)) {
     event.respondWith(handleImageRequest(request));
   } else {
     event.respondWith(handleDynamicRequest(request));
@@ -221,8 +221,11 @@ function isArticleRequest(url) {
 }
 
 function isImageRequest(url) {
-  return url.pathname.match(/\.(png|jpg|jpeg|gif|svg|webp|avif|bmp|tiff)$/) ||
-         url.hostname.includes('trae-api-us.mchost.guru');
+  return (
+    url.pathname.match(/\.(png|jpg|jpeg|gif|svg|webp|avif|bmp|tiff)$/) ||
+    url.hostname.includes('trae-api-us.mchost.guru') ||
+    url.hostname.includes('images.unsplash.com')
+  );
 }
 
 // Handlers otimizados para cada tipo de recurso

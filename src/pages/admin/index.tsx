@@ -19,7 +19,7 @@ import { ResponsiveContainer, BarChart, Bar, CartesianGrid, XAxis, YAxis, Toolti
 import { useNavigate } from 'react-router-dom';
 import { useArticles } from '@/hooks/useArticles';
 import { useDebounce } from '@/hooks/useDebounce';
-import { PerformanceMonitor } from '@/components/Admin/PerformanceMonitor';
+import UnifiedPerformanceDashboard from '@/components/Admin/UnifiedPerformanceDashboard';
 
 
 // Skeletons
@@ -298,11 +298,10 @@ export default function AdminDashboard() {
         </Button>
       </div>
 
-      {/* Performance Monitor */}
+      {/* Dashboard de Performance Unificado */}
       <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10">
         <div className="p-4 sm:p-6">
-          <h3 className="text-base sm:text-lg font-orbitron font-bold text-white mb-3">Monitor de Performance</h3>
-          <PerformanceMonitor />
+          <UnifiedPerformanceDashboard />
         </div>
       </Card>
 

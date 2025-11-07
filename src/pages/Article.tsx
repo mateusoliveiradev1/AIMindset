@@ -1,8 +1,7 @@
 import React, { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Calendar, Clock, Tag, Share2, Twitter, Linkedin, Facebook, ArrowLeft, ArrowRight } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import { MarkdownLazy } from '../components/Performance/MarkdownLazy';
 import { toast } from 'sonner';
 import { useArticles } from '../hooks/useArticles';
 import { useReadingTime } from '../hooks/useReadingTime';
@@ -286,8 +285,7 @@ const Article: React.FC = () => {
     
               {/* Article Content */}
               <article id="article-content" data-article-content className="prose prose-invert prose-lg max-w-none mb-12">
-                <ReactMarkdown 
-                  remarkPlugins={[remarkGfm]}
+                <MarkdownLazy 
                   className="font-roboto text-futuristic-gray leading-relaxed"
                   components={{
                     p: ({ children }) => <p className="mb-4 leading-relaxed">{children}</p>,
@@ -366,7 +364,7 @@ const Article: React.FC = () => {
                   }}
                 >
                   {article.content}
-                </ReactMarkdown>
+                </MarkdownLazy>
               </article>
     
               {/* Tags */}

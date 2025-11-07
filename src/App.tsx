@@ -20,13 +20,13 @@ import { ProgressiveEnhancementProvider } from './components/ProgressiveEnhancem
 import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
 import { Card } from './components/UI/Card';
 import { Button } from './components/UI/Button';
+import { initWebVitals } from './utils/webVitals';
 import { 
   OptimizedAdminLogs, 
   OptimizedAdminBackup, 
   OptimizedAdminNewsletter, 
   OptimizedAdminFeedback 
 } from './components/Performance/OptimizedLazyLoad';
-import { PerformanceDashboard } from '@/components/Admin/PerformanceDashboard';
 
 // Lazy loading otimizado com chunks nomeados
 import LazyComponents from './components/LazyComponents';
@@ -75,6 +75,12 @@ function AppContent() {
   useEffect(() => {
     SecurityHeaders.initialize();
     initializeSecurityConfig();
+    // Inicializar Web Vitals
+    try {
+      initWebVitals();
+    } catch (e) {
+      console.warn('Falha ao inicializar Web Vitals:', e);
+    }
   }, []);
 
   // Registrar Service Worker - TEMPORARIAMENTE DESABILITADO PARA PREVIEW
@@ -127,11 +133,10 @@ function AppContent() {
           <Route path="categories" element={<AdminCategories />} />
           <Route path="feedback" element={<OptimizedAdminFeedback />} />
           <Route path="seo" element={<AdminSEO />} />
-                <Route path="performance" element={<PerformanceDashboard />} />
-                <Route path="logs" element={<OptimizedAdminLogs />} />
-                <Route path="backup" element={<OptimizedAdminBackup />} />
-                <Route path="notifications" element={<AdminNotifications />} />
-                <Route path="settings" element={<AdminSettings />} />
+          <Route path="logs" element={<OptimizedAdminLogs />} />
+          <Route path="backup" element={<OptimizedAdminBackup />} />
+          <Route path="notifications" element={<AdminNotifications />} />
+          <Route path="settings" element={<AdminSettings />} />
         </Route>
         
         {/* Performance Test routes - usando componentes lazy otimizados */}

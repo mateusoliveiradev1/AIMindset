@@ -5,6 +5,7 @@ import App from './App.tsx'
 import { devSecurityTest } from './utils/securityTest'
 import { autoReset } from './utils/localStorageReset'
 import { initializeLogging } from './lib/logging'
+import { unifiedPerformanceService } from './services/UnifiedPerformanceService'
 // import { initServiceWorker } from './utils/serviceWorker'
 
 // 🔄 RESET AUTOMÁTICO DO LOCALSTORAGE
@@ -21,6 +22,23 @@ autoReset().then((resetResult) => {
 // Inicializar sistema de logs após reset automático
 initializeLogging().then(() => {
   console.log('📝 [MAIN] Sistema de logs inicializado com sucesso');
+  // Capturar e persistir performance-report.json do dist, se disponível
+  if (import.meta.env.PROD) {
+    fetch('/performance-report.json')
+      .then(async (res) => {
+        if (!res.ok) return;
+        const report = await res.json();
+        const bundleSizeKB = Math.round((report.totalGzip || report.totalSize || 0) / 1024);
+        localStorage.setItem('build-performance-report', JSON.stringify({
+          bundleSize: { bytes: report.totalSize || 0, gzip: report.totalGzip || 0, br: report.totalBr || 0 },
+          assets: report.assets || [],
+          generatedAt: report.generatedAt,
+          bundleSizeKB
+        }));
+        console.log('📊 [MAIN] Build performance report armazenado', bundleSizeKB, 'KB');
+      })
+      .catch(() => {});
+  }
 }).catch((error) => {
   console.error('❌ [MAIN] Erro ao inicializar sistema de logs:', error);
 });

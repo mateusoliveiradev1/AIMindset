@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import type { Article, Category } from '../lib/supabase';
 import { supabase } from '../lib/supabase';
-import { hybridCache, CacheKeys } from '../utils/hybridCache';
+import { hybridCache, CacheKeys, setCacheKeyPrefix } from '../utils/hybridCache';
 import { AdminCacheUtils } from '../utils/cacheInvalidation';
 import { supabaseWithRetry } from '../utils/supabaseRetry';
 import { useAutoFeedbackSync } from './useAutoFeedbackSync';
-import { supabaseAdmin } from '../lib/supabase-admin';
 import { supabaseOptimizer } from '../utils/supabaseOptimizer';
+import { useAuth } from '../contexts/AuthContext';
 
 export type { Article, Category };
 
@@ -14,8 +14,14 @@ export type { Article, Category };
 console.log('🔍 useArticles: Verificando clientes Supabase...', {
   supabase: !!supabase,
   supabaseServiceClient: !!supabase,
-  supabaseAdmin: !!supabaseAdmin
+  supabaseAdmin: 'lazy_import'
 });
+
+// Importação lazy do cliente admin para evitar múltiplas instâncias do GoTrueClient
+async function getAdminClient() {
+  const mod = await import('../lib/supabase-admin');
+  return mod.supabaseAdmin;
+}
 
 // Função para gerar slug a partir do título
 const generateSlug = (title: string): string => {
@@ -106,6 +112,13 @@ export const useArticles = (): UseArticlesReturn => {
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
+
+  // Prefixo de cache por user-role
+  const { user } = useAuth();
+  React.useEffect(() => {
+    const prefix = user?.role ? String(user.role) : 'guest';
+    setCacheKeyPrefix(prefix);
+  }, [user?.role]);
 
   // Sistema 100% automático de sincronização de feedbacks
   const { forceSyncNow, isActive } = useAutoFeedbackSync();
@@ -672,7 +685,7 @@ export const useArticles = (): UseArticlesReturn => {
       
       // Selecionar cliente adequado: usar admin em DEV para is_featured_manual
       const useAdminForFeatured = import.meta.env.DEV === true && updateData.is_featured_manual !== undefined;
-      const client = useAdminForFeatured ? supabaseAdmin : supabase;
+      const client = useAdminForFeatured ? await getAdminClient() : supabase;
       console.log('🧩 Cliente selecionado para update:', useAdminForFeatured ? 'supabaseAdmin (DEV)' : 'supabase (anon)');
       
       // UMA QUERY SIMPLES - SEM COMPLICAÇÕES

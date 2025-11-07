@@ -327,9 +327,9 @@ export const PerformanceDashboard: React.FC = () => {
       
       const { data: logs, error } = await supabase
         .from('system_logs')
-        .select('created_at, event_type, metadata')
+        .select('created_at, type, context')
         .gte('created_at', twentyFourHoursAgo)
-        .in('event_type', ['performance_audit', 'cache_hit', 'cache_miss', 'query_performance', 'hero_section_optimized_load'])
+        .in('type', ['performance_audit', 'cache_hit', 'cache_miss', 'query_performance', 'hero_section_optimized_load'])
         .order('created_at', { ascending: true });
 
       if (error) {
@@ -388,9 +388,9 @@ export const PerformanceDashboard: React.FC = () => {
       }
 
       const metric = hourlyMetrics[hour];
-      const metadata = log.metadata || {};
+      const metadata = log.context || {};
 
-      switch (log.event_type) {
+      switch (log.type) {
         case 'performance_audit':
           if (metadata.lcp) metric.lcp = (metric.lcp + metadata.lcp) / 2;
           if (metadata.fid) metric.fid = (metric.fid + metadata.fid) / 2;
@@ -426,21 +426,21 @@ export const PerformanceDashboard: React.FC = () => {
     // Buscar métricas de cache dos logs
     const { data: cacheLogs } = await supabase
       .from('system_logs')
-      .select('event_type, metadata')
+      .select('type, context')
       .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-      .in('event_type', ['cache_hit', 'cache_miss']);
+      .in('type', ['cache_hit', 'cache_miss']);
 
     const cacheStats: { [key: string]: { hits: number; misses: number } } = {};
 
     cacheLogs?.forEach(log => {
-      const cacheName = log.metadata?.cacheName || 'default';
+      const cacheName = log.context?.cacheName || 'default';
       if (!cacheStats[cacheName]) {
         cacheStats[cacheName] = { hits: 0, misses: 0 };
       }
 
-      if (log.event_type === 'cache_hit') {
+      if (log.type === 'cache_hit') {
         cacheStats[cacheName].hits++;
-      } else if (log.event_type === 'cache_miss') {
+      } else if (log.type === 'cache_miss') {
         cacheStats[cacheName].misses++;
       }
     });
@@ -457,19 +457,19 @@ export const PerformanceDashboard: React.FC = () => {
     // Buscar métricas de query dos logs
     const { data: queryLogs } = await supabase
       .from('system_logs')
-      .select('created_at, metadata')
+      .select('created_at, context')
       .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-      .eq('event_type', 'query_performance');
+      .eq('type', 'query_performance');
 
     const queryStats: { [key: string]: { totalTime: number; count: number; lastQuery: string } } = {};
 
     queryLogs?.forEach(log => {
-      const table = log.metadata?.table || 'unknown';
+      const table = log.context?.table || 'unknown';
       if (!queryStats[table]) {
         queryStats[table] = { totalTime: 0, count: 0, lastQuery: log.created_at };
       }
 
-      queryStats[table].totalTime += log.metadata?.queryTime || 0;
+      queryStats[table].totalTime += log.context?.queryTime || 0;
       queryStats[table].count++;
       queryStats[table].lastQuery = log.created_at;
     });

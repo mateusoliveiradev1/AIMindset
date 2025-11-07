@@ -1,5 +1,4 @@
-/* Otimização de fontes - carregamento assíncrono com font-display swap */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* Removido import de Google Fonts para evitar preload/warnings; usar system fonts fallback */
 
 /* Mobile Usability Enhancements */
 @import './styles/mobile-usability.css';
