@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { logEvent } from '@/lib/logging';
 
@@ -70,12 +70,13 @@ export const OptimizedLazyLoad: React.FC<OptimizedLazyLoadProps> = ({
 }) => {
   const [error, setError] = useState<Error | null>(null);
   const [retryAttempt, setRetryAttempt] = useState(0);
-  const [startTime] = useState(performance.now());
+  const [startTime, setStartTime] = useState(performance.now());
+  const [componentKey, setComponentKey] = useState(0);
+  const timerRef = useRef<number | null>(null);
+  const loadedRef = useRef<boolean>(false);
 
   useEffect(() => {
     const loadTime = performance.now() - startTime;
-    
-    // Log de performance do lazy loading
     logEvent('info', 'lazy_load', 'slow_load', {
       component: componentName,
       loadTime: Math.round(loadTime),
@@ -84,13 +85,12 @@ export const OptimizedLazyLoad: React.FC<OptimizedLazyLoadProps> = ({
       userAgent: navigator.userAgent
     });
 
-    // Alerta se demorar muito para carregar
     if (loadTime > 5000) {
       logEvent('info', 'lazy_load', 'component_loaded', {
-      component: componentName,
-      loadTime: Math.round(loadTime),
-      threshold: 5000
-    });
+        component: componentName,
+        loadTime: Math.round(loadTime),
+        threshold: 5000
+      });
     }
   }, [componentName, startTime, retryAttempt]);
 
@@ -98,21 +98,51 @@ export const OptimizedLazyLoad: React.FC<OptimizedLazyLoadProps> = ({
     if (retryAttempt < retryCount) {
       setRetryAttempt(prev => prev + 1);
       setError(null);
-      // Forçar re-renderização do componente
-      window.location.reload();
+      loadedRef.current = false;
+      setStartTime(performance.now());
+      // Remontar o componente sem recarregar a página
+      setComponentKey(prev => prev + 1);
     }
   };
 
-  // Timeout para carregamento
+  // Timeout para carregamento com cancelamento quando carregar
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!error) {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+
+    loadedRef.current = false;
+    timerRef.current = window.setTimeout(() => {
+      if (!loadedRef.current && !error) {
         setError(new Error(`Timeout ao carregar ${componentName} após ${timeout}ms`));
       }
     }, timeout);
 
-    return () => clearTimeout(timer);
-  }, [componentName, timeout, error]);
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [componentName, timeout, error, componentKey]);
+
+  const markLoaded = () => {
+    if (!loadedRef.current) {
+      loadedRef.current = true;
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  };
+
+  const LoadedMarker: React.FC<{ onLoaded: () => void; Comp: any; }> = ({ onLoaded, Comp }) => {
+    useEffect(() => {
+      onLoaded();
+    }, [onLoaded]);
+    return <Comp />;
+  };
 
   if (error) {
     return errorFallback || (
@@ -127,7 +157,8 @@ export const OptimizedLazyLoad: React.FC<OptimizedLazyLoadProps> = ({
 
   return (
     <Suspense fallback={fallback}>
-      <Component />
+      {/* Marca como carregado ao renderizar o componente resolvido do lazy */}
+      <LoadedMarker key={componentKey} onLoaded={markLoaded} Comp={Component} />
     </Suspense>
   );
 };
