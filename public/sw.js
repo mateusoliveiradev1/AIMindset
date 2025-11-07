@@ -25,6 +25,22 @@ const CRITICAL_ASSETS = [
   '/offline.html'
 ];
 
+// Rotas críticas para navegação rápida e suporte offline
+const CRITICAL_ROUTES = [
+  '/',
+  '/artigos',
+  '/newsletter',
+  '/contato',
+  '/sobre',
+  '/politica-privacidade',
+  '/admin',
+  '/admin/articles',
+  '/admin/editor',
+  '/admin/newsletter',
+  '/admin/feedback',
+  '/admin/settings'
+];
+
 // Estratégias de cache otimizadas
 const CACHE_STRATEGIES = {
   CACHE_FIRST: 'cache-first',
@@ -92,8 +108,8 @@ self.addEventListener('install', (event) => {
     Promise.all([
       // Cache agressivo de recursos críticos
       caches.open(STATIC_CACHE).then((cache) => {
-        console.log('[SW] Caching critical assets aggressively');
-        return cache.addAll(CRITICAL_ASSETS);
+        console.log('[SW] Caching critical assets and routes aggressively');
+        return cache.addAll([...CRITICAL_ASSETS, ...CRITICAL_ROUTES]);
       }),
       // Pre-cache de recursos dinâmicos importantes
       caches.open(DYNAMIC_CACHE).then((cache) => {
@@ -115,6 +131,15 @@ self.addEventListener('activate', (event) => {
   
   event.waitUntil(
     Promise.all([
+      // Habilitar navigation preload para reduzir TTFB de navegações
+      (async () => {
+        try {
+          if ('navigationPreload' in self.registration) {
+            await self.registration.navigationPreload.enable();
+            console.log('[SW] Navigation preload enabled');
+          }
+        } catch {}
+      })(),
       // Limpar caches antigos
       cleanupOldCaches(),
       // Tomar controle de todas as abas
@@ -127,6 +152,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+  
+  // Tratar navegações SPA primeiro para melhor TTFB com navigation preload
+  if (request.mode === 'navigate') {
+    event.respondWith(handleNavigation(event));
+    return;
+  }
   
   // Ignorar requests não HTTP e extensões do browser
   if (!request.url.startsWith('http') || 
@@ -156,6 +187,24 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(handleDynamicRequest(request));
   }
 });
+
+// Navegação SPA com suporte a navigation preload e offline
+async function handleNavigation(event) {
+  try {
+    // Usar resposta pré-carregada se disponível
+    if ('navigationPreload' in self.registration) {
+      const preloaded = await event.preloadResponse;
+      if (preloaded) return preloaded;
+    }
+    // Tentar rede normal
+    return await fetch(event.request);
+  } catch (error) {
+    console.warn('[SW] Navigation fetch failed, falling back to cache/offline', error);
+    const cache = await caches.open(STATIC_CACHE);
+    const cachedIndex = await cache.match('/index.html');
+    return cachedIndex || (await caches.match('/offline.html')) || new Response('Offline', { status: 503 });
+  }
+}
 
 // Background Sync para dados não críticos
 self.addEventListener('sync', (event) => {
