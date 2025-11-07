@@ -264,21 +264,14 @@ const Article: React.FC = () => {
                 </div>
     
                 <div className="relative w-full max-h-[400px] sm:max-h-[500px] lg:max-h-[600px] bg-darker-surface rounded-lg overflow-hidden flex items-center justify-center">
-                  <img
+                  <OptimizedImage
                     src={article.image_url || '/placeholder-image.svg'}
                     alt={article.title}
                     className="w-full h-auto max-h-full object-contain transition-transform duration-300 hover:scale-105"
                     width={1200}
                     height={600}
-                    loading="eager"
-                    onLoad={(e) => {
-                      console.log('✅ [IMAGE DEBUG] Imagem carregada com sucesso:', e.currentTarget.src);
-                    }}
-                    onError={(e) => {
-                      console.log('❌ [IMAGE DEBUG] Erro ao carregar imagem:', e.currentTarget.src);
-                      console.log('❌ [IMAGE DEBUG] Tentando fallback para placeholder...');
-                      e.currentTarget.src = '/placeholder-image.svg';
-                    }}
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 1200px"
+                    priority={true}
                   />
                 </div>
               </header>
@@ -415,13 +408,14 @@ const Article: React.FC = () => {
                     {(relatedArticles || []).map((relatedArticle) => (
                       <Card key={relatedArticle.id} variant="glass" className="overflow-hidden group">
                         <Link to={`/artigo/${relatedArticle.slug}`} className="block relative w-full aspect-[3/2] overflow-hidden cursor-pointer">
-                          <img
+                          <OptimizedImage
                             src={relatedArticle.image_url || '/placeholder-image.svg'}
                             alt={relatedArticle.title}
                             className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                             width={300}
                             height={200}
-                            loading="lazy"
+                            sizes="300px"
+                            priority={false}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-primary-dark/80 to-transparent"></div>
                         </Link>
@@ -471,3 +465,4 @@ const Article: React.FC = () => {
 };
 
 export default Article;
+import { OptimizedImage } from '../components/Performance/OptimizedImage';

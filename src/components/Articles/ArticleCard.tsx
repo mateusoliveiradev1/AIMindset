@@ -4,6 +4,7 @@ import { Calendar, Clock, Eye, Heart, Tag, ArrowRight } from 'lucide-react';
 import { Card } from '../UI/Card';
 import { computeReadingTime } from '../../hooks/useReadingTime';
 import { Article } from '../../types';
+import { OptimizedImage } from '../Performance/OptimizedImage';
 
 interface ArticleCardProps {
   article: Article;
@@ -58,12 +59,14 @@ export const ArticleCard = memo<ArticleCardProps>(({
     <Card className={cardClass}>
       {showImage && article.imageUrl && (
         <div className={viewMode === 'list' ? "md:flex-shrink-0" : ""}>
-          <img
+          <OptimizedImage
             src={article.imageUrl}
             alt={article.title}
             className={imageClass}
-            loading="lazy"
-            decoding="async"
+            width={800}
+            height={450}
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            priority={false}
           />
         </div>
       )}

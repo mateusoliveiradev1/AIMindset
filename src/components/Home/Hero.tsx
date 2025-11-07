@@ -21,6 +21,7 @@ const Hero: React.FC = () => {
       className="relative min-h-screen flex items-center justify-center overflow-hidden"
       role="banner"
       aria-label="Seção principal do AIMindset"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '800px' }}
     >
       {/* Background Effects */}
       <div className="absolute inset-0 bg-dark-gradient" aria-hidden="true"></div>

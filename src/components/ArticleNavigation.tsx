@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useArticleNavigation, NavigationArticle } from '../hooks/useArticleNavigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 // import LazyImage from './Performance/LazyImage';
+import { OptimizedImage } from './Performance/OptimizedImage';
 
 interface ArticleNavigationProps {
   currentSlug: string;
@@ -68,15 +69,14 @@ const NavigationCard: React.FC<NavigationCardProps> = ({ article, direction }) =
       {/* Image */}
       {article.image_url && (
         <div className="flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gray-800">
-          <img
+          <OptimizedImage
             src={article.image_url}
             alt={article.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             width={64}
             height={64}
-            loading="lazy"
-            crossOrigin={article.image_url?.includes('images.unsplash.com') ? 'anonymous' : undefined}
-            referrerPolicy={article.image_url?.includes('images.unsplash.com') ? 'no-referrer' : undefined}
+            sizes="64px"
+            priority={false}
           />
         </div>
       )}

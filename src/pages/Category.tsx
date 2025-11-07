@@ -8,6 +8,7 @@ import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import SEOManager from '../components/SEO/SEOManager';
 import { computeReadingTime } from '../hooks/useReadingTime';
+import { OptimizedImage } from '../components/Performance/OptimizedImage';
 // import LazyImage from '../components/Performance/LazyImage';
 
 const Category: React.FC = () => {
@@ -114,13 +115,14 @@ const Category: React.FC = () => {
               <Card key={article.id} variant="glass" className="overflow-hidden group">
                 <Link to={`/artigo/${article.slug}`} className="block relative w-full aspect-[4/3] sm:aspect-[16/9] overflow-hidden cursor-pointer">
                   {article.image_url ? (
-                    <img
+                    <OptimizedImage
                       src={article.image_url}
                       alt={article.title}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       width={400}
                       height={225}
-                      loading="lazy"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      priority={false}
                     />
                   ) : (
                     <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-neon-purple/20 to-lime-green/20 flex items-center justify-center">

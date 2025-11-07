@@ -5,6 +5,7 @@ import Card from '../UI/Card';
 import { computeReadingTime } from '../../hooks/useReadingTime';
 import { useArticleVirtualScroll } from '../../hooks/useVirtualScroll';
 import { Article } from '../../types';
+import { OptimizedImage } from './OptimizedImage';
 
 interface Category {
   id: string;
@@ -68,12 +69,14 @@ const ArticleCard = memo<{
               to={`/artigo/${article.slug}`} 
               className="block relative mb-4 w-full aspect-[16/9] overflow-hidden rounded-lg cursor-pointer"
             >
-              <img
+              <OptimizedImage
                 src={article.image_url}
                 alt={article.title}
                 className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                loading="lazy"
-                decoding="async"
+                width={800}
+                height={450}
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                priority={false}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </Link>

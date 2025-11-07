@@ -107,7 +107,7 @@ const FeaturedArticles: React.FC = () => {
   }
 
   return (
-    <section className="py-20 bg-darker-surface">
+    <section className="py-20 bg-darker-surface" style={{ contentVisibility: 'auto', containIntrinsicSize: '1200px' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="font-orbitron font-bold text-3xl md:text-4xl mb-4">

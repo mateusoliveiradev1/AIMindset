@@ -55,9 +55,18 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        'orbitron': ['Orbitron', 'sans-serif'],
-        'montserrat': ['Montserrat', 'sans-serif'],
-        'roboto': ['Roboto', 'sans-serif'],
+        'orbitron': [
+          'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Ubuntu',
+          'Cantarell', 'Noto Sans', 'Helvetica Neue', 'Arial', 'sans-serif'
+        ],
+        'montserrat': [
+          'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Ubuntu',
+          'Cantarell', 'Noto Sans', 'Helvetica Neue', 'Arial', 'sans-serif'
+        ],
+        'roboto': [
+          'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Ubuntu',
+          'Cantarell', 'Noto Sans', 'Helvetica Neue', 'Arial', 'sans-serif'
+        ],
       },
       animation: {
         'pulse-neon': 'pulse-neon 2s ease-in-out infinite alternate',
