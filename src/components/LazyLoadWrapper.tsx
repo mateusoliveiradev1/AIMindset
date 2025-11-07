@@ -66,25 +66,25 @@ export const LazyLoadWrapper: React.FC<LazyLoadWrapperProps> = ({
 
 // Lazy loaders específicos para componentes pesados
 export const LazyLogs = lazy(() => 
-  import('@/pages/admin/Logs').then(module => ({
+  import('@/pages/admin/logs').then(module => ({
     default: module.default
   }))
 );
 
 export const LazyBackup = lazy(() =>
-  import('@/pages/admin/Backup').then(module => ({
+  import('@/pages/admin/backup').then(module => ({
     default: module.default
   }))
 );
 
 export const LazyNewsletter = lazy(() =>
-  import('@/pages/admin/Newsletter').then(module => ({
+  import('@/pages/admin/newsletter').then(module => ({
     default: module.default
   }))
 );
 
 export const LazyFeedback = lazy(() =>
-  import('@/pages/admin/Feedback').then(module => ({
+  import('@/pages/admin/feedback').then(module => ({
     default: module.default
   }))
 );

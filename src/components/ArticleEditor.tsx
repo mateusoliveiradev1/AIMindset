@@ -544,7 +544,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
                   }}
                 >
                   {content || '*Nenhum conteúdo ainda...*'}
-                </ReactMarkdown>
+                </MarkdownLazy>
               </div>
             </article>
           </Card>
