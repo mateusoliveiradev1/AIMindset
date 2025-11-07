@@ -61,6 +61,20 @@ if ('serviceWorker' in navigator) {
       });
     }
   });
+
+  // Listener para mensagens vindas do Service Worker
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    const data = event.data || {};
+    if (data.type === 'CLEAR_BROWSER_STORAGE') {
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+        console.log('🧹 [MAIN] Browser storage limpo por solicitação do SW');
+      } catch (e) {
+        console.warn('⚠️ [MAIN] Falha ao limpar browser storage:', e);
+      }
+    }
+  });
 }
 
 // Inicializar Service Worker para cache offline e performance

@@ -65,7 +65,7 @@ export const OptimizedLazyLoad: React.FC<OptimizedLazyLoadProps> = ({
   componentName,
   fallback = <OptimizedFallback componentName={componentName} />,
   errorFallback,
-  timeout = 10000, // 10 segundos de timeout
+  timeout = 10000, // 10 segundos de timeout padrão
   retryCount = 3
 }) => {
   const [error, setError] = useState<Error | null>(null);
@@ -184,7 +184,7 @@ export const OptimizedAdminNewsletter = () => (
   <OptimizedLazyLoad
     component={lazy(() => import('@/pages/admin/newsletter').then(m => ({ default: m.default })))}
     componentName="Newsletter"
-    timeout={10000}
+    timeout={20000}
   />
 );
 

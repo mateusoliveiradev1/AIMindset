@@ -82,6 +82,14 @@ const LazyImage: React.FC<LazyImageProps> = ({
     return () => observer.disconnect();
   }, []);
 
+  // Aplicar atributo fetchpriority via DOM para evitar warning do React
+  useEffect(() => {
+    if (imgRef.current) {
+      const prio = loading === 'eager' ? 'high' : 'low';
+      imgRef.current.setAttribute('fetchpriority', prio);
+    }
+  }, [loading, isInView]);
+
   const handleLoad = () => {
     setIsLoaded(true);
     onLoad?.();
@@ -178,7 +186,6 @@ const LazyImage: React.FC<LazyImageProps> = ({
             onLoad={handleLoad}
             onError={handleError}
             decoding="async"
-            fetchPriority={loading === 'eager' ? 'high' : 'low'}
           />
         </picture>
 
@@ -237,7 +244,6 @@ const LazyImage: React.FC<LazyImageProps> = ({
         onLoad={handleLoad}
         onError={handleError}
         decoding="async"
-        fetchPriority={loading === 'eager' ? 'high' : 'low'}
         crossOrigin={optimizedSrc?.includes('images.unsplash.com') ? 'anonymous' : undefined}
         referrerPolicy={optimizedSrc?.includes('images.unsplash.com') ? 'no-referrer' : undefined}
       />

@@ -1,4 +1,4 @@
-import React, { memo, useState, useCallback } from 'react';
+import React, { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { useLazyImage } from '../../hooks/useAdvancedLazyLoading';
 
 interface OptimizedImageProps {
@@ -90,6 +90,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = memo(({
   onError
 }) => {
   const [imageError, setImageError] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
   
   // Usar lazy loading apenas se não for prioridade
   const lazyOptions = priority ? { triggerOnce: false, threshold: 1 } : { 
@@ -111,6 +112,13 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = memo(({
     setImageError(true);
     onError?.();
   }, [onError]);
+
+  // Aplicar atributo fetchpriority via DOM para evitar warning do React
+  useEffect(() => {
+    if (imgRef.current) {
+      imgRef.current.setAttribute('fetchpriority', priority ? 'high' : 'low');
+    }
+  }, [priority, lazySrc]);
 
   // Se houver erro na imagem, mostrar placeholder
   if (hasError || imageError) {
@@ -141,6 +149,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = memo(({
   return (
     <div ref={ref}>
       <img
+        ref={imgRef}
         src={lazySrc}
         alt={alt}
         className={className}
@@ -150,7 +159,6 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = memo(({
         onLoad={handleLoad}
         onError={handleError}
         loading={priority ? 'eager' : 'lazy'}
-        fetchPriority={priority ? 'high' : 'low'}
         decoding="async"
         crossOrigin={lazySrc?.includes('images.unsplash.com') ? 'anonymous' : undefined}
         referrerPolicy={lazySrc?.includes('images.unsplash.com') ? 'no-referrer' : undefined}
