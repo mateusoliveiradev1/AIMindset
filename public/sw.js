@@ -595,6 +595,26 @@ self.addEventListener('message', (event) => {
       event.ports[0].postMessage({ type: 'CACHE_CLEARED' });
     });
   }
+
+  // Limpeza de IndexedDB para evitar impacto em performance do Lighthouse
+  if (event.data && event.data.type === 'CLEAR_INDEXEDDB') {
+    clearIndexedDB().then((ok) => {
+      event.ports[0]?.postMessage({ type: 'INDEXEDDB_CLEARED', ok });
+    }).catch(() => {
+      event.ports[0]?.postMessage({ type: 'INDEXEDDB_CLEARED', ok: false });
+    });
+  }
+  
+  // Limpeza completa de armazenamento (Cache + IndexedDB + Storage)
+  if (event.data && event.data.type === 'CLEAR_STORAGE_ALL') {
+    Promise.allSettled([
+      clearAllCaches(),
+      clearIndexedDB(),
+      clearBrowserStorage()
+    ]).then(() => {
+      event.ports[0]?.postMessage({ type: 'STORAGE_ALL_CLEARED' });
+    });
+  }
 });
 
 async function getCacheSize() {
@@ -618,4 +638,32 @@ async function getCacheSize() {
 async function clearAllCaches() {
   const cacheNames = await caches.keys();
   return Promise.all(cacheNames.map(cacheName => caches.delete(cacheName)));
+}
+
+// Limpar IndexedDB (todas as bases conhecidas do app)
+async function clearIndexedDB() {
+  try {
+    // Lista de possíveis bancos usados no projeto
+    const dbs = ['AIMindsetCache', 'aimindset-cache'];
+    for (const name of dbs) {
+      try {
+        await indexedDB.deleteDatabase(name);
+        console.log('[SW] IndexedDB deletado:', name);
+      } catch (e) {
+        console.warn('[SW] Falha ao deletar IndexedDB:', name, e);
+      }
+    }
+    return true;
+  } catch (e) {
+    console.warn('[SW] Erro geral ao limpar IndexedDB:', e);
+    return false;
+  }
+}
+
+// Limpar localStorage e sessionStorage (via clients)
+async function clearBrowserStorage() {
+  const clientsList = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+  await Promise.allSettled(clientsList.map(client => {
+    return client.postMessage({ type: 'CLEAR_BROWSER_STORAGE' });
+  }));
 }

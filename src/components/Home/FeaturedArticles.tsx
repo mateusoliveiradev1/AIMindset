@@ -7,6 +7,7 @@ import { useAutoFeedbackSync } from '../../hooks/useAutoFeedbackSync';
 import { Article } from '../../types';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
+import OptimizedImage from '../Performance/OptimizedImage';
 import { FeaturedArticlesSkeleton } from '../UI/HomeSkeleton';
 // import LazyImage from '../Performance/LazyImage';
 
@@ -131,13 +132,14 @@ const FeaturedArticles: React.FC = () => {
               <div className="relative">
                 <Link to={`/artigo/${article.slug}`} className="block relative w-full aspect-[4/3] sm:aspect-video overflow-hidden cursor-pointer">
                   {article.image_url ? (
-                    <img
+                    <OptimizedImage
                       src={article.image_url}
                       alt={article.title}
                       className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       width={400}
                       height={225}
-                      loading="lazy"
+                      priority={index < 3}
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     />
                   ) : (
                     <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-neon-purple/20 to-lime-green/20 flex items-center justify-center">

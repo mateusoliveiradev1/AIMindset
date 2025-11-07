@@ -27,6 +27,8 @@ interface ServiceWorkerActions {
   getCacheStats: () => Promise<CacheStats>;
   clearCache: () => Promise<void>;
   prefetchUrls: (urls: string[]) => void;
+  clearIndexedDB: () => Promise<boolean>;
+  clearAllStorage: () => Promise<void>;
 }
 
 export function useServiceWorker(): ServiceWorkerState & ServiceWorkerActions {
@@ -239,6 +241,48 @@ export function useServiceWorker(): ServiceWorkerState & ServiceWorkerActions {
     });
   }, []);
 
+  // Limpar IndexedDB via mensagem ao Service Worker
+  const clearIndexedDB = useCallback(async (): Promise<boolean> => {
+    if (!navigator.serviceWorker.controller) return false;
+
+    return new Promise<boolean>((resolve) => {
+      const messageChannel = new MessageChannel();
+      messageChannel.port1.onmessage = (event) => {
+        if (event.data.type === 'INDEXEDDB_CLEARED') {
+          resolve(!!event.data.ok);
+        } else {
+          resolve(false);
+        }
+      };
+      navigator.serviceWorker.controller.postMessage(
+        { type: 'CLEAR_INDEXEDDB' },
+        [messageChannel.port2]
+      );
+    });
+  }, []);
+
+  // Limpar cache + IndexedDB + storages
+  const clearAllStorage = useCallback(async (): Promise<void> => {
+    if (!navigator.serviceWorker.controller) return;
+
+    await new Promise<void>((resolve) => {
+      const messageChannel = new MessageChannel();
+      messageChannel.port1.onmessage = (event) => {
+        if (event.data.type === 'STORAGE_ALL_CLEARED') {
+          try {
+            localStorage.clear();
+            sessionStorage.clear();
+          } catch {}
+          resolve();
+        }
+      };
+      navigator.serviceWorker.controller.postMessage(
+        { type: 'CLEAR_STORAGE_ALL' },
+        [messageChannel.port2]
+      );
+    });
+  }, []);
+
   // Efeitos para escutar mudanças do Service Worker
   useEffect(() => {
     if (!state.isSupported) return;
@@ -281,6 +325,8 @@ export function useServiceWorker(): ServiceWorkerState & ServiceWorkerActions {
     getCacheStats,
     clearCache,
     prefetchUrls,
+    clearIndexedDB,
+    clearAllStorage,
   };
 }
 
