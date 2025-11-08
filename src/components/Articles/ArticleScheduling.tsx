@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Calendar, Clock, AlertCircle, X, Check } from 'lucide-react';
 import { useArticleScheduling } from '@/hooks/useArticleScheduling';
+import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -37,6 +38,7 @@ export const ArticleScheduling: React.FC<ArticleSchedulingProps> = ({
     formatSchedulingDate,
     validateSchedulingDate
   } = useArticleScheduling();
+  const { isAuthenticated } = useAuth();
 
   // Preencher data/hora atual + 1 hora como sugestão apenas quando modal abrir
   useEffect(() => {
@@ -174,6 +176,15 @@ export const ArticleScheduling: React.FC<ArticleSchedulingProps> = ({
           </div>
         </div>
       )}
+
+      {!isAuthenticated && (
+        <div className="mb-4 p-3 rounded-lg border text-gray-700 bg-red-50 border-red-200">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" />
+            <span>Faça login para agendar a publicação.</span>
+          </div>
+        </div>
+      )}
       {/* Status atual do agendamento */}
       {currentScheduledDate && currentStatus && (
         <div className={`mb-4 p-3 rounded-lg border ${getStatusColor(currentStatus)}`}>
@@ -208,7 +219,7 @@ export const ArticleScheduling: React.FC<ArticleSchedulingProps> = ({
         <button
           onClick={() => setIsOpen(true)}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          disabled={!articleId}
+          disabled={!articleId || !isAuthenticated}
         >
           <Calendar className="w-4 h-4" />
           Agendar Publicação

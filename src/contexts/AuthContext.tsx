@@ -553,7 +553,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const isAuthenticated = !!user && !!supabaseUser;
+  // Considera autenticado quando há usuário do Supabase (independente de ser admin)
+  const isAuthenticated = !!supabaseUser;
   
   // 🔥 LOG DE DEBUG PARA MONITORAR ESTADO - DESABILITADO
   // useEffect(() => {
