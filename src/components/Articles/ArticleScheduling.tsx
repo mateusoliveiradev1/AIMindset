@@ -165,6 +165,15 @@ export const ArticleScheduling: React.FC<ArticleSchedulingProps> = ({
 
   return (
     <div className={`article-scheduling ${className}`}>
+      {/* Bloquear UI quando não houver ID (não salvo) */}
+      {!articleId && (
+        <div className="mb-4 p-3 rounded-lg border text-gray-700 bg-yellow-50 border-yellow-200">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" />
+            <span>Salve o artigo primeiro para habilitar o agendamento.</span>
+          </div>
+        </div>
+      )}
       {/* Status atual do agendamento */}
       {currentScheduledDate && currentStatus && (
         <div className={`mb-4 p-3 rounded-lg border ${getStatusColor(currentStatus)}`}>
@@ -199,6 +208,7 @@ export const ArticleScheduling: React.FC<ArticleSchedulingProps> = ({
         <button
           onClick={() => setIsOpen(true)}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          disabled={!articleId}
         >
           <Calendar className="w-4 h-4" />
           Agendar Publicação

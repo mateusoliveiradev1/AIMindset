@@ -81,8 +81,9 @@ export const supabase = (() => {
     global: {
       headers: {
         'x-client-info': 'aimindset-app',
-        'apikey': finalKey, // Garantir que a API key seja enviada nos headers
-        'Authorization': `Bearer ${finalKey}` // Header de autorização explícito
+        'apikey': finalKey
+        // Authorization deve ser o token de usuário, não a API key.
+        // Supabase JS já injeta Authorization quando há sessão.
       }
     },
     realtime: {

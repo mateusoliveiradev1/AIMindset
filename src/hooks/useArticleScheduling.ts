@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from './useToast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface SchedulingData {
   scheduled_for: string;
@@ -32,6 +33,7 @@ export const useArticleScheduling = () => {
   const [loading, setLoading] = useState(false);
   const [scheduledArticles, setScheduledArticles] = useState<ScheduledArticle[]>([]);
   const { showToast } = useToast();
+  const { isAuthenticated } = useAuth();
 
   // Validação simples de UUID v4 (formato 8-4-4-4-12 hex)
   const isValidUUID = (value: string): boolean => {
@@ -46,6 +48,17 @@ export const useArticleScheduling = () => {
   ): Promise<SchedulingResult> => {
     try {
       setLoading(true);
+
+      // Garantir que usuário esteja autenticado
+      if (!isAuthenticated) {
+        throw new Error('Você precisa estar autenticado para agendar artigos');
+      }
+
+      // Validar sessão ativa
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Sessão expirada ou inválida. Faça login novamente.');
+      }
 
       // Validar ID do artigo
       if (!isValidUUID(articleId)) {
@@ -109,6 +122,17 @@ export const useArticleScheduling = () => {
   ): Promise<SchedulingResult> => {
     try {
       setLoading(true);
+
+      // Garantir que usuário esteja autenticado
+      if (!isAuthenticated) {
+        throw new Error('Você precisa estar autenticado para cancelar agendamentos');
+      }
+
+      // Validar sessão ativa
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Sessão expirada ou inválida. Faça login novamente.');
+      }
 
       // Validar ID do artigo
       if (!isValidUUID(articleId)) {
