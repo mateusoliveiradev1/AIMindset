@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { logEvent } from '../../lib/logging';
 
 export interface BreadcrumbItem {
   name: string;
@@ -63,6 +64,89 @@ export const SEOManager: React.FC<SEOManagerProps> = ({ metadata }) => {
 
   // Gerar URL da imagem OG padrão se não fornecida
   const defaultOgImage = ogImage || `https://aimindset.com.br/api/og?title=${encodeURIComponent(title)}&type=${type}`;
+
+  // Normalizações e fallbacks seguros
+  const safeDescription = useMemo(() => {
+    const base = description && description.trim().length > 0 ? description.trim() : `${title} | AIMindset`;
+    return base.length > 160 ? base.slice(0, 160) : base;
+  }, [description, title]);
+
+  const robotsFinal = useMemo(() => {
+    try {
+      const path = typeof window !== 'undefined' ? window.location.pathname : '';
+      const isPrivate = /(\/admin|\/logs|\/preview|\/private|\/temp)/.test(path);
+      if (isPrivate) return 'noindex, nofollow';
+      return robots;
+    } catch {
+      return robots;
+    }
+  }, [robots]);
+
+  // Auditoria de metadados e duplicações
+  useEffect(() => {
+    let cancelled = false;
+    const runAudit = async () => {
+      try {
+        await logEvent('info', 'SEOManager', 'SEO_AUDIT_START', {
+          title,
+          canonicalUrl,
+          type,
+          language
+        });
+
+        const head = typeof document !== 'undefined' ? document.head : null;
+        const count = (selector: string) => (head ? head.querySelectorAll(selector).length : 0);
+
+        const duplicates = {
+          meta_description: count('meta[name="description"]'),
+          meta_keywords: count('meta[name="keywords"]'),
+          meta_robots: count('meta[name="robots"]'),
+          og_title: count('meta[property="og:title"]'),
+          og_description: count('meta[property="og:description"]'),
+          twitter_title: count('meta[name="twitter:title"]'),
+          twitter_description: count('meta[name="twitter:description"]'),
+          canonical: count('link[rel="canonical"]')
+        };
+
+        const h1Count = typeof document !== 'undefined' ? document.querySelectorAll('h1').length : 0;
+        const issues: string[] = [];
+        if (safeDescription.length < 50) issues.push('short_description');
+        if (!keywordsString) issues.push('no_keywords');
+        if (duplicates.meta_description > 1) issues.push('duplicate_meta_description');
+        if (duplicates.meta_robots > 1) issues.push('duplicate_meta_robots');
+        if (duplicates.og_title > 1 || duplicates.og_description > 1) issues.push('duplicate_open_graph');
+        if (duplicates.twitter_title > 1 || duplicates.twitter_description > 1) issues.push('duplicate_twitter');
+        if (duplicates.canonical !== 1) issues.push('canonical_missing_or_multiple');
+        if (h1Count !== 1) issues.push('invalid_h1_structure');
+
+        const report = {
+          title,
+          canonicalUrl,
+          type,
+          description_len: safeDescription.length,
+          keywords_count: keywords.length,
+          h1_count: h1Count,
+          duplicates,
+          issues
+        };
+
+        await logEvent('info', 'SEOManager', 'SEO_AUDIT_REPORT', report);
+        await logEvent('info', 'SEOManager', 'SEO_AUDIT_END', {
+          issues_count: issues.length,
+          ok: issues.length === 0
+        });
+      } catch (err) {
+        await logEvent('error', 'SEOManager', 'SEO_AUDIT_FAIL', {
+          error_message: err instanceof Error ? err.message : String(err)
+        });
+      }
+    };
+
+    if (!cancelled) runAudit();
+    return () => {
+      cancelled = true;
+    };
+  }, [title, canonicalUrl, type, language, safeDescription, keywords.length]);
 
   // Schema.org JSON-LD avançado
   const generateSchemaData = () => {
@@ -180,9 +264,9 @@ export const SEOManager: React.FC<SEOManagerProps> = ({ metadata }) => {
       <title>{title}</title>
       
       {/* Meta tags básicas */}
-      <meta name="description" content={description} />
+      <meta name="description" content={safeDescription} />
       {keywordsString && <meta name="keywords" content={keywordsString} />}
-      <meta name="robots" content={robots} />
+      <meta name="robots" content={robotsFinal} />
       <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <meta httpEquiv="Content-Language" content={language} />

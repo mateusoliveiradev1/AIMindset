@@ -23,6 +23,16 @@ import {
 import { TableOfContents } from '../components/TableOfContents';
 import { ReadingProgressBar } from '../components/ReadingProgressBar';
 import { ArticleNavigation } from '../components/ArticleNavigation';
+// Util para sanitizar título exibido (remover IDs/UUIDs e sufixos indesejados)
+const sanitizeTitle = (rawTitle: string) => {
+  if (!rawTitle) return rawTitle;
+  let t = rawTitle.trim();
+  t = t.replace(/\s*\|\s*AIMindset\s*#([a-f0-9-]+|\d+)\s*$/i, '');
+  t = t.replace(/\s*\((id|uuid):\s*[a-f0-9-]+\)\s*$/i, '');
+  // Remover múltiplos "| AIMindset" se houver
+  t = t.replace(/\s*\|\s*AIMindset\s*$/i, '');
+  return t;
+};
 
 const Article: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -42,6 +52,7 @@ const Article: React.FC = () => {
   
   const article = (articles || []).find(art => art?.slug === slug && art.published);
   const articleCategory = categories.find(cat => cat.id === article?.category_id);
+  const displayTitle = sanitizeTitle(article?.title || '');
   
   console.log('🔍 Article.tsx - Artigo encontrado:', article ? `ID: ${article.id}, Título: ${article.title}` : 'NENHUM ARTIGO ENCONTRADO');
   
@@ -207,7 +218,7 @@ const Article: React.FC = () => {
                 </div>
     
                 <h1 className="font-orbitron font-bold text-3xl md:text-4xl lg:text-5xl text-white mb-6 leading-tight">
-                  {article.title}
+                  {displayTitle}
                 </h1>
     
                 <p className="font-roboto text-lg text-futuristic-gray mb-8 leading-relaxed">
@@ -266,11 +277,12 @@ const Article: React.FC = () => {
                 <div className="relative w-full max-h-[400px] sm:max-h-[500px] lg:max-h-[600px] bg-darker-surface rounded-lg overflow-hidden flex items-center justify-center">
                   <OptimizedImage
                     src={article.image_url || '/placeholder-image.svg'}
-                    alt={article.title}
+                    alt={displayTitle}
                     className="w-full h-auto max-h-full object-contain transition-transform duration-300 hover:scale-105"
                     width={1200}
                     height={600}
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 1200px"
+                    fallbackSrc={'/placeholder-image.svg'}
                     priority={true}
                   />
                 </div>
@@ -415,6 +427,7 @@ const Article: React.FC = () => {
                             width={300}
                             height={200}
                             sizes="300px"
+                            fallbackSrc={'/placeholder-image.svg'}
                             priority={false}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-primary-dark/80 to-transparent"></div>

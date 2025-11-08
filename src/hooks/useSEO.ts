@@ -282,11 +282,50 @@ export const useSEO = (options: UseSEOOptions) => {
   // Gerar metadados SEO formatados para o SEOManager
   const getMetadata = (): SEOMetadata => {
     const baseUrl = 'https://aimindset.com.br';
+    const sanitizeTitle = (rawTitle: string) => {
+      if (!rawTitle) return rawTitle;
+      let t = rawTitle.trim();
+      // Remover sufixos com ID/UUID: "| AIMindset #<uuid>" ou "#<n>"
+      t = t.replace(/\s*\|\s*AIMindset\s*#([a-f0-9-]+|\d+)\s*$/i, '');
+      // Remover padrões de ID em parênteses no final
+      t = t.replace(/\s*\((id|uuid):\s*[a-f0-9-]+\)\s*$/i, '');
+      // Garantir sufixo padrão "| AIMindset" uma única vez
+      t = t.replace(/\s*\|\s*AIMindset\s*$/i, '');
+      t = `${t} | AIMindset`;
+      // Limitar a 60 caracteres com corte inteligente
+      const MAX = 60;
+      if (t.length > MAX) {
+        const base = t.replace(/\s*\|\s*AIMindset\s*$/i, '').trim();
+        const suffix = ' | AIMindset';
+        const limit = MAX - suffix.length;
+        let truncated = base.slice(0, limit).trim();
+        const lastSpace = truncated.lastIndexOf(' ');
+        if (lastSpace > limit - 15) {
+          truncated = truncated.slice(0, lastSpace);
+        }
+        t = `${truncated}${suffix}`;
+      }
+      return t;
+    };
+
+    const smartTruncate = (text: string, limit: number) => {
+      if (!text) return text;
+      if (text.length <= limit) return text;
+      let truncated = text.slice(0, limit).trim();
+      const lastSpace = truncated.lastIndexOf(' ');
+      if (lastSpace > limit - 20) {
+        truncated = truncated.slice(0, lastSpace);
+      }
+      return truncated.endsWith('.') ? truncated : `${truncated}...`;
+    };
     
     if (seoData) {
+      const sanitizedTitle = sanitizeTitle(seoData.title);
+      const descLimit = pageType === 'article' ? 160 : pageType === 'category' ? 140 : 155;
+      const sanitizedDescription = smartTruncate(seoData.description, descLimit);
       return {
-        title: seoData.title,
-        description: seoData.description,
+        title: sanitizedTitle,
+        description: sanitizedDescription,
         keywords: seoData.keywords,
         ogImage: seoData.og_image || fallbackImage,
         canonicalUrl: seoData.canonical_url,
@@ -313,14 +352,14 @@ export const useSEO = (options: UseSEOOptions) => {
       canonicalUrl = `${baseUrl}/artigo/${pageSlug}`;
       
       if (articleData) {
-        title = articleData.title.includes('|') ? articleData.title : `${articleData.title} | AIMindset`;
+        title = sanitizeTitle(articleData.title.includes('|') ? articleData.title : `${articleData.title} | AIMindset`);
         
         // Gerar descrição automaticamente
         if (articleData.content) {
-          description = generateMetaDescription(articleData.content, articleData.title);
+          description = generateMetaDescription(articleData.content, articleData.title, 160);
         } else if (articleData.excerpt) {
-          description = articleData.excerpt.length > 155 
-            ? articleData.excerpt.substring(0, 152) + '...'
+          description = articleData.excerpt.length > 160 
+            ? articleData.excerpt.substring(0, 157) + '...'
             : articleData.excerpt;
         }
         
@@ -332,6 +371,8 @@ export const useSEO = (options: UseSEOOptions) => {
         }
         
         ogImage = articleData.image_url || `${baseUrl}/api/og?title=${encodeURIComponent(articleData.title)}&type=article`;
+        // Truncar descrição final para garantir limite
+        description = smartTruncate(description || fallbackDescription, 160);
       }
     } else if (pageType === 'category' && pageSlug) {
       canonicalUrl = `${baseUrl}/categoria/${pageSlug}`;
@@ -363,8 +404,8 @@ export const useSEO = (options: UseSEOOptions) => {
     }
 
     return {
-      title,
-      description,
+      title: sanitizeTitle(title),
+      description: pageType === 'article' ? smartTruncate(description, 160) : pageType === 'category' ? smartTruncate(description, 140) : smartTruncate(description, 155),
       keywords,
       ogImage,
       canonicalUrl,

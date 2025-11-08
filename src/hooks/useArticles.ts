@@ -7,6 +7,7 @@ import { supabaseWithRetry } from '../utils/supabaseRetry';
 import { useAutoFeedbackSync } from './useAutoFeedbackSync';
 import { supabaseOptimizer } from '../utils/supabaseOptimizer';
 import { useAuth } from '../contexts/AuthContext';
+import { logEvent } from '../lib/logging';
 
 export type { Article, Category };
 
@@ -756,10 +757,12 @@ export const useArticles = (): UseArticlesReturn => {
     // Validar ID
     if (!id || typeof id !== 'string') {
       console.error('❌ ID inválido:', id);
+      await logEvent('error', 'useArticles', 'SEO_AUTO_FAIL', { article_id: id, reason: 'invalid_id', published });
       return false;
     }
     
     try {
+      await logEvent('info', 'useArticles', 'SEO_AUTO_START', { article_id: id, published });
       // Log detalhado antes da chamada RPC
       console.log('🔧 Chamando RPC emergency_update_published com BOOLEAN direto:', {
         article_id: id,
@@ -778,12 +781,14 @@ export const useArticles = (): UseArticlesReturn => {
       if (error) {
         console.error('❌ Erro na RPC emergency_update_published:', error);
         console.error('❌ Detalhes do erro:', JSON.stringify(error, null, 2));
+        await logEvent('error', 'useArticles', 'SEO_AUTO_FAIL', { article_id: id, error_message: error.message, published });
         throw error;
       }
 
       if (data === false || data === null) {
         console.error('❌ RPC retornou false/null - artigo não encontrado ou não atualizado');
         console.error('❌ Verificar se o artigo com ID existe:', id);
+        await logEvent('warn', 'useArticles', 'SEO_AUTO_FAIL', { article_id: id, reason: 'rpc_returned_false', published });
         return false;
       }
 
@@ -794,10 +799,28 @@ export const useArticles = (): UseArticlesReturn => {
       await hybridCache.invalidateAfterCRUD('update', 'article', id);
       console.log('✅ Cache invalidado com sucesso!');
       
+      // Ping sitemap/robots e registrar sucesso
+      try {
+        const siteUrl = (import.meta.env.VITE_SITE_URL as string) || (typeof window !== 'undefined' ? window.location.origin : '');
+        const sitemapUrl = `${siteUrl}/sitemap.xml`;
+        const robotsUrl = `${siteUrl}/robots.txt`;
+
+        // Warm endpoints
+        await fetch(sitemapUrl, { method: 'GET', cache: 'reload' }).catch(() => {});
+        await fetch(robotsUrl, { method: 'GET', cache: 'reload' }).catch(() => {});
+        // Ping buscadores (no-cors)
+        await fetch(`https://www.google.com/ping?sitemap=${encodeURIComponent(sitemapUrl)}`, { mode: 'no-cors' }).catch(() => {});
+        await fetch(`https://www.bing.com/ping?sitemap=${encodeURIComponent(sitemapUrl)}`, { mode: 'no-cors' }).catch(() => {});
+        await logEvent('info', 'useArticles', 'SEO_PING_SITEMAP_ROBOTS', { article_id: id, sitemapUrl, robotsUrl, published });
+      } catch {}
+
+      await logEvent('info', 'useArticles', 'SEO_AUTO_SUCCESS', { article_id: id, published });
+      
       return true;
     } catch (error) {
       console.error('❌ Erro geral em updateArticlePublished:', error);
       console.error('❌ Stack trace:', error instanceof Error ? error.stack : 'N/A');
+      await logEvent('error', 'useArticles', 'SEO_AUTO_FAIL', { article_id: id, error_message: error instanceof Error ? error.message : String(error), published });
       return false;
     }
   };

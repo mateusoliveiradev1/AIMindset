@@ -64,22 +64,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const baseUrl = process.env.VITE_SITE_URL || 'https://aimindset.com.br';
     const urls: SitemapUrl[] = [];
 
+    // Buscar metadados SEO para melhorar lastmod e priorização
+    const { data: seoData } = await supabase
+      .from('seo_metadata')
+      .select('page_type, page_slug, title, updated_at, canonical_url');
+
     // Páginas estáticas com prioridades otimizadas
     const staticPages = [
-      { loc: '/', changefreq: 'daily' as const, priority: 1.0 },
-      { loc: '/sobre', changefreq: 'monthly' as const, priority: 0.8 },
-      { loc: '/contato', changefreq: 'monthly' as const, priority: 0.7 },
-      { loc: '/privacidade', changefreq: 'monthly' as const, priority: 0.6 },
-      { loc: '/newsletter', changefreq: 'weekly' as const, priority: 0.6 },
-      { loc: '/artigos', changefreq: 'daily' as const, priority: 0.9 },
-      { loc: '/categorias', changefreq: 'weekly' as const, priority: 0.8 }
+      { loc: '/', changefreq: 'daily' as const, priority: 1.0, type: 'home' },
+      { loc: '/sobre', changefreq: 'monthly' as const, priority: 0.8, type: 'about' },
+      { loc: '/contato', changefreq: 'monthly' as const, priority: 0.7, type: 'contact' },
+      { loc: '/privacidade', changefreq: 'monthly' as const, priority: 0.6, type: 'privacy' },
+      { loc: '/newsletter', changefreq: 'weekly' as const, priority: 0.6, type: 'newsletter' },
+      // Usa page_type canonical 'all_articles' para página agregadora
+      { loc: '/artigos', changefreq: 'daily' as const, priority: 0.9, type: 'all_articles' },
+      { loc: '/categorias', changefreq: 'weekly' as const, priority: 0.8, type: 'categories' }
     ];
 
-    // Adicionar páginas estáticas
+    // Adicionar páginas estáticas com lastmod via seo_metadata quando possível
     staticPages.forEach(page => {
+      const seoMeta = seoData?.find(meta =>
+        meta.page_type === page.type ||
+        (page.type === 'all_articles' && meta.page_type === 'all_articles') ||
+        meta.page_slug === page.loc.replace('/', '') ||
+        (meta.canonical_url && meta.canonical_url.includes(`${baseUrl}${page.loc}`))
+      );
+
       urls.push({
         loc: `${baseUrl}${page.loc}`,
-        lastmod: new Date().toISOString().split('T')[0],
+        lastmod: seoMeta?.updated_at
+          ? new Date(seoMeta.updated_at).toISOString().split('T')[0]
+          : new Date().toISOString().split('T')[0],
         changefreq: page.changefreq,
         priority: page.priority
       });
@@ -89,22 +104,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { data: articles, error: articlesError } = await supabase
       .from('articles')
       .select('slug, title, excerpt, image_url, updated_at, created_at')
-      .eq('status', 'published')
+      .eq('published', true)
       .order('updated_at', { ascending: false })
-      .limit(100);
+      .limit(200);
 
     if (articlesError) {
       console.error('Erro ao buscar artigos:', articlesError);
     } else if (articles) {
       articles.forEach(article => {
+        // Buscar metadados SEO do artigo para lastmod mais preciso
+        const seoMeta = seoData?.find(meta => meta.page_type === 'article' && meta.page_slug === article.slug);
+
         const articleUrl: SitemapUrl = {
           loc: `${baseUrl}/artigo/${article.slug}`,
-          lastmod: new Date(article.updated_at || article.created_at).toISOString().split('T')[0],
+          lastmod: seoMeta?.updated_at
+            ? new Date(seoMeta.updated_at).toISOString().split('T')[0]
+            : new Date(article.updated_at || article.created_at).toISOString().split('T')[0],
           changefreq: 'weekly',
           priority: 0.8
         };
 
-        // Adicionar imagens se disponíveis
         if (article.image_url) {
           articleUrl.images = [{
             loc: article.image_url,

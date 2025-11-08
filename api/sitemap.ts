@@ -44,14 +44,16 @@ export const generateSitemap = async (req: Request, res: Response) => {
       { loc: '/contato', changefreq: 'monthly' as const, priority: 0.7, type: 'contact' },
       { loc: '/privacidade', changefreq: 'monthly' as const, priority: 0.6, type: 'privacy' },
       { loc: '/newsletter', changefreq: 'weekly' as const, priority: 0.6, type: 'newsletter' },
-      { loc: '/artigos', changefreq: 'daily' as const, priority: 0.9, type: 'articles' },
+      // Usa page_type canonical 'all_articles' para página agregadora
+      { loc: '/artigos', changefreq: 'daily' as const, priority: 0.9, type: 'all_articles' },
       { loc: '/categorias', changefreq: 'weekly' as const, priority: 0.8, type: 'categories' }
     ];
 
     staticPages.forEach(page => {
       // Buscar metadados SEO específicos se disponíveis
       const seoMeta = seoData?.find(meta => 
-        meta.page_type === page.type || 
+        meta.page_type === page.type ||
+        (page.type === 'all_articles' && meta.page_type === 'all_articles') ||
         meta.page_slug === page.loc.replace('/', '') || 
         meta.canonical_url?.includes(page.loc)
       );

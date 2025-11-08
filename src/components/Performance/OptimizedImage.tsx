@@ -8,6 +8,8 @@ interface OptimizedImageProps {
   width?: number;
   height?: number;
   placeholder?: string;
+  // Fallback seguro quando a imagem externa falha (ex.: ORB Unsplash)
+  fallbackSrc?: string;
   quality?: number;
   format?: 'webp' | 'avif' | 'auto';
   sizes?: string;
@@ -82,6 +84,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = memo(({
   width,
   height,
   placeholder,
+  fallbackSrc,
   quality = 85,
   format = 'auto',
   sizes,
@@ -91,6 +94,9 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = memo(({
 }) => {
   const [imageError, setImageError] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
+  const publicUrl = (import.meta as any)?.env?.VITE_PUBLIC_URL || '';
+  // Fallback padrão para OG/local quando houver erro de imagem externa
+  const defaultFallback = fallbackSrc || (publicUrl ? `${publicUrl}/og-image.jpg` : '/og-image.jpg');
   
   // Usar lazy loading apenas se não for prioridade
   const lazyOptions = priority ? { triggerOnce: false, threshold: 1 } : { 
@@ -120,14 +126,23 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = memo(({
     }
   }, [priority, lazySrc]);
 
-  // Se houver erro na imagem, mostrar placeholder
+  // Se houver erro na imagem, usar fallback seguro (local) para evitar ORB
   if (hasError || imageError) {
     return (
-      <ImagePlaceholder 
-        width={width} 
-        height={height} 
-        className={className}
+      <img
+        ref={imgRef}
+        src={defaultFallback}
         alt={alt}
+        className={className}
+        width={width}
+        height={height}
+        sizes={sizes}
+        loading={priority ? 'eager' : 'lazy'}
+        decoding="async"
+        style={{
+          contentVisibility: 'auto',
+          containIntrinsicSize: width && height ? `${width}px ${height}px` : 'auto'
+        }}
       />
     );
   }

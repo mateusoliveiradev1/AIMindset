@@ -8,6 +8,8 @@ import FilterDropdown from '../components/UI/FilterDropdown';
 import ViewToggle from '../components/UI/ViewToggle';
 import VirtualizationToggle from '../components/UI/VirtualizationToggle';
 import { useArticles } from '../hooks/useArticles';
+import { useSEO } from '../hooks/useSEO';
+import SEOManager from '../components/SEO/SEOManager';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { PullToRefreshIndicator } from '../components/UI/PullToRefreshIndicator';
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
@@ -58,6 +60,16 @@ const AllArticles: React.FC = () => {
     enableMemoryManagement: true,
     enablePerformanceMonitoring: true
   });
+
+  // SEO para página de todos os artigos
+  const seoHook = useSEO({
+    pageType: 'all_articles',
+    fallbackTitle: 'Todos os Artigos sobre IA e Tecnologia | AIMindset',
+    fallbackDescription:
+      'Explore nossa coleção completa de artigos sobre inteligência artificial, machine learning, deep learning e tecnologia.',
+    fallbackKeywords: ['artigos', 'IA', 'machine learning', 'deep learning', 'tecnologia']
+  });
+  const metadata = seoHook.getMetadata();
 
   // Usar hook completo com métricas em vez do simples
   const { 
@@ -234,6 +246,8 @@ const AllArticles: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-dark-bg via-dark-surface to-dark-bg">
+      {/* SEO Manager */}
+      <SEOManager metadata={metadata} />
       <PullToRefreshIndicator {...pullToRefreshProps} isRefreshing={pullToRefreshProps.isRefreshing} />
       
       <div className="container mx-auto px-4 py-8">
