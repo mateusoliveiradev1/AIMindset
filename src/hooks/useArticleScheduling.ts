@@ -54,11 +54,7 @@ export const useArticleScheduling = () => {
         throw new Error('Você precisa estar autenticado para agendar artigos');
       }
 
-      // Validar sessão ativa
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Sessão expirada ou inválida. Faça login novamente.');
-      }
+      // Confia no estado do AuthContext; sessão será gerenciada pelo SDK
 
       // Validar ID do artigo
       if (!isValidUUID(articleId)) {
@@ -128,11 +124,7 @@ export const useArticleScheduling = () => {
         throw new Error('Você precisa estar autenticado para cancelar agendamentos');
       }
 
-      // Validar sessão ativa
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Sessão expirada ou inválida. Faça login novamente.');
-      }
+      // Confia no estado do AuthContext; sessão será gerenciada pelo SDK
 
       // Validar ID do artigo
       if (!isValidUUID(articleId)) {
