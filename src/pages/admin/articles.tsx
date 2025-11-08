@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useDebounce } from '@/hooks/useDebounce';
 import SEOManager from '@/components/SEO/SEOManager';
+import { ScheduledArticlesList } from '@/components/Admin/ScheduledArticlesList';
 
 // Skeleton para linha de artigo (refinado)
 const ArticleRowSkeleton: React.FC = () => (
@@ -287,6 +288,9 @@ export default function AdminArticles() {
           </div>
         </div>
       </Card>
+
+      {/* Scheduled Articles Section */}
+      <ScheduledArticlesList />
     </div>
   );
 }

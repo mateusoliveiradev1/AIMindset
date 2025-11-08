@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { MarkdownLazy } from './Performance/MarkdownLazy';
 // import LazyImage from './Performance/LazyImage';
+import { ArticleScheduling } from './Articles/ArticleScheduling';
 import { 
   Save, 
   Eye, 
@@ -51,6 +52,8 @@ interface ArticleData {
   tags: string;
   featuredImage: string;
   published: boolean;
+  scheduled_for?: string | null;
+  scheduling_status?: string;
 }
 
 interface ArticleEditorProps {
@@ -85,6 +88,16 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
   const [tags, setTags] = useState(initialData?.tags || '');
   const [featuredImage, setFeaturedImage] = useState(initialData?.image_url || '');
   const [isPublished, setIsPublished] = useState(initialData?.published || false);
+  const [scheduledFor, setScheduledFor] = useState(initialData?.scheduled_for || '');
+  const [schedulingStatus, setSchedulingStatus] = useState(initialData?.scheduling_status || 'draft');
+
+  // Atualizar estados de agendamento quando initialData mudar
+  useEffect(() => {
+    if (initialData) {
+      setScheduledFor(initialData.scheduled_for || '');
+      setSchedulingStatus(initialData.scheduling_status || 'draft');
+    }
+  }, [initialData]);
   const [showPreview, setShowPreview] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -342,6 +355,8 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
         tags: sanitizedTags,
         featuredImage: sanitizedFeaturedImage,
         published: isPublished,
+        scheduled_for: scheduledFor || null,
+        scheduling_status: schedulingStatus,
       };
 
       if (onSave) {
@@ -662,6 +677,21 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
                 <p className="text-xs text-futuristic-gray">
                   {isPublished ? 'Artigo será publicado' : 'Artigo será salvo como rascunho'}
                 </p>
+                
+                {/* Componente de Agendamento */}
+                <ArticleScheduling
+                  articleId={initialData?.id || ''}
+                  currentScheduledDate={scheduledFor}
+                  currentStatus={schedulingStatus}
+                  onSchedule={(data) => {
+                    setScheduledFor(data.scheduled_for);
+                    setSchedulingStatus('scheduled');
+                  }}
+                  onCancel={() => {
+                    setScheduledFor('');
+                    setSchedulingStatus('draft');
+                  }}
+                />
               </div>
             </Card>
 
