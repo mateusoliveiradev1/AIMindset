@@ -141,33 +141,90 @@ async function getAccessTokenWithFallbacks(): Promise<string | null> {
 }
 
 export async function rpcWithAuth<T = any>(fnName: string, params: Record<string, any>, accessTokenOverride?: string): Promise<T> {
-  const accessToken = accessTokenOverride || await getAccessTokenWithFallbacks();
+  // Tentar obter token atual
+  let accessToken = accessTokenOverride || await getAccessTokenWithFallbacks();
 
+  // Função auxiliar para fazer fetch com Authorization
+  const doFetch = async (token: string) => {
+    const url = `${supabaseUrl}/rest/v1/rpc/${fnName}`;
+    return fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseAnonKey,
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(params)
+    });
+  };
+
+  // Se não houver token, tentar refresh e obter sessão
   if (!accessToken) {
-    throw new Error('Sessão inválida: token não encontrado');
+    try {
+      const refreshed = await supabase.auth.refreshSession();
+      accessToken = refreshed.data?.session?.access_token || null;
+    } catch {}
   }
 
-  const url = `${supabaseUrl}/rest/v1/rpc/${fnName}`;
+  // Se ainda sem token, tentar chamada via cliente supabase (que injeta headers automaticamente)
+  if (!accessToken) {
+    try {
+      const { data, error } = await supabase.rpc(fnName, params);
+      if (error) {
+        console.error('❌ [rpcWithAuth] Falha em supabase.rpc sem token:', { fnName, error });
+        throw new Error(error.message || 'Erro RPC');
+      }
+      return data as T;
+    } catch (e: any) {
+      // Último recurso
+      throw new Error(e?.message || 'Sessão inválida: token não encontrado');
+    }
+  }
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': supabaseAnonKey,
-      'Authorization': `Bearer ${accessToken}`
-    },
-    body: JSON.stringify(params)
-  });
+  // Fazer requisição com token atual
+  let res = await doFetch(accessToken);
 
-  const contentType = res.headers.get('content-type') || '';
-  const isJson = contentType.includes('application/json');
-  const data = isJson ? await res.json() : await res.text();
+  // Se 401, tentar refresh do token e repetir uma vez
+  if (res.status === 401) {
+    try {
+      const refreshed = await supabase.auth.refreshSession();
+      const newToken = refreshed.data?.session?.access_token;
+      if (newToken) {
+        res = await doFetch(newToken);
+      }
+    } catch (e) {
+      console.warn('⚠️ [rpcWithAuth] Falha ao refresh token após 401:', e);
+    }
+  }
 
+  // Se ainda não OK, tentar via supabase.rpc como fallback robusto
   if (!res.ok) {
-    const message = isJson && (data as any)?.message ? (data as any).message : (typeof data === 'string' ? data : 'Erro RPC');
-    console.error('❌ [rpcWithAuth] Erro na RPC:', { fnName, message, status: res.status });
-    throw new Error(message);
+    try {
+      const { data, error } = await supabase.rpc(fnName, params);
+      if (error) {
+        const contentType = res.headers.get('content-type') || '';
+        const isJson = contentType.includes('application/json');
+        const body = isJson ? await res.json() : await res.text();
+        const message = isJson && (body as any)?.message ? (body as any).message : (typeof body === 'string' ? body : 'Erro RPC');
+        console.error('❌ [rpcWithAuth] Erro na RPC (fetch e supabase.rpc):', { fnName, message, status: res.status, rpcError: error.message });
+        throw new Error(message || error.message);
+      }
+      return data as T;
+    } catch (fallbackErr: any) {
+      const contentType = res.headers.get('content-type') || '';
+      const isJson = contentType.includes('application/json');
+      const body = isJson ? await res.json() : await res.text();
+      const message = isJson && (body as any)?.message ? (body as any).message : (typeof body === 'string' ? body : 'Erro RPC');
+      console.error('❌ [rpcWithAuth] Erro na RPC (após fallback):', { fnName, message, status: res.status, error: fallbackErr?.message });
+      throw new Error(message);
+    }
   }
 
-  return data as T;
+  // OK: retornar dados
+  {
+    const contentType = res.headers.get('content-type') || '';
+    const isJson = contentType.includes('application/json');
+    const data = isJson ? await res.json() : await res.text();
+    return data as T;
+  }
 }
