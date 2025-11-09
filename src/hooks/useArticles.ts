@@ -1153,6 +1153,154 @@ export const useArticles = (): UseArticlesReturn => {
     };
   }, [fetchArticles, fetchCategories]);
 
+  // Invalidação automática de cache ao publicar/excluir artigos (via Supabase Realtime)
+  React.useEffect(() => {
+    try {
+      const channel = supabase
+        .channel('articles-publish-realtime')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'articles'
+        }, async (payload: any) => {
+          const row = payload?.new ?? payload?.record ?? null;
+          const oldRow = payload?.old ?? null;
+          const eventType = payload?.eventType || payload?.type || null;
+
+          if (!row && !oldRow) return;
+
+          const publishedNow = row.published === true;
+          const statusPublished = row.scheduling_status === 'published';
+          
+          // Tratar exclusões de artigos
+          if (eventType === 'DELETE') {
+            const id = oldRow?.id || row?.id;
+            console.log('🗑️ [useArticles] Detected article deletion. Invalidating caches...', { id });
+            try {
+              await hybridCache.invalidateAfterCRUD('delete', 'article', id);
+              await fetchArticles(true);
+
+              // Limpar cache do Service Worker
+              try {
+                const { clearCache: swClearCache } = await import('../utils/serviceWorker');
+                await swClearCache();
+              } catch (swErr) {
+                console.warn('SW cache clear failed or not available:', swErr);
+              }
+
+              // Notificar UI para atualizar Home
+              try {
+                window.dispatchEvent(new CustomEvent('realtime-cache-invalidate', {
+                  detail: { source: 'articles-delete', id }
+                }));
+              } catch {}
+
+              console.log('✅ [useArticles] Caches invalidados após exclusão');
+            } catch (invErr) {
+              console.error('❌ [useArticles] Falha ao invalidar caches após exclusão:', invErr);
+            }
+            return;
+          }
+
+          // Tratar publicações/atualizações que impactam published
+          if (publishedNow || statusPublished || (eventType === 'INSERT' && row.published === true)) {
+            console.log('⚡ [useArticles] Detected article publication. Invalidating caches...', {
+              id: row.id,
+              published: row.published,
+              scheduling_status: row.scheduling_status
+            });
+
+            try {
+              // Invalidação padronizada incluindo Home
+              await hybridCache.invalidateAfterCRUD('publish', 'article', row.id);
+              await fetchArticles(true);
+
+              // Solicita limpeza do cache do Service Worker
+              try {
+                const { clearCache: swClearCache } = await import('../utils/serviceWorker');
+                await swClearCache();
+              } catch (swErr) {
+                console.warn('SW cache clear failed or not available:', swErr);
+              }
+
+              // Notificar UI para atualizar Home
+              try {
+                window.dispatchEvent(new CustomEvent('realtime-cache-invalidate', {
+                  detail: { source: 'articles-publish', id: row.id }
+                }));
+              } catch {}
+
+              console.log('✅ [useArticles] Caches invalidados após publicação');
+            } catch (invErr) {
+              console.error('❌ [useArticles] Falha ao invalidar caches após publicação:', invErr);
+            }
+          }
+
+          // Tratar UNPUBLISH (quando published muda de true -> false)
+          if (eventType === 'UPDATE' && oldRow && oldRow.published === true && row.published === false) {
+            console.log('🔕 [useArticles] Detected article unpublish. Invalidating caches...', { id: row.id });
+            try {
+              await hybridCache.invalidateAfterCRUD('unpublish', 'article', row.id);
+              await fetchArticles(true);
+
+              try {
+                const { clearCache: swClearCache } = await import('../utils/serviceWorker');
+                await swClearCache();
+              } catch (swErr) {
+                console.warn('SW cache clear failed or not available:', swErr);
+              }
+
+              try {
+                window.dispatchEvent(new CustomEvent('realtime-cache-invalidate', {
+                  detail: { source: 'articles-unpublish', id: row.id }
+                }));
+              } catch {}
+
+              console.log('✅ [useArticles] Caches invalidados após unpublish');
+            } catch (invErr) {
+              console.error('❌ [useArticles] Falha ao invalidar caches após unpublish:', invErr);
+            }
+            return;
+          }
+
+          // Tratar UPDATE genérico que possa impactar listagens (título, slug, categoria, etc.)
+          if (eventType === 'UPDATE' && row.published === true) {
+            console.log('✏️ [useArticles] Detected article update. Invalidating list caches...', { id: row.id });
+            try {
+              await hybridCache.invalidateAfterCRUD('update', 'article', row.id);
+              await fetchArticles(true);
+
+              try {
+                const { clearCache: swClearCache } = await import('../utils/serviceWorker');
+                await swClearCache();
+              } catch (swErr) {
+                console.warn('SW cache clear failed or not available:', swErr);
+              }
+
+              try {
+                window.dispatchEvent(new CustomEvent('realtime-cache-invalidate', {
+                  detail: { source: 'articles-update', id: row.id }
+                }));
+              } catch {}
+
+              console.log('✅ [useArticles] Caches invalidados após update');
+            } catch (invErr) {
+              console.error('❌ [useArticles] Falha ao invalidar caches após update:', invErr);
+            }
+          }
+        })
+        .subscribe((status) => {
+          console.log('🔌 [useArticles] Realtime subscription status:', status);
+        });
+
+      return () => {
+        try { supabase.removeChannel(channel); } catch {}
+      };
+    } catch (err) {
+      console.warn('Realtime not available or failed to subscribe:', err);
+    }
+  }, [fetchArticles]);
+
   return {
     articles,
     categories,

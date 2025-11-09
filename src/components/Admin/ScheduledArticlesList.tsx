@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { rpcWithAuth } from '@/lib/supabaseRpc';
 import { useAuth } from '../../contexts/AuthContext';
 import Card from '../UI/Card';
 import Button from '../UI/Button';
@@ -76,23 +77,22 @@ export const ScheduledArticlesList: React.FC = () => {
 
   const cancelScheduling = async (articleId: string) => {
     try {
-      const { error } = await supabase
-        .rpc('cancel_scheduled_article', {
-          article_id: articleId,
-          reason: 'Cancelado pelo administrador'
-        });
+      const result = await rpcWithAuth<{ success: boolean; message?: string }>('cancel_scheduled_article', {
+        article_id: articleId,
+        reason: 'Cancelado pelo administrador'
+      });
 
-      if (error) {
-        console.error('Erro ao cancelar agendamento:', error);
-        toast.error('Erro ao cancelar agendamento');
+      if (!result?.success) {
+        console.error('Erro ao cancelar agendamento:', result?.message);
+        toast.error(result?.message || 'Erro ao cancelar agendamento');
         return;
       }
 
-      toast.success('Agendamento cancelado com sucesso');
+      toast.success(result?.message || 'Agendamento cancelado com sucesso');
       loadScheduledArticles();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao cancelar agendamento:', error);
-      toast.error('Erro ao cancelar agendamento');
+      toast.error(error?.message || 'Erro ao cancelar agendamento');
     }
   };
 

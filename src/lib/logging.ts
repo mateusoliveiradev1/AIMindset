@@ -6,6 +6,8 @@
  */
 
 import { supabase } from './supabase';
+import { supabaseAdmin } from './supabase-admin';
+import { rpcWithAuth } from './supabaseRpc';
 
 // Fila offline simples baseada em localStorage
 interface QueuedAppLog {
@@ -149,20 +151,52 @@ export async function logEvent(
       return { success: true };
     }
 
-    // Chamar função RPC do Supabase
-    const { data, error } = await supabase.rpc('insert_app_log', {
-      p_level: level,
-      p_source: source,
-      p_action: action,
-      p_details: enrichedDetails,
-      p_user_id: details.user_id || null
-    });
+    // Tentar via RPC padrão, com fallbacks em caso de CORS/502
+    try {
+      const { data, error } = await supabase.rpc('insert_app_log', {
+        p_level: level,
+        p_source: source,
+        p_action: action,
+        p_details: enrichedDetails,
+        p_user_id: details.user_id || null
+      });
 
-    if (error) {
-      console.error('❌ [LOG-EVENT] Erro ao registrar log de aplicação:', error);
-      // Enfileirar para retry
-      enqueueAppLog({ level, source, action, details: enrichedDetails });
-      return { success: false, error: error.message };
+      if (error) throw error;
+    } catch (primaryErr: any) {
+      console.warn('⚠️ [LOG-EVENT] Falha na RPC padrão, tentando fallback com token:', primaryErr?.message || primaryErr);
+      try {
+        await rpcWithAuth('insert_app_log', {
+          p_level: level,
+          p_source: source,
+          p_action: action,
+          p_details: enrichedDetails,
+          p_user_id: details.user_id || null
+        });
+      } catch (authErr: any) {
+        console.warn('⚠️ [LOG-EVENT] Falha no fallback com token, tentando insert direto (admin em DEV):', authErr?.message || authErr);
+        // Em DEV/preview local, usar cliente admin como último recurso
+        const isDev = typeof import.meta !== 'undefined' ? !!import.meta.env.DEV : true;
+        const isLocal = typeof window !== 'undefined' ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') : false;
+        if (isDev || isLocal) {
+          try {
+            await supabaseAdmin.from('app_logs').insert({
+              level,
+              source,
+              action,
+              details: enrichedDetails,
+              user_id: details.user_id || null,
+              created_at: new Date().toISOString()
+            });
+          } catch (adminErr: any) {
+            console.error('❌ [LOG-EVENT] Falha no insert direto admin:', adminErr?.message || adminErr);
+            enqueueAppLog({ level, source, action, details: enrichedDetails });
+            return { success: false, error: adminErr?.message || 'Falha ao registrar log' };
+          }
+        } else {
+          enqueueAppLog({ level, source, action, details: enrichedDetails });
+          return { success: false, error: authErr?.message || 'Falha ao registrar log' };
+        }
+      }
     }
 
     // Log local para desenvolvimento
@@ -214,18 +248,44 @@ export async function logSystem(
       return { success: true };
     }
 
-    // Chamar função RPC do Supabase
-    const { data, error } = await supabase.rpc('insert_system_log', {
-      p_type: type,
-      p_message: message,
-      p_context: enrichedContext
-    });
-
-    if (error) {
-      console.error('❌ [LOG-SYSTEM] Erro ao registrar log de sistema:', error);
-      // Enfileirar para retry
-      enqueueSystemLog({ type, message, context: enrichedContext });
-      return { success: false, error: error.message };
+    // Tentar via RPC padrão, com fallbacks em caso de CORS/502
+    try {
+      const { data, error } = await supabase.rpc('insert_system_log', {
+        p_type: type,
+        p_message: message,
+        p_context: enrichedContext
+      });
+      if (error) throw error;
+    } catch (primaryErr: any) {
+      console.warn('⚠️ [LOG-SYSTEM] Falha na RPC padrão, tentando fallback com token:', primaryErr?.message || primaryErr);
+      try {
+        await rpcWithAuth('insert_system_log', {
+          p_type: type,
+          p_message: message,
+          p_context: enrichedContext
+        });
+      } catch (authErr: any) {
+        console.warn('⚠️ [LOG-SYSTEM] Falha no fallback com token, tentando insert direto (admin em DEV):', authErr?.message || authErr);
+        const isDev = typeof import.meta !== 'undefined' ? !!import.meta.env.DEV : true;
+        const isLocal = typeof window !== 'undefined' ? (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') : false;
+        if (isDev || isLocal) {
+          try {
+            await supabaseAdmin.from('system_logs').insert({
+              type,
+              message,
+              context: enrichedContext,
+              created_at: new Date().toISOString()
+            });
+          } catch (adminErr: any) {
+            console.error('❌ [LOG-SYSTEM] Falha no insert direto admin:', adminErr?.message || adminErr);
+            enqueueSystemLog({ type, message, context: enrichedContext });
+            return { success: false, error: adminErr?.message || 'Falha ao registrar log' };
+          }
+        } else {
+          enqueueSystemLog({ type, message, context: enrichedContext });
+          return { success: false, error: authErr?.message || 'Falha ao registrar log' };
+        }
+      }
     }
 
     // Log local para desenvolvimento

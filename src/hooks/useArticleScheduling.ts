@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { rpcWithAuth } from '@/lib/supabaseRpc';
 import { useToast } from './useToast';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -34,6 +35,46 @@ export const useArticleScheduling = () => {
   const [scheduledArticles, setScheduledArticles] = useState<ScheduledArticle[]>([]);
   const { showToast } = useToast();
   const { isAuthenticated } = useAuth();
+
+  // ✅ Garante que o token/sessão esteja persistido antes das RPCs
+  const ensureTokenPersisted = useCallback(async () => {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.warn('⚠️ Erro ao obter sessão antes da RPC:', error.message);
+      }
+      let effectiveSession = session || null;
+
+      // Tentar refresh se sessão não veio
+      if (!effectiveSession) {
+        try {
+          const refreshRes = await supabase.auth.refreshSession();
+          effectiveSession = refreshRes.data?.session || null;
+          if (!effectiveSession && refreshRes.error) {
+            console.warn('⚠️ Falha no refreshSession:', refreshRes.error.message);
+          }
+        } catch (e: any) {
+          console.warn('⚠️ Exceção em refreshSession:', e?.message || e);
+        }
+      }
+
+      if (effectiveSession?.access_token) {
+        const payload = JSON.stringify({ access_token: effectiveSession.access_token, session: effectiveSession });
+        try {
+          localStorage.setItem('aimindset.auth.token', payload);
+          // Persistir também aimindset_session para alinhamento com RPC
+          localStorage.setItem('aimindset_session', JSON.stringify(effectiveSession));
+        } catch (e) {
+          try {
+            sessionStorage.setItem('aimindset.auth.token', payload);
+            sessionStorage.setItem('aimindset_session', JSON.stringify(effectiveSession));
+          } catch (e2) {
+            console.error('💥 Falha ao persistir sessão/token em qualquer storage:', e2);
+          }
+        }
+      }
+    } catch {}
+  }, []);
 
   // Validação simples de UUID v4 (formato 8-4-4-4-12 hex)
   const isValidUUID = (value: string): boolean => {
@@ -76,17 +117,16 @@ export const useArticleScheduling = () => {
       }
 
       // Chamar função RPC
-      const { data, error } = await supabase
-        .rpc('schedule_article', {
-          article_id: articleId,
-          scheduled_date: schedulingData.scheduled_for,
-          reason: schedulingData.reason || 'Agendamento via interface',
-          metadata: schedulingData.metadata || {}
-        });
-
-      if (error) {
-        throw new Error(error.message);
-      }
+      await ensureTokenPersisted();
+      // Obter token diretamente da sessão atual para evitar dependência de storage
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      const data = await rpcWithAuth<SchedulingResult>('schedule_article', {
+        article_id: articleId,
+        scheduled_date: schedulingData.scheduled_for,
+        reason: schedulingData.reason || 'Agendamento via interface',
+        metadata: schedulingData.metadata || {}
+      }, accessToken || undefined);
 
       if (!data.success) {
         throw new Error(data.error || 'Erro ao agendar artigo');
@@ -109,7 +149,7 @@ export const useArticleScheduling = () => {
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [showToast, isAuthenticated]);
 
   // Função para cancelar agendamento
   const cancelScheduling = useCallback(async (
@@ -130,16 +170,13 @@ export const useArticleScheduling = () => {
       if (!isValidUUID(articleId)) {
         throw new Error('ID do artigo inválido. Não é possível cancelar agendamento sem um ID válido.');
       }
-
-      const { data, error } = await supabase
-        .rpc('cancel_scheduled_article', {
-          article_id: articleId,
-          reason: reason || 'Cancelamento via interface'
-        });
-
-      if (error) {
-        throw new Error(error.message);
-      }
+      await ensureTokenPersisted();
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      const data = await rpcWithAuth<SchedulingResult>('cancel_scheduled_article', {
+        article_id: articleId,
+        reason: reason || 'Cancelamento via interface'
+      }, accessToken || undefined);
 
       if (!data.success) {
         throw new Error(data.error || 'Erro ao cancelar agendamento');
@@ -162,7 +199,7 @@ export const useArticleScheduling = () => {
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [showToast, isAuthenticated]);
 
   // Função para buscar artigos agendados
   const fetchScheduledArticles = useCallback(async (
@@ -173,16 +210,18 @@ export const useArticleScheduling = () => {
     try {
       setLoading(true);
 
-      const { data, error } = await supabase
-        .rpc('get_scheduled_articles', {
-          filter_status: filterStatus,
-          limit_count: limit,
-          offset_count: offset
-        });
-
-      if (error) {
-        throw new Error(error.message);
+      // Garantir que usuário esteja autenticado
+      if (!isAuthenticated) {
+        throw new Error('Você precisa estar autenticado para listar agendamentos');
       }
+      await ensureTokenPersisted();
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      const data = await rpcWithAuth<ScheduledArticle[]>('get_scheduled_articles', {
+        filter_status: filterStatus,
+        limit_count: limit,
+        offset_count: offset
+      }, accessToken || undefined);
 
       setScheduledArticles(data || []);
       return data || [];

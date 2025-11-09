@@ -648,6 +648,14 @@ class HybridCacheSystem {
           if (operation === 'publish' || operation === 'unpublish') {
             patterns.push('articles', 'featured', 'highlight');
           }
+
+          // Sempre invalidar caches da Home ao mexer em artigos
+          // Isso garante atualização imediata dos contadores e listas exibidas na Home
+          patterns.push(
+            CacheKeys.HOME_DATA,
+            CacheKeys.HOME_METRICS,
+            CacheKeys.HOME_FEATURED
+          );
           break;
           
         case 'category':
@@ -655,6 +663,12 @@ class HybridCacheSystem {
           if (entityId) {
             patterns.push(`category_${entityId}`, `articles_category_${entityId}`);
           }
+          // Incluir caches da Home pois categorias afetam agrupamentos/contagens
+          patterns.push(
+            CacheKeys.HOME_DATA,
+            CacheKeys.HOME_METRICS,
+            CacheKeys.HOME_FEATURED
+          );
           break;
       }
       

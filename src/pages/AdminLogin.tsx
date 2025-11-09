@@ -8,6 +8,7 @@ import { useSEO } from '../hooks/useSEO';
 import SEOManager from '../components/SEO/SEOManager';
 import { sanitizeEmail, validators, RateLimiter, CSRFProtection, secureCleanup } from '../utils/security';
 import { logAuth, logError } from '../lib/logging';
+import { supabase } from '../lib/supabase';
 
 const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -78,6 +79,29 @@ const AdminLogin: React.FC = () => {
         await logAuth('admin_login_success', undefined, true, {
           email: sanitizedEmail
         });
+
+        // 🔒 Persistir sessão explicitamente para garantir JWT disponível
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const session = sessionData?.session || null;
+          if (session) {
+            const json = JSON.stringify(session);
+            localStorage.setItem('aimindset.auth.token', json);
+            // Também persistir na chave aimindset_session para fallback do RPC
+            try {
+              localStorage.setItem('aimindset_session', json);
+            } catch (e) {
+              try {
+                sessionStorage.setItem('aimindset_session', json);
+              } catch {}
+            }
+            console.log('🔑 [AdminLogin] Sessão salva manualmente no localStorage.');
+          } else {
+            console.warn('⚠️ [AdminLogin] Nenhuma sessão retornada após login.');
+          }
+        } catch (sessErr) {
+          console.warn('⚠️ [AdminLogin] Falha ao obter sessão para persistência:', sessErr);
+        }
         
         // Limpar dados sensíveis do formulário
         secureCleanup.clearFormData(e.target as HTMLFormElement);

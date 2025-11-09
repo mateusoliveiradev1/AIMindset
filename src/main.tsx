@@ -67,9 +67,29 @@ if ('serviceWorker' in navigator) {
     const data = event.data || {};
     if (data.type === 'CLEAR_BROWSER_STORAGE') {
       try {
+        // Preservar sessão e chaves críticas ao limpar
+        const preserveKeys = ['aimindset_session', 'aimindset.auth.token', 'aimindset_user', 'aimindset_supabase_user'];
+        const preserved: Record<string, string | null> = {};
+        preserveKeys.forEach(k => {
+          try { preserved[k] = localStorage.getItem(k); } catch { preserved[k] = null; }
+        });
+        // Preservar chaves dinâmicas do Supabase
+        try {
+          Object.keys(localStorage)
+            .filter(k => k.startsWith('sb-') && k.includes('auth-token'))
+            .forEach(k => { preserved[k] = localStorage.getItem(k); });
+        } catch {}
+
         localStorage.clear();
         sessionStorage.clear();
-        console.log('🧹 [MAIN] Browser storage limpo por solicitação do SW');
+
+        // Restaurar preservados
+        Object.entries(preserved).forEach(([k, v]) => {
+          if (v !== null) {
+            try { localStorage.setItem(k, v); } catch { try { sessionStorage.setItem(k, v); } catch {} }
+          }
+        });
+        console.log('🧹 [MAIN] Storage limpo com preservação de sessão/token');
       } catch (e) {
         console.warn('⚠️ [MAIN] Falha ao limpar browser storage:', e);
       }

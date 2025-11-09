@@ -21,6 +21,7 @@ import { ErrorBoundary } from './components/ErrorBoundary/ErrorBoundary';
 import { Card } from './components/UI/Card';
 import { Button } from './components/UI/Button';
 import { initWebVitals } from './utils/webVitals';
+import { supabase } from './lib/supabase';
 import { 
   OptimizedAdminLogs, 
   OptimizedAdminBackup, 
@@ -101,6 +102,64 @@ function AppContent() {
   //     }
   //   }
   // }, [hasUpdate, skipWaiting]);
+
+  // 🔁 Restauração automática de sessão para persistência local
+  useEffect(() => {
+    const restoreSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.warn('⚠️ Erro ao obter sessão na inicialização:', error.message);
+        }
+        if (session) {
+          const payload = JSON.stringify(session);
+          try {
+            localStorage.setItem('aimindset_session', payload);
+          } catch (e) {
+            try {
+              sessionStorage.setItem('aimindset_session', payload);
+            } catch (e2) {
+              console.error('💥 Falha ao persistir sessão em qualquer storage:', e2);
+            }
+          }
+        } else {
+          // Se não há sessão, tentar detectar sessão do SDK e salvar se existir
+          try {
+            const { data } = await supabase.auth.getSession();
+            if (data?.session) {
+              const payload2 = JSON.stringify(data.session);
+              localStorage.setItem('aimindset_session', payload2);
+            }
+          } catch {}
+        }
+      } catch (err: any) {
+        console.warn('⚠️ Exceção ao restaurar sessão:', err?.message || err);
+      }
+    };
+
+    restoreSession();
+
+    // Verificação periódica (lightweight) para garantir persistência
+    const interval = setInterval(async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data?.session) {
+          const stored = localStorage.getItem('aimindset_session') || sessionStorage.getItem('aimindset_session');
+          if (!stored) {
+            const payload = JSON.stringify(data.session);
+            try {
+              localStorage.setItem('aimindset_session', payload);
+            } catch {
+              try { sessionStorage.setItem('aimindset_session', payload); } catch {}
+            }
+            console.log('🔄 [App] Sessão sincronizada periodicamente no storage.');
+          }
+        }
+      } catch {}
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <>

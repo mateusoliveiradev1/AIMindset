@@ -56,6 +56,13 @@ export const supabase = (() => {
   }
 
   // Criar nova instância apenas se não existir
+  // Obter project ref a partir da URL para alinhar storageKey padrão do Supabase
+  const match = typeof finalUrl === 'string' ? finalUrl.match(/^https:\/\/([^.]+)\.supabase\.co/) : null;
+  const projectRef = match?.[1] || 'aimindset';
+  const dynamicStorageKey = `sb-${projectRef}-auth-token`;
+
+  console.log('🔐 [SUPABASE-INIT] Computed storageKey:', dynamicStorageKey);
+
   supabaseInstance = createClient(finalUrl, finalKey, {
     auth: {
       // 🔧 USAR SESSIONSTORAGE COMO FALLBACK PARA EVITAR QUOTA EXCEEDED
@@ -73,7 +80,8 @@ export const supabase = (() => {
           return window.sessionStorage;
         }
       })(),
-      storageKey: 'aimindset.auth.token', // Chave única para evitar conflitos
+      // Usar a chave dinâmica padrão do Supabase para melhor compatibilidade
+      storageKey: dynamicStorageKey,
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true

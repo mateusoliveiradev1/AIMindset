@@ -138,11 +138,30 @@ export function resetLocalStorage(options: ResetOptions = { all: true }): ResetR
         'user_preferences', 
         'auth_token',
         'aimindset_user',           // 🔥 Preservar dados de autenticação
-        'aimindset_supabase_user'   // 🔥 Preservar sessão do Supabase
+        'aimindset_supabase_user',  // 🔥 Preservar usuário do Supabase
+        'aimindset_session',        // 🔥 Preservar sessão usada pelo RPC
+        'aimindset.auth.token',     // 🔥 Preservar sessão/token legado
+        'sb-auth-token',            // 🔥 Possível chave do SDK
+        'sb:token',                 // 🔥 Possível chave do SDK
+        'supabase.auth.token'       // 🔥 Possível chave do SDK
       ];
-      
+
+      // Detectar e preservar chaves dinâmicas do Supabase: sb-<ref>-auth-token
+      try {
+        const allKeys = Object.keys(localStorage);
+        const dynamicSbKeys = allKeys.filter(k => k.startsWith('sb-') && k.includes('auth-token'));
+        dynamicSbKeys.forEach(k => preserveKeys.push(k));
+      } catch (e) {
+        console.warn('⚠️ [RESET] Falha ao detectar chaves dinâmicas do Supabase:', e);
+      }
+
+      // Copiar valores das chaves a preservar
       preserveKeys.forEach(key => {
-        importantData[key] = localStorage.getItem(key);
+        try {
+          importantData[key] = localStorage.getItem(key);
+        } catch (e) {
+          importantData[key] = null;
+        }
       });
 
       // Limpar tudo
@@ -151,8 +170,15 @@ export function resetLocalStorage(options: ResetOptions = { all: true }): ResetR
 
       // Restaurar dados importantes
       Object.entries(importantData).forEach(([key, value]) => {
-        if (value !== null) {
-          localStorage.setItem(key, value);
+        try {
+          if (value !== null) {
+            localStorage.setItem(key, value);
+          }
+        } catch (e) {
+          // Se não conseguir restaurar em localStorage, tenta sessionStorage para a sessão crítica
+          if (key === 'aimindset_session' && value !== null) {
+            try { sessionStorage.setItem(key, value); } catch {}
+          }
         }
       });
     } else {

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
-import { User as SupabaseUser } from '@supabase/supabase-js';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { logAuth, logError } from '../lib/logging';
 
@@ -33,6 +33,7 @@ export const useAuth = () => {
 // 🔥 CHAVES PARA PERSISTÊNCIA
 const USER_STORAGE_KEY = 'aimindset_user';
 const SUPABASE_USER_STORAGE_KEY = 'aimindset_supabase_user';
+const SESSION_STORAGE_KEY = 'aimindset.auth.token';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
@@ -128,6 +129,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('💥 ERRO AO SALVAR SUPABASE USER:', error);
       // Em caso de erro, ainda atualiza o estado
       setSupabaseUser(supabaseUserData);
+    }
+  };
+
+  // 🔥 FUNÇÃO PARA SALVAR SESSÃO (JWT) NO STORAGE COM FALLBACK
+  const saveSessionToStorage = (session: Session | null) => {
+    try {
+      if (session) {
+        clearLocalStorageIfNeeded();
+        const json = JSON.stringify(session);
+        try {
+          localStorage.setItem(SESSION_STORAGE_KEY, json);
+          // Também persistir na chave padronizada aimindset_session para RPC fallback
+          localStorage.setItem('aimindset_session', json);
+        } catch (e) {
+          console.warn('⚠️ Falha ao salvar sessão no localStorage, usando sessionStorage:', e);
+          try {
+            sessionStorage.setItem(SESSION_STORAGE_KEY, json);
+            sessionStorage.setItem('aimindset_session', json);
+          } catch (e2) {
+            console.error('💥 Falha ao salvar sessão no sessionStorage também:', e2);
+          }
+        }
+        console.log('🔒 Sessão persistida com sucesso (JWT presente).');
+      } else {
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+        sessionStorage.removeItem(SESSION_STORAGE_KEY);
+        // Remover também aimindset_session
+        localStorage.removeItem('aimindset_session');
+        sessionStorage.removeItem('aimindset_session');
+      }
+    } catch (error) {
+      console.error('💥 ERRO AO SALVAR SESSÃO:', error);
     }
   };
 
@@ -238,6 +271,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           if (session?.user) {
             console.log('📡 SESSÃO SUPABASE ENCONTRADA:', session.user.email);
+            // Persistir sessão (inclui access_token)
+            saveSessionToStorage(session);
             saveSupabaseUserToStorage(session.user);
             
             // Verificar se é admin
@@ -308,6 +343,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           
           if (session?.user) {
+            // Persistir sessão sempre que houver
+            try {
+              if (session) {
+                saveSessionToStorage(session);
+              }
+            } catch (persistErr) {
+              console.warn('⚠️ Falha ao persistir sessão em onAuthStateChange:', persistErr);
+            }
             saveSupabaseUserToStorage(session.user);
             setSupabaseUser(session.user);
             
@@ -348,11 +391,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 🧹 LIMPEZA FORÇADA DO LOCALSTORAGE ANTES DO LOGIN
       console.log('🧹 LIMPANDO LOCALSTORAGE FORÇADAMENTE...');
       try {
-        // Limpar todos os dados não essenciais
-        const keysToKeep = ['aimindset.auth.token', 'aimindset.auth.user', 'aimindset.supabase.user'];
+        // Limpar todos os dados não essenciais, preservando chaves críticas do Supabase
+        const keysToKeep = ['aimindset.auth.token', 'aimindset.auth.user', 'aimindset.supabase.user', 'aimindset_session'];
         const allKeys = Object.keys(localStorage);
         
         for (const key of allKeys) {
+          // Preservar chaves dinâmicas do Supabase (sb-<ref>-auth-token)
+          const isSupabaseDynamicAuthKey = key.startsWith('sb-') && key.includes('auth-token');
+          if (isSupabaseDynamicAuthKey) continue;
           if (!keysToKeep.includes(key)) {
             localStorage.removeItem(key);
           }
@@ -413,6 +459,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (data.user) {
         console.log('✅ USUÁRIO LOGADO:', data.user.email);
+        // Capturar sessão atual e persistir para garantir JWT disponível
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData?.session) {
+            saveSessionToStorage(sessionData.session);
+          } else {
+            console.warn('⚠️ Nenhuma sessão retornada imediatamente após login');
+          }
+        } catch (sessErr) {
+          console.warn('⚠️ Falha ao obter sessão pós-login:', sessErr);
+        }
         saveSupabaseUserToStorage(data.user);
         
         // Verificar admin imediatamente
@@ -434,19 +491,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('🎯 LOGIN COMPLETO - ESTADO PERSISTIDO - RETORNANDO TRUE');
           return true;
         } else {
-          console.log('❌ NÃO É ADMIN - LIMPANDO DADOS LOCAIS...');
+          console.log('⚠️ USUÁRIO AUTENTICADO, MAS NÃO ADMIN - MANTENDO SESSÃO');
           
-          // Log de falha por não ser admin
-          await logAuth('login_failure_not_admin', data.user.id, false, {
+          // Manter sessão do Supabase para considerar autenticado
+          saveSupabaseUserToStorage(data.user);
+          // Persistir sessão mesmo para não-admin
+          try {
+            const { data: sessionDataNonAdmin } = await supabase.auth.getSession();
+            if (sessionDataNonAdmin?.session) {
+              saveSessionToStorage(sessionDataNonAdmin.session);
+            }
+          } catch {}
+          // Não há usuário admin; mantém isAdmin como falso
+          saveUserToStorage(null);
+
+          // Log informativo de login sem privilégios de admin
+          await logAuth('login_success_non_admin', data.user.id, true, {
             email: data.user.email,
-            reason: 'user_not_admin'
+            role: 'user'
           });
           
-          // NÃO FAZER LOGOUT NO SUPABASE - APENAS LIMPAR DADOS LOCAIS
-          saveSupabaseUserToStorage(null);
-          saveUserToStorage(null);
           setIsLoading(false);
-          return false;
+          // Login bem-sucedido como usuário autenticado (não-admin)
+          return true;
         }
       }
 
@@ -491,6 +558,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         localStorage.removeItem(USER_STORAGE_KEY);
         localStorage.removeItem(SUPABASE_USER_STORAGE_KEY);
+        localStorage.removeItem(SESSION_STORAGE_KEY);
         sessionStorage.clear();
       } catch (storageError) {
         console.warn('⚠️ Erro ao limpar storage:', storageError);
