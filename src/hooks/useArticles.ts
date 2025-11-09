@@ -102,7 +102,7 @@ export interface UseArticlesReturn {
   getArticlesByCategory: (categoryId: string) => Promise<Article[]>;
   searchArticles: (query: string) => Promise<Article[]>;
   refreshArticles: () => Promise<void>;
-  fetchHomeData: () => Promise<{ articles: Article[]; categories: Category[]; }>;
+  fetchHomeData: (forceRefresh?: boolean) => Promise<{ articles: Article[]; categories: Category[]; }>;
   getFeaturedArticles: () => Promise<Article[]>;
 }
 
