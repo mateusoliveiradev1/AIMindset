@@ -71,6 +71,8 @@ export default {
       animation: {
         'pulse-neon': 'pulse-neon 2s ease-in-out infinite alternate',
         'float': 'float 3s ease-in-out infinite',
+        'gradient-shift': 'gradient-shift 8s ease infinite',
+        'pulse-subtle': 'pulse-subtle 2s ease-in-out infinite',
       },
       keyframes: {
         'pulse-neon': {
@@ -84,6 +86,18 @@ export default {
         'float': {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-10px)' },
+        },
+        'gradient-shift': {
+          '0%, 100%': { 
+            backgroundPosition: '0% 50%',
+          },
+          '50%': { 
+            backgroundPosition: '100% 50%',
+          },
+        },
+        'pulse-subtle': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.8' },
         },
       },
       backgroundImage: {

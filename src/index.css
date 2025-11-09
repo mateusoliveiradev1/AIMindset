@@ -18,6 +18,9 @@
 /* Import do scroll suave otimizado */
 @import './styles/smooth-scroll.css';
 
+/* Import dos estilos do card de artigo agendado */
+@import './styles/scheduled-card.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

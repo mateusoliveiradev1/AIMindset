@@ -72,3 +72,16 @@ export interface User {
 }
 
 export type SortBy = 'date' | 'title' | 'rating';
+
+// Tipo para o próximo artigo agendado (mobile-first)
+export interface ScheduledArticle {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  featured_image: string;
+  scheduled_for: string; // ISO timestamp
+  category_name: string;
+  author_name: string;
+  reading_time: number;
+}

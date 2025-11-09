@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import Hero from '../components/Home/Hero';
+import { NextScheduledArticle } from '../components/Home/NextScheduledArticle';
 import FeaturedArticles from '../components/Home/FeaturedArticles';
 import Categories from '../components/Home/Categories';
 import NewsletterCTA from '../components/Home/NewsletterCTA';
@@ -96,6 +97,12 @@ const Home: React.FC = () => {
         </Helmet>
       )}
       <Hero />
+      
+      {/* Card inteligente do próximo artigo agendado - só aparece quando há artigo */}
+      <section className="container mx-auto px-4 py-8">
+        <NextScheduledArticle />
+      </section>
+      
       <FeaturedArticles />
       <Categories />
       <NewsletterCTA />

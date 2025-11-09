@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, Tag, Share2, Twitter, Linkedin, Facebook, ArrowLeft, ArrowRight } from 'lucide-react';
 import { MarkdownLazy } from '../components/Performance/MarkdownLazy';
 import { toast } from 'sonner';
@@ -11,6 +11,8 @@ import Card from '../components/UI/Card';
 import Button from '../components/UI/Button';
 import SEOManager from '../components/SEO/SEOManager';
 import PreloadManager from '../components/Performance/PreloadManager';
+import { supabase } from '../lib/supabase';
+import { CountdownTimer } from '../components/Home/CountdownTimer';
 // import LazyImage from '../components/Performance/LazyImage';
 import { 
   ReadingProgressBarLazy,
@@ -35,8 +37,12 @@ const sanitizeTitle = (rawTitle: string) => {
 };
 
 const Article: React.FC = () => {
+  const navigate = useNavigate();
   const { slug } = useParams<{ slug: string }>();
   const { articles, categories, loading, error, refreshArticles } = useArticles();
+  const [searchParams] = useSearchParams();
+  const isPreviewParam = searchParams.get('preview') === 'true';
+  const [previewArticle, setPreviewArticle] = useState<any>(null);
   
   // Debug logs para investigar o problema
   console.log('🔍 Article.tsx - Renderizando página do artigo');
@@ -45,16 +51,65 @@ const Article: React.FC = () => {
   console.log('🔍 Article.tsx - Loading:', loading);
   console.log('🔍 Article.tsx - Error:', error);
   console.log('🔍 Article.tsx - Todos os artigos:', articles?.map(a => ({ slug: a.slug, title: a.title, published: a.published })));
+  console.log('🔍 Article.tsx - Preview param:', isPreviewParam);
   
+  // Determina o artigo publicado antes dos efeitos para evitar ReferenceError
+  const articlePublished = (articles || []).find(art => art?.slug === slug && art.published);
+
+  // Modo preview ativo quando não há artigo publicado e existe preview carregado
+  const isPreviewMode = Boolean(isPreviewParam && !articlePublished && previewArticle);
+
+  // Util para limitar conteúdo do preview (primeiros 3 parágrafos ou ~1200 chars)
+  const getLimitedContent = (markdown: string, maxParagraphs: number = 3, maxChars: number = 1200) => {
+    if (!markdown) return '';
+    const paragraphs = markdown.split(/\n\s*\n/);
+    let limited = paragraphs.slice(0, maxParagraphs).join('\n\n');
+    if (limited.length > maxChars) {
+      limited = limited.slice(0, maxChars) + '\n\n[...]';
+    }
+    return limited;
+  };
+
   useEffect(() => {
     refreshArticles();
   }, [refreshArticles]);
+
+  // Carregar artigo por slug para preview quando não encontrado como publicado
+  useEffect(() => {
+    const loadPreviewIfNeeded = async () => {
+      if (!isPreviewParam || !slug || articlePublished) return;
+      try {
+        console.log('🔍 Article.tsx - Buscando artigo para preview por slug:', slug);
+        const { data, error } = await supabase
+          .from('articles')
+          .select('id, title, slug, excerpt, content, image_url, published, created_at, updated_at, category_id, scheduled_for, scheduling_status')
+          .eq('slug', slug)
+          .limit(1)
+          .maybeSingle();
+        if (error) {
+          console.error('❌ Article.tsx - Erro ao buscar artigo de preview:', error);
+          return;
+        }
+        if (data) {
+          console.log('✅ Article.tsx - Artigo de preview carregado:', { id: data.id, title: data.title, published: data.published });
+          setPreviewArticle(data);
+        } else {
+          console.warn('⚠️ Article.tsx - Nenhum artigo encontrado para preview com este slug');
+        }
+      } catch (e) {
+        console.error('❌ Article.tsx - Falha ao carregar artigo de preview:', e);
+      }
+    };
+    loadPreviewIfNeeded();
+  }, [isPreviewParam, slug, articlePublished]);
   
-  const article = (articles || []).find(art => art?.slug === slug && art.published);
+  const article = articlePublished || (isPreviewParam ? previewArticle : null);
   const articleCategory = categories.find(cat => cat.id === article?.category_id);
   const displayTitle = sanitizeTitle(article?.title || '');
   
-  console.log('🔍 Article.tsx - Artigo encontrado:', article ? `ID: ${article.id}, Título: ${article.title}` : 'NENHUM ARTIGO ENCONTRADO');
+  console.log('🔍 Article.tsx - Artigo publicado encontrado:', articlePublished ? `ID: ${articlePublished.id}, Título: ${articlePublished.title}` : 'NENHUM ARTIGO PUBLICADO ENCONTRADO');
+  console.log('🔍 Article.tsx - Artigo em preview:', previewArticle ? `ID: ${previewArticle.id}, Título: ${previewArticle.title}` : 'SEM PREVIEW');
+  console.log('🔍 Article.tsx - Artigo efetivo:', article ? `ID: ${article.id}, Título: ${article.title}` : 'NENHUM ARTIGO EFETIVO');
   
 
   
@@ -109,6 +164,18 @@ const Article: React.FC = () => {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-4">Erro ao carregar artigo</h1>
           <p className="text-futuristic-gray">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Evitar 404 enquanto carrega preview
+  if (isPreviewParam && !articlePublished && !previewArticle) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-green mx-auto mb-4"></div>
+          <p className="text-futuristic-gray">Carregando preview do artigo...</p>
         </div>
       </div>
     );
@@ -191,7 +258,9 @@ const Article: React.FC = () => {
             {/* Sidebar - Table of Contents */}
             <aside className="lg:w-64 order-2 lg:order-1">
               <div className="lg:sticky lg:top-20 lg:h-screen lg:overflow-y-auto lg:pb-20">
-                <TableOfContents articleSlug={slug} />
+                {!isPreviewMode && (
+                  <TableOfContents articleSlug={slug} />
+                )}
               </div>
             </aside>
 
@@ -199,22 +268,35 @@ const Article: React.FC = () => {
             <div className="flex-1 lg:max-w-4xl order-1 lg:order-2">
               {/* Back Button */}
               <div className="mb-8">
-                <Link
-                  to={`/categoria/${articleCategory?.slug || ''}`}
-                  className="inline-flex items-center text-futuristic-gray hover:text-lime-green transition-colors duration-300"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Voltar para {articleCategory?.name || 'Categoria'}
-                </Link>
+                {isPreviewMode ? (
+                  <button
+                    onClick={() => navigate(-1)}
+                    className="inline-flex items-center text-futuristic-gray hover:text-lime-green transition-colors duration-300"
+                    aria-label="Voltar"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Voltar
+                  </button>
+                ) : (
+                  <Link
+                    to={`/categoria/${articleCategory?.slug || ''}`}
+                    className="inline-flex items-center text-futuristic-gray hover:text-lime-green transition-colors duration-300"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Voltar para {articleCategory?.name || 'Categoria'}
+                  </Link>
+                )}
               </div>
     
               {/* Article Header */}
               <header className="mb-12">
                 <div className="mb-6">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-montserrat font-semibold bg-neon-purple/20 text-neon-purple border border-neon-purple/30">
-                    <Tag className="h-3 w-3 mr-1" />
-                    {articleCategory?.name || 'Categoria'}
-                  </span>
+                  {!isPreviewMode && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-montserrat font-semibold bg-neon-purple/20 text-neon-purple border border-neon-purple/30">
+                      <Tag className="h-3 w-3 mr-1" />
+                      {articleCategory?.name || 'Categoria'}
+                    </span>
+                  )}
                 </div>
     
                 <h1 className="font-orbitron font-bold text-3xl md:text-4xl lg:text-5xl text-white mb-6 leading-tight">
@@ -226,55 +308,59 @@ const Article: React.FC = () => {
                 </p>
     
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-                  <div className="flex items-center space-x-6 text-sm text-futuristic-gray">
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      {formatDate(article.created_at)}
+                  {!isPreviewMode && (
+                    <div className="flex items-center space-x-6 text-sm text-futuristic-gray">
+                      <div className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        {formatDate(article.created_at)}
+                      </div>
+                      <div className="flex items-center">
+                        <Clock className="h-4 w-4 mr-2" />
+                        {dynamicReadingTime} min de leitura
+                      </div>
                     </div>
-                    <div className="flex items-center">
-                      <Clock className="h-4 w-4 mr-2" />
-                      {dynamicReadingTime} min de leitura
-                    </div>
-                  </div>
+                  )}
     
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm text-futuristic-gray mr-2">Compartilhar:</span>
-                    <button
-                      onClick={() => handleShare('copy')}
-                      className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 hover-lift"
-                      title="Copiar link"
-                      aria-label="Copiar link do artigo"
-                    >
-                      <Share2 className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleShare('twitter')}
-                      className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 hover-lift"
-                      title="Compartilhar no Twitter"
-                      aria-label="Compartilhar artigo no Twitter"
-                    >
-                      <Twitter className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleShare('linkedin')}
-                      className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 hover-lift"
-                      title="Compartilhar no LinkedIn"
-                      aria-label="Compartilhar artigo no LinkedIn"
-                    >
-                      <Linkedin className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleShare('facebook')}
-                      className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 hover-lift"
-                      title="Compartilhar no Facebook"
-                      aria-label="Compartilhar artigo no Facebook"
-                    >
-                      <Facebook className="h-4 w-4" />
-                    </button>
-                  </div>
+                  {!isPreviewMode && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-futuristic-gray mr-2">Compartilhar:</span>
+                      <button
+                        onClick={() => handleShare('copy')}
+                        className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 hover-lift"
+                        title="Copiar link"
+                        aria-label="Copiar link do artigo"
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleShare('twitter')}
+                        className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 hover-lift"
+                        title="Compartilhar no Twitter"
+                        aria-label="Compartilhar artigo no Twitter"
+                      >
+                        <Twitter className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleShare('linkedin')}
+                        className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 hover-lift"
+                        title="Compartilhar no LinkedIn"
+                        aria-label="Compartilhar artigo no LinkedIn"
+                      >
+                        <Linkedin className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleShare('facebook')}
+                        className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 hover-lift"
+                        title="Compartilhar no Facebook"
+                        aria-label="Compartilhar artigo no Facebook"
+                      >
+                        <Facebook className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
     
-                <div className="relative w-full max-h-[400px] sm:max-h-[500px] lg:max-h-[600px] bg-darker-surface rounded-lg overflow-hidden flex items-center justify-center">
+              <div className="relative w-full max-h-[400px] sm:max-h-[500px] lg:max-h-[600px] bg-darker-surface rounded-lg overflow-hidden flex items-center justify-center">
                   <OptimizedImage
                     src={article.image_url || '/placeholder-image.svg'}
                     alt={displayTitle}
@@ -285,9 +371,29 @@ const Article: React.FC = () => {
                     fallbackSrc={'/placeholder-image.svg'}
                     priority={true}
                   />
+                  {isPreviewMode && (
+                    <div className="preview-watermark">
+                      <span className="text-4xl sm:text-5xl lg:text-6xl">PREVIEW</span>
+                    </div>
+                  )}
                 </div>
               </header>
-    
+
+              {isPreviewMode && (
+                <div className="mb-6 glass-panel neon-glow-border preview-banner p-4 animate-fade-in-up">
+                  <div className="flex-1">
+                    <div className="preview-label text-sm uppercase tracking-wider">Preview de artigo agendado</div>
+                    <p className="text-white/80 text-sm">Conteúdo parcial. O artigo completo será liberado na publicação.</p>
+                  </div>
+                  {previewArticle?.scheduled_for && (
+                    <div className="countdown-chip">
+                      <span className="countdown-glow text-sm">Publicação em</span>
+                      <CountdownTimer targetDate={previewArticle.scheduled_for} />
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Article Content */}
               <article id="article-content" data-article-content className="prose prose-invert prose-lg max-w-none mb-12">
                 <MarkdownLazy 
@@ -368,49 +474,51 @@ const Article: React.FC = () => {
                     )
                   }}
                 >
-                  {article.content}
+                  {isPreviewMode ? getLimitedContent(previewArticle?.content || '') : article.content}
                 </MarkdownLazy>
               </article>
     
-              {/* Tags */}
-              <div className="mb-12">
-                <h3 className="font-montserrat font-semibold text-white mb-4">Tags:</h3>
-                <div className="flex flex-wrap gap-2">
-                  {(() => {
-                    const tags = article.tags;
-                    if (!tags) return null;
-                    
-                    // Se for string, dividir por vírgula
-                    if (typeof tags === 'string' && tags.length > 0) {
-                      return tags.split(',').map((tag, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 text-sm font-roboto bg-lime-green/10 text-lime-green rounded-md hover:bg-lime-green/20 transition-colors duration-300"
-                        >
-                          {tag.trim()}
-                        </span>
-                      ));
-                    }
-                    
-                    // Se for array
-                    if (Array.isArray(tags) && tags.length > 0) {
-                      return tags.map((tag, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 text-sm font-roboto bg-lime-green/10 text-lime-green rounded-md hover:bg-lime-green/20 transition-colors duration-300"
-                        >
-                          {typeof tag === 'string' ? tag : String(tag)}
-                        </span>
-                      ));
-                    }
-                    
-                    return null;
-                  })()}
+              {/* Tags - ocultas no modo preview para manter minimalista */}
+              {!isPreviewMode && (
+                <div className="mb-12">
+                  <h3 className="font-montserrat font-semibold text-white mb-4">Tags:</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {(() => {
+                      const tags = article.tags;
+                      if (!tags) return null;
+                      
+                      // Se for string, dividir por vírgula
+                      if (typeof tags === 'string' && tags.length > 0) {
+                        return tags.split(',').map((tag, index) => (
+                          <span
+                            key={index}
+                            className="px-3 py-1 text-sm font-roboto bg-lime-green/10 text-lime-green rounded-md hover:bg-lime-green/20 transition-colors duration-300"
+                          >
+                            {tag.trim()}
+                          </span>
+                        ));
+                      }
+                      
+                      // Se for array
+                      if (Array.isArray(tags) && tags.length > 0) {
+                        return tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className="px-3 py-1 text-sm font-roboto bg-lime-green/10 text-lime-green rounded-md hover:bg-lime-green/20 transition-colors duração-300"
+                          >
+                            {typeof tag === 'string' ? tag : String(tag)}
+                          </span>
+                        ));
+                      }
+                      
+                      return null;
+                    })()}
+                  </div>
                 </div>
-              </div>
+              )}
     
               {/* Related Articles */}
-              {relatedArticles && relatedArticles.length > 0 && (
+              {!isPreviewMode && relatedArticles && relatedArticles.length > 0 && (
                 <section className="mb-12">
                   <h3 className="font-orbitron font-bold text-2xl text-white mb-8">
                     <span className="gradient-text">Artigos Relacionados</span>
@@ -458,17 +566,24 @@ const Article: React.FC = () => {
               )}
      
                {/* Article Navigation */}
-               <ArticleNavigation 
-                 currentSlug={slug}
-                 categoryId={article?.category_id}
-                 className="mt-12"
-               />
+               {!isPreviewMode && (
+                 <ArticleNavigation 
+                   currentSlug={slug}
+                   categoryId={article?.category_id}
+                   className="mt-12"
+                 />
+               )}
      
-               {/* Feedback Section */}
-               <FeedbackSectionLazy articleId={article.id} />
+               {/* Interações (feedbacks/comentários) apenas fora do preview */}
+               {!isPreviewMode && (
+                 <>
+                   {/* Feedback Section */}
+                   <FeedbackSectionLazy articleId={article.id} />
 
-               {/* Comments Section */}
-               <CommentSectionLazy articleId={article.id} />
+                   {/* Comments Section */}
+                   <CommentSectionLazy articleId={article.id} />
+                 </>
+               )}
              </div>
            </div>
          </div>
