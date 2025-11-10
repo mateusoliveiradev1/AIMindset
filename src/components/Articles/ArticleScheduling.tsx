@@ -199,6 +199,7 @@ export const ArticleScheduling: React.FC<ArticleSchedulingProps> = ({
               <button
                 onClick={() => setIsOpen(true)}
                 className="text-sm px-3 py-1 bg-white border rounded hover:bg-gray-50"
+                aria-label="Editar agendamento"
               >
                 Reagendar
               </button>

@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { rpcWithAuth } from '@/lib/supabaseRpc';
 import { useToast } from './useToast';
 import { useAuth } from '@/contexts/AuthContext';
+import { logEvent, logSystem } from '@/lib/logging';
 
 export interface SchedulingData {
   scheduled_for: string;
@@ -108,12 +109,38 @@ export const useArticleScheduling = () => {
       const minDate = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutos no futuro
       const maxDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 ano no futuro
 
+      // Horário já passou
+      if (scheduledDate.getTime() <= now.getTime()) {
+        throw new Error('O horário selecionado já passou');
+      }
+
       if (scheduledDate < minDate) {
         throw new Error('A data de agendamento deve ser pelo menos 5 minutos no futuro');
       }
 
       if (scheduledDate > maxDate) {
         throw new Error('A data de agendamento não pode ser mais de 1 ano no futuro');
+      }
+
+      // Verificar se artigo já está publicado
+      const { data: article, error: articleError } = await supabase
+        .from('articles')
+        .select('id, published, scheduling_status')
+        .eq('id', articleId)
+        .single();
+
+      if (articleError) {
+        throw new Error('Falha ao verificar status do artigo');
+      }
+
+      if (article?.published) {
+        throw new Error('Este artigo já está publicado e não pode ser agendado');
+      }
+
+      // Verificar conflitos de horário
+      const hasConflict = await checkSchedulingConflicts(schedulingData.scheduled_for, articleId);
+      if (hasConflict) {
+        throw new Error('Já existe um artigo agendado para este horário');
       }
 
       // Chamar função RPC
@@ -132,7 +159,21 @@ export const useArticleScheduling = () => {
         throw new Error(data.error || 'Erro ao agendar artigo');
       }
 
-      showToast('success', 'Artigo agendado com sucesso!');
+      // Determinar mensagem amigável conforme origem (criação vs edição)
+      const previousStatus = schedulingData.metadata?.previousStatus as string | undefined;
+      const successMessage = previousStatus === 'scheduled' ? 'Agendamento atualizado com sucesso!' : 'Artigo agendado com sucesso!';
+      showToast('success', successMessage);
+      // Logs de aplicação e sistema
+      await logEvent('info', 'useArticleScheduling', previousStatus === 'scheduled' ? 'scheduling_updated' : 'scheduling_created', {
+        article_id: articleId,
+        scheduled_for: schedulingData.scheduled_for,
+        previous_status: previousStatus,
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined
+      });
+      await logSystem('general', previousStatus === 'scheduled' ? 'Agendamento atualizado' : 'Agendamento criado', {
+        component: 'useArticleScheduling',
+        function_name: 'scheduleArticle'
+      });
       return {
         success: true,
         article_id: data.article_id,
@@ -142,6 +183,20 @@ export const useArticleScheduling = () => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao agendar artigo';
       showToast('error', errorMessage);
+      // Logar erro
+      try {
+        await logEvent('error', 'useArticleScheduling', 'scheduling_error', {
+          article_id: articleId,
+          scheduled_for: schedulingData?.scheduled_for,
+          error_stack: error instanceof Error ? error.stack : undefined
+        });
+        await logSystem('general', 'Falha de publicação: motivo X', {
+          component: 'useArticleScheduling',
+          function_name: 'scheduleArticle',
+          error_code: 'SCHEDULING_VALIDATION_OR_RPC_ERROR',
+          stack_trace: error instanceof Error ? error.stack : undefined
+        });
+      } catch {}
       return {
         success: false,
         error: errorMessage
@@ -183,6 +238,14 @@ export const useArticleScheduling = () => {
       }
 
       showToast('success', 'Agendamento cancelado com sucesso!');
+      await logEvent('info', 'useArticleScheduling', 'scheduling_cancelled', {
+        article_id: articleId,
+        reason
+      });
+      await logSystem('general', 'Agendamento cancelado', {
+        component: 'useArticleScheduling',
+        function_name: 'cancelScheduling'
+      });
       return {
         success: true,
         article_id: data.article_id,
@@ -192,6 +255,12 @@ export const useArticleScheduling = () => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao cancelar agendamento';
       showToast('error', errorMessage);
+      try {
+        await logEvent('error', 'useArticleScheduling', 'scheduling_cancel_error', {
+          article_id: articleId,
+          error_stack: error instanceof Error ? error.stack : undefined
+        });
+      } catch {}
       return {
         success: false,
         error: errorMessage
@@ -209,6 +278,8 @@ export const useArticleScheduling = () => {
   ): Promise<ScheduledArticle[]> => {
     try {
       setLoading(true);
+      // Manutenção automática: limpar cancelados antigos sem afetar UI
+      await cleanupOldCancelled();
 
       // Garantir que usuário esteja autenticado
       if (!isAuthenticated) {
@@ -222,9 +293,35 @@ export const useArticleScheduling = () => {
         limit_count: limit,
         offset_count: offset
       }, accessToken || undefined);
+      // Detectar transições de scheduled -> published para logar publicação automática
+      try {
+        const previousById = new Map<string, string>();
+        for (const item of scheduledArticles) {
+          previousById.set(item.id, item.scheduling_status);
+        }
+        for (const item of (data || [])) {
+          const prevStatus = previousById.get(item.id);
+          if (prevStatus === 'scheduled' && item.scheduling_status === 'published') {
+            await logEvent('info', 'useArticleScheduling', 'auto_publish_performed', {
+              article_id: item.id,
+              scheduled_for: item.scheduled_for
+            });
+            await logSystem('general', 'Publicação automática realizada', {
+              component: 'useArticleScheduling',
+              function_name: 'fetchScheduledArticles',
+              article_id: item.id
+            });
+          }
+        }
+      } catch {}
 
-      setScheduledArticles(data || []);
-      return data || [];
+      const sorted = (data || []).slice().sort((a, b) => {
+        const at = new Date(a.scheduled_for).getTime();
+        const bt = new Date(b.scheduled_for).getTime();
+        return at - bt;
+      });
+      setScheduledArticles(sorted);
+      return sorted;
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro ao buscar artigos agendados';
@@ -265,6 +362,50 @@ export const useArticleScheduling = () => {
     }
   }, []);
 
+  // Indicador de tempo restante (para consumo em tooltips/titles)
+  const getRemainingTimeLabel = useCallback((dateString: string): string => {
+    const target = new Date(dateString).getTime();
+    const now = Date.now();
+    const diffMs = target - now;
+    if (diffMs <= 0) return 'horário já passou';
+    const minutes = Math.floor(diffMs / (60 * 1000));
+    if (minutes < 60) return `publica em ${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `publica em ${hours} h`;
+    const days = Math.floor(hours / 24);
+    return `publica em ${days} dia(s)`;
+  }, []);
+
+  // Manutenção automática: limpar agendamentos cancelados há > 30 dias (executa no cliente, sem alterar UI)
+  const cleanupOldCancelled = useCallback(async (): Promise<void> => {
+    try {
+      const lastRunRaw = localStorage.getItem('aimindset_cleanup_cancelled_last_run');
+      const lastRun = lastRunRaw ? parseInt(lastRunRaw, 10) : 0;
+      const nowTs = Date.now();
+      // executar no máximo 1 vez por dia
+      if (nowTs - lastRun < 24 * 60 * 60 * 1000) {
+        return;
+      }
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { error } = await supabase
+        .from('articles')
+        .delete()
+        .eq('scheduling_status', 'cancelled')
+        .lt('updated_at', cutoff);
+      if (error) {
+        console.warn('Falha ao limpar cancelados antigos:', error.message);
+        return;
+      }
+      localStorage.setItem('aimindset_cleanup_cancelled_last_run', String(nowTs));
+      await logSystem('general', 'Manutenção: cancelados antigos limpos', {
+        component: 'useArticleScheduling',
+        function_name: 'cleanupOldCancelled'
+      });
+    } catch (err) {
+      console.warn('Erro na manutenção automática de cancelados:', err instanceof Error ? err.message : err);
+    }
+  }, []);
+
   // Função auxiliar para formatar data de agendamento
   const formatSchedulingDate = useCallback((dateString: string): string => {
     const date = new Date(dateString);
@@ -283,6 +424,10 @@ export const useArticleScheduling = () => {
     const now = new Date();
     const minDate = new Date(now.getTime() + 5 * 60 * 1000);
     const maxDate = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+
+    if (scheduledDate.getTime() <= now.getTime()) {
+      return { valid: false, error: 'O horário selecionado já passou' };
+    }
 
     if (scheduledDate < minDate) {
       return { valid: false, error: 'A data deve ser pelo menos 5 minutos no futuro' };
@@ -303,6 +448,8 @@ export const useArticleScheduling = () => {
     fetchScheduledArticles,
     checkSchedulingConflicts,
     formatSchedulingDate,
-    validateSchedulingDate
+    validateSchedulingDate,
+    getRemainingTimeLabel,
+    cleanupOldCancelled
   };
 };

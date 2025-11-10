@@ -196,7 +196,9 @@ export const ScheduledArticlesList: React.FC = () => {
                   <div className="flex items-center space-x-4 text-sm text-futuristic-gray mb-2">
                     <div className="flex items-center space-x-1">
                       <Calendar className="w-4 h-4" />
-                      <span>
+                      <span
+                        title={`${format(new Date(article.scheduled_for), 'dd/MM/yyyy HH:mm', { locale: ptBR })}`}
+                      >
                         {format(new Date(article.scheduled_for), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                       </span>
                     </div>
@@ -218,6 +220,23 @@ export const ScheduledArticlesList: React.FC = () => {
                       {getStatusIcon(article.scheduling_status)}
                       <span>{getStatusLabel(article.scheduling_status)}</span>
                     </span>
+                    {article.scheduling_status === 'scheduled' && (
+                      <span className="text-[11px] text-futuristic-gray" aria-label="Tempo restante">
+                        {/* Apenas texto adicional, sem alterar visual do painel */}
+                        publica em {(() => {
+                          const target = new Date(article.scheduled_for).getTime();
+                          const now = Date.now();
+                          const diff = target - now;
+                          if (diff <= 0) return '0min';
+                          const min = Math.floor(diff / 60000);
+                          if (min < 60) return `${min}min`;
+                          const h = Math.floor(min / 60);
+                          if (h < 24) return `${h}h`;
+                          const d = Math.floor(h / 24);
+                          return `${d}d`;
+                        })()}
+                      </span>
+                    )}
                   </div>
                 </div>
 
