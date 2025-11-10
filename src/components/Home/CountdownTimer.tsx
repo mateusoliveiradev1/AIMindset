@@ -8,20 +8,33 @@ interface CountdownTimerProps {
 
 // Função para formatar o tempo de forma mobile-friendly
 const formatTimeRemaining = (timeLeft: number): string => {
+  const now = new Date();
+  const target = new Date(now.getTime() + timeLeft);
+
+  // Diferença de dias com base no calendário local (corrige "amanhã" indevido)
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfTarget = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+  const daysDiff = Math.round((startOfTarget.getTime() - startOfToday.getTime()) / (24 * 60 * 60 * 1000));
+
+  // Regras desejadas:
+  // - Hoje (mesmo dia): "publica hoje" (com urgência em minutos quando < 1h)
+  // - Amanhã: "publica amanhã"
+  // - 2 dias ou mais: "publica em X dias"
+  if (daysDiff >= 2) {
+    return `publica em ${daysDiff} dias`;
+  }
+  if (daysDiff === 1) {
+    return 'publica amanhã';
+  }
+
+  // daysDiff === 0 -> hoje
   const hours = Math.floor(timeLeft / (1000 * 60 * 60));
   const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-  
-  // Mobile-first: formatos inteligentes baseado no tempo restante
   if (timeLeft < 60 * 60 * 1000) { // Menos de 1 hora
     return `Faltam ${minutes}min`;
-  } else if (timeLeft < 24 * 60 * 60 * 1000) { // Menos de 24 horas
-    return `Em ${hours}h ${minutes}m`;
-  } else { // Mais de 24 horas
-    const targetDate = new Date();
-    targetDate.setTime(targetDate.getTime() + timeLeft);
-    const hours = targetDate.getHours();
-    return `Amanhã às ${hours}h`;
   }
+  // Hoje, mas não urgente
+  return 'publica hoje';
 };
 
 // Componente otimizado para mobile - 60fps garantido
