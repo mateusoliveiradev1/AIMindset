@@ -74,6 +74,44 @@ const Article: React.FC = () => {
     refreshArticles();
   }, [refreshArticles]);
 
+  // Registrar view com dedupe simples por sessão
+  useEffect(() => {
+    const registerView = async () => {
+      try {
+        const targetId = articlePublished?.id || previewArticle?.id;
+        if (!targetId || isPreviewParam) return; // Não registrar em preview
+
+        const key = `viewed_${targetId}`;
+        const now = Date.now();
+        const last = sessionStorage.getItem(key);
+        // Dedupe: só contar 1 vez por sessão a cada 30 minutos
+        const THIRTY_MIN = 30 * 60 * 1000;
+        if (last && now - Number(last) < THIRTY_MIN) {
+          return;
+        }
+
+        const { data, error } = await supabase.rpc('increment_article_views', { target_article_id: targetId });
+        if (error) {
+          console.warn('⚠️ Falha ao registrar view:', error.message);
+          return;
+        }
+        sessionStorage.setItem(key, String(now));
+
+        // Invalidação leve de cache para refletir no admin
+        try {
+          window.dispatchEvent(new CustomEvent('realtime-cache-invalidate', {
+            detail: { source: 'article-view', articleId: targetId }
+          }));
+        } catch {}
+      } catch (e) {
+        console.warn('⚠️ Erro inesperado ao registrar view:', e);
+      }
+    };
+
+    registerView();
+    // Executa quando artigo publicado muda
+  }, [articlePublished?.id, isPreviewParam]);
+
   // Carregar artigo por slug para preview quando não encontrado como publicado
   useEffect(() => {
     const loadPreviewIfNeeded = async () => {

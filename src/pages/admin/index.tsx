@@ -633,7 +633,7 @@ export default function AdminDashboard() {
                 ) : (
                   <span className="px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-400 text-[11px] border border-yellow-400/30">Rascunho</span>
                 );
-                const views = article.views ?? 0;
+                const views = (typeof article.views === 'number' ? article.views : (typeof (article as any).total_views === 'number' ? (article as any).total_views : 0));
                 const comments = article.comments_count ?? 0;
                 const likes = article.likes_count ?? 0;
                 return (

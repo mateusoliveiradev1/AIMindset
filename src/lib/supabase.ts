@@ -151,6 +151,7 @@ export type Article = Database['public']['Tables']['articles']['Row'] & {
   negative_feedback?: number;
   total_comments?: number;
   approval_rate?: number;
+  views?: number; // Compatível com UI existente, mapeado de total_views
 };
 export type Category = Database['public']['Tables']['categories']['Row'];
 export type NewsletterSubscriber = Database['public']['Tables']['newsletter_subscribers']['Row'];

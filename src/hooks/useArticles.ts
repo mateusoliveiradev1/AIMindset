@@ -164,11 +164,13 @@ export const useArticles = (): UseArticlesReturn => {
           filters: [{ column: 'id', operator: 'in', value: categoryIds }]
         });
 
-        // Combinar artigos com categorias
-        const articlesWithCategories = data.map(article => ({
-          ...article,
-          category: categoriesData?.find(cat => cat.id === article.category_id) || null
-        }));
+      // Combinar artigos com categorias
+      const articlesWithCategories = data.map(article => ({
+        ...article,
+        // Mapear total_views -> views para compatibilidade com UI
+        views: typeof (article as any).total_views === 'number' ? (article as any).total_views : 0,
+        category: categoriesData?.find(cat => cat.id === article.category_id) || null
+      }));
 
         // Cachear resultados
         await hybridCache.set(CacheKeys.ARTICLES_LIST, articlesWithCategories);
@@ -176,11 +178,16 @@ export const useArticles = (): UseArticlesReturn => {
         
         console.log(`✅ [useArticles] ${articlesWithCategories.length} artigos carregados (${queryTime}ms)${fromCache ? ' [CACHE]' : ''}`);
       } else {
-        // Cachear sem categorias
-        await hybridCache.set(CacheKeys.ARTICLES_LIST, data);
-        setArticles(data);
+        // Cachear sem categorias — ainda mapear total_views -> views
+        const mapped = data.map((a: any) => ({
+          ...a,
+          views: typeof a.total_views === 'number' ? a.total_views : 0
+        }));
+
+        await hybridCache.set(CacheKeys.ARTICLES_LIST, mapped);
+        setArticles(mapped);
         
-        console.log(`✅ [useArticles] ${data.length} artigos carregados (${queryTime}ms)${fromCache ? ' [CACHE]' : ''}`);
+        console.log(`✅ [useArticles] ${mapped.length} artigos carregados (${queryTime}ms)${fromCache ? ' [CACHE]' : ''}`);
       }
     } catch (err) {
       console.error('❌ Error fetching optimized articles:', err);
@@ -875,15 +882,14 @@ export const useArticles = (): UseArticlesReturn => {
     try {
       const { data, error: fetchError } = await supabase
         .from('articles')
-        .select('*')
+        .select('*, total_views')
         .eq('published', true)
         .order('created_at', { ascending: false });
 
       if (fetchError) {
         throw fetchError;
       }
-
-      return data || [];
+      return (data || []).map((a: any) => ({ ...a, views: typeof a.total_views === 'number' ? a.total_views : 0 }));
     } catch (err) {
       console.error('Error fetching published articles:', err);
       return [];
@@ -894,7 +900,7 @@ export const useArticles = (): UseArticlesReturn => {
     try {
       const { data, error: fetchError } = await supabase
         .from('articles')
-        .select('*')
+        .select('*, total_views')
         .eq('category_id', categoryId)
         .eq('published', true)
         .order('created_at', { ascending: false });
@@ -902,8 +908,7 @@ export const useArticles = (): UseArticlesReturn => {
       if (fetchError) {
         throw fetchError;
       }
-
-      return data || [];
+      return (data || []).map((a: any) => ({ ...a, views: typeof a.total_views === 'number' ? a.total_views : 0 }));
     } catch (err) {
       console.error('Error fetching articles by category:', err);
       return [];
@@ -914,7 +919,7 @@ export const useArticles = (): UseArticlesReturn => {
     try {
       const { data, error: fetchError } = await supabase
         .from('articles')
-        .select('*')
+        .select('*, total_views')
         .or(`title.ilike.%${query}%,excerpt.ilike.%${query}%,content.ilike.%${query}%`)
         .eq('published', true)
         .order('created_at', { ascending: false });
@@ -922,8 +927,7 @@ export const useArticles = (): UseArticlesReturn => {
       if (fetchError) {
         throw fetchError;
       }
-
-      return data || [];
+      return (data || []).map((a: any) => ({ ...a, views: typeof a.total_views === 'number' ? a.total_views : 0 }));
     } catch (err) {
       console.error('Error searching articles:', err);
       return [];
@@ -1146,10 +1150,13 @@ export const useArticles = (): UseArticlesReturn => {
     // Escutar eventos de mudança de feedback
     window.addEventListener('feedbackChanged', handleFeedbackChange as EventListener);
     window.addEventListener('forceFeedbackSync', handleForceSync);
+    // Escutar invalidação global de cache (ex.: incremento de views)
+    window.addEventListener('realtime-cache-invalidate', handleForceSync);
 
     return () => {
       window.removeEventListener('feedbackChanged', handleFeedbackChange as EventListener);
       window.removeEventListener('forceFeedbackSync', handleForceSync);
+      window.removeEventListener('realtime-cache-invalidate', handleForceSync);
     };
   }, [fetchArticles, fetchCategories]);
 
