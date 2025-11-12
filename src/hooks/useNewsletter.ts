@@ -551,6 +551,10 @@ export const useNewsletter = () => {
           toast.error('Este email já está inscrito na newsletter');
           return { success: false, error: 'Email já inscrito' };
         }
+        if (error.code === '23514') {
+          toast.error('Falha ao registrar log da inscrição. Tente novamente mais tarde.');
+          return { success: false, error: 'Violação de regra de status em logs' };
+        }
         throw error;
       }
 
@@ -561,6 +565,10 @@ export const useNewsletter = () => {
       return { success: true, data };
     } catch (err: any) {
       console.error('Erro ao inscrever:', err);
+      if (err?.code === '23514') {
+        toast.error('Falha ao registrar log da inscrição. Tente novamente mais tarde.');
+        return { success: false, error: 'Violação de regra de status em logs' };
+      }
       toast.error('Erro ao realizar inscrição');
       return { success: false, error: err.message };
     }

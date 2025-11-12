@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { ensureValidLogStatus } from '../utils/newsletterLogs';
 import { toast } from 'sonner';
 
 export interface NewsletterLog {
@@ -211,10 +212,12 @@ export const useNewsletterLogs = () => {
   // Criar log de evento
   const createLog = async (logData: Omit<NewsletterLog, 'id' | 'created_at' | 'processed_at'>) => {
     try {
+      const validatedStatus = ensureValidLogStatus(logData.status as string);
       const { data, error } = await supabase
         .from('newsletter_logs')
         .insert([{
           ...logData,
+          status: validatedStatus,
           user_id: (await supabase.auth.getUser()).data.user?.id
         }])
         .select()
