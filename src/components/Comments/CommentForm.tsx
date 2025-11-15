@@ -26,6 +26,7 @@ export const CommentForm: React.FC<CommentFormProps> = ({
   const [errors, setErrors] = useState<Partial<CommentFormData>>({});
   const { isTouchDevice, addTouchFeedback } = useMobileUsability();
   const submitButtonRef = useRef<HTMLButtonElement>(null);
+  const [submitted, setSubmitted] = useState(false);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<CommentFormData> = {};
@@ -63,6 +64,8 @@ export const CommentForm: React.FC<CommentFormProps> = ({
     if (success) {
       setFormData({ user_name: '', content: '', parent_id: parentId });
       setErrors({});
+      setSubmitted(true);
+      setTimeout(() => setSubmitted(false), 2000);
     }
   };
 
@@ -90,6 +93,11 @@ export const CommentForm: React.FC<CommentFormProps> = ({
       )}
       
       <div className="space-y-4">
+        {submitted && (
+          <div className="flex items-center justify-center text-xs text-lime-green bg-darker-surface/20 rounded-md p-2 border border-lime-green/20">
+            <span>Comentário publicado com sucesso</span>
+          </div>
+        )}
         {/* Campo Nome */}
         <div className="mobile-form-field">
           <label htmlFor={`user_name_${parentId || 'main'}`} className="block text-sm font-medium text-futuristic-gray mb-1">

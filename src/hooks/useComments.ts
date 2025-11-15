@@ -28,13 +28,16 @@ const isMockId = (id: string): boolean => {
   return !uuidRegex.test(id);
 };
 
-export const useComments = (articleId: string) => {
+type SortMode = 'recent' | 'likes'
+
+export const useComments = (articleId: string, initialSort: SortMode = 'recent') => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortMode, setSortMode] = useState<SortMode>(initialSort);
   
   const abortControllerRef = useRef<AbortController | null>(null);
   const COMMENTS_PER_PAGE = 10;
@@ -120,20 +123,10 @@ export const useComments = (articleId: string) => {
 
       const { data, error: fetchError } = await supabase
         .from('comments')
-        .select(`
-          *,
-          replies:comments!parent_id(
-            id,
-            user_name,
-            content,
-            created_at,
-            likes,
-            parent_id
-          )
-        `)
+        .select('*')
         .eq('article_id', articleId)
         .is('parent_id', null)
-        .order('created_at', { ascending: false })
+        .order(sortMode === 'recent' ? 'created_at' : 'likes', { ascending: false })
         .range(from, to);
 
       // Verificar novamente se foi cancelada após a requisição
@@ -171,7 +164,7 @@ export const useComments = (articleId: string) => {
     } finally {
       setLoading(false);
     }
-  }, [articleId]);
+  }, [articleId, sortMode]);
 
   // Função para carregar mais comentários
   const loadMoreComments = useCallback(async () => {
@@ -247,6 +240,28 @@ export const useComments = (articleId: string) => {
     await loadComments(1, false);
   }, [loadComments]);
 
+  const setSorting = useCallback((mode: SortMode) => {
+    if (sortMode === mode) return;
+    setSortMode(mode);
+  }, [sortMode]);
+
+  const fetchReplies = useCallback(async (parentId: string, pageNum: number = 1, pageSize: number = 10) => {
+    if (!articleId || !parentId) return { replies: [], hasMore: false };
+    if (isMockId(articleId)) return { replies: [], hasMore: false };
+    const from = (pageNum - 1) * pageSize;
+    const to = from + pageSize - 1;
+    const { data, error } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('article_id', articleId)
+      .eq('parent_id', parentId)
+      .order('created_at', { ascending: false })
+      .range(from, to);
+    if (error) return { replies: [], hasMore: false };
+    const list = data || [];
+    return { replies: list as Comment[], hasMore: list.length === pageSize };
+  }, [articleId]);
+
   // Carregar comentários iniciais
   useEffect(() => {
     if (articleId) {
@@ -287,9 +302,9 @@ export const useComments = (articleId: string) => {
     }
 
     try {
-      // Verificar controle de spam via localStorage
-      const likedComments = JSON.parse(localStorage.getItem('likedComments') || '[]');
-      if (likedComments.includes(commentId)) {
+      const storageKey = `likedComments:${articleId}`;
+      const likedComments = JSON.parse(localStorage.getItem(storageKey) || '[]');
+      if (Array.isArray(likedComments) && likedComments.includes(commentId)) {
         toast.error('Você já curtiu este comentário');
         return false;
       }
@@ -302,9 +317,8 @@ export const useComments = (articleId: string) => {
         throw error;
       }
 
-      // Atualizar localStorage para controle de spam
-      likedComments.push(commentId);
-      localStorage.setItem('likedComments', JSON.stringify(likedComments));
+      const updated = Array.isArray(likedComments) ? likedComments.concat(commentId) : [commentId];
+      localStorage.setItem(storageKey, JSON.stringify(updated));
 
       // Atualizar estado local
       setComments(prev => prev.map(comment => {
@@ -325,12 +339,17 @@ export const useComments = (articleId: string) => {
       return true;
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
       console.error('❌ Erro ao curtir comentário:', err);
       toast.error('Erro ao curtir comentário');
       return false;
     }
-  }, []);
+  }, [articleId]);
+
+  const isCommentLiked = useCallback((commentId: string) => {
+    const storageKey = `likedComments:${articleId}`;
+    const likedComments = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    return Array.isArray(likedComments) ? likedComments.includes(commentId) : false;
+  }, [articleId]);
 
   return {
     comments,
@@ -341,6 +360,10 @@ export const useComments = (articleId: string) => {
     addComment,
     loadMoreComments,
     refreshComments,
-    likeComment
+    likeComment,
+    sortMode,
+    setSorting,
+    fetchReplies,
+    isCommentLiked
   };
 };

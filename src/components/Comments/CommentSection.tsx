@@ -3,6 +3,7 @@ import { Zap } from 'lucide-react';
 import { CommentList } from './CommentList';
 import { CommentForm } from './CommentForm';
 import { useComments } from '../../hooks/useComments';
+import type { CommentFormData } from '../../hooks/useComments';
 import { useRealTimeInteractions } from '../../hooks/useRealTimeInteractions';
 
 interface CommentSectionProps {
@@ -19,7 +20,11 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
     addComment,
     loadMoreComments,
     refreshComments,
-    likeComment
+    likeComment,
+    sortMode,
+    setSorting,
+    fetchReplies,
+    isCommentLiked
   } = useComments(String(articleId));
 
   // 🚀 NOVO: Hook para tempo real de comentários
@@ -52,7 +57,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
     }
   }, [realTimeStats, interactions, articleId, refreshComments]);
 
-  const handleAddComment = async (commentData: any) => {
+  const handleAddComment = async (commentData: CommentFormData) => {
     const success = await addComment(commentData);
     if (success) {
       // Forçar atualização das stats em tempo real
@@ -85,6 +90,22 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
       data-comments-section="true"
       id="comments"
     >
+      <div className="flex items-center justify-end gap-2">
+        <button
+          onClick={() => { setSorting('recent'); refreshComments(); }}
+          disabled={loading}
+          className={`px-3 py-1 text-xs rounded-md border ${sortMode === 'recent' ? 'border-neon-purple text-white bg-neon-purple/20' : 'border-neon-purple/20 text-futuristic-gray'}`}
+        >
+          Mais recentes
+        </button>
+        <button
+          onClick={() => { setSorting('likes'); refreshComments(); }}
+          disabled={loading}
+          className={`px-3 py-1 text-xs rounded-md border ${sortMode === 'likes' ? 'border-neon-purple text-white bg-neon-purple/20' : 'border-neon-purple/20 text-futuristic-gray'}`}
+        >
+          Mais curtidos
+        </button>
+      </div>
       {/* 🚀 NOVO: Indicador de tempo real para comentários */}
       {isConnected && (
         <div className="flex items-center justify-center gap-2 text-xs text-lime-green bg-darker-surface/20 rounded-lg p-2 border border-lime-green/20">
@@ -126,6 +147,8 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
         onLike={handleLikeComment}
         onReply={handleAddComment}
         submitting={submitting}
+        fetchReplies={async (parentId: string, page: number = 1) => fetchReplies(parentId, page)}
+        isCommentLiked={(id: string) => isCommentLiked(id)}
       />
 
       {/* Formulário para adicionar comentário */}

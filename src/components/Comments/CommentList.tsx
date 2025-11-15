@@ -11,6 +11,8 @@ interface CommentListProps {
   onLike?: (commentId: string) => Promise<boolean>;
   onReply?: (data: CommentFormData) => Promise<boolean>;
   submitting?: boolean;
+  fetchReplies?: (parentId: string, page?: number) => Promise<{ replies: Comment[]; hasMore: boolean }>;
+  isCommentLiked?: (commentId: string) => boolean;
 }
 
 export const CommentList: React.FC<CommentListProps> = ({
@@ -20,7 +22,9 @@ export const CommentList: React.FC<CommentListProps> = ({
   onLoadMore,
   onLike,
   onReply,
-  submitting
+  submitting,
+  fetchReplies,
+  isCommentLiked
 }) => {
   console.log('🔍 [DEBUG] CommentList - Props recebidas:', {
     commentsLength: comments.length,
@@ -82,6 +86,8 @@ export const CommentList: React.FC<CommentListProps> = ({
             onLike={onLike}
             onReply={onReply}
             submitting={submitting}
+            fetchReplies={fetchReplies}
+            isCommentLiked={isCommentLiked}
           />
         ))}
       </div>

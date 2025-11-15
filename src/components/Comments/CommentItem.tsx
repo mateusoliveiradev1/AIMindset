@@ -10,16 +10,25 @@ interface CommentItemProps {
   onLike?: (commentId: string) => Promise<boolean>;
   onReply?: (data: CommentFormData) => Promise<boolean>;
   submitting?: boolean;
+  fetchReplies?: (parentId: string, page?: number) => Promise<{ replies: Comment[]; hasMore: boolean }>;
+  isCommentLiked?: (commentId: string) => boolean;
 }
 
 export const CommentItem: React.FC<CommentItemProps> = ({ 
   comment, 
   onLike, 
   onReply, 
-  submitting = false 
+  submitting = false,
+  fetchReplies,
+  isCommentLiked
 }) => {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
+  const [repliesVisible, setRepliesVisible] = useState(false);
+  const [repliesLoading, setRepliesLoading] = useState(false);
+  const [repliesPage, setRepliesPage] = useState(1);
+  const [repliesHasMore, setRepliesHasMore] = useState(false);
+  const [replies, setReplies] = useState<Comment[]>(comment.replies || []);
 
   const formatDate = (dateString: string) => {
     try {
@@ -55,8 +64,45 @@ export const CommentItem: React.FC<CommentItemProps> = ({
     const success = await onReply(replyData);
     if (success) {
       setShowReplyForm(false);
+      if (repliesVisible && fetchReplies) {
+        setRepliesPage(1);
+        setRepliesLoading(true);
+        const res = await fetchReplies(comment.id, 1);
+        setReplies(res.replies);
+        setRepliesHasMore(res.hasMore);
+        setRepliesLoading(false);
+      }
     }
     return success;
+  };
+
+  const toggleReplies = async () => {
+    if (!fetchReplies) {
+      setRepliesVisible(!repliesVisible);
+      return;
+    }
+    if (!repliesVisible) {
+      setRepliesLoading(true);
+      const res = await fetchReplies(comment.id, 1);
+      setReplies(res.replies);
+      setRepliesHasMore(res.hasMore);
+      setRepliesPage(1);
+      setRepliesLoading(false);
+      setRepliesVisible(true);
+    } else {
+      setRepliesVisible(false);
+    }
+  };
+
+  const loadMoreReplies = async () => {
+    if (!fetchReplies || repliesLoading || !repliesHasMore) return;
+    const next = repliesPage + 1;
+    setRepliesLoading(true);
+    const res = await fetchReplies(comment.id, next);
+    setReplies(prev => [...prev, ...res.replies]);
+    setRepliesHasMore(res.hasMore);
+    setRepliesPage(next);
+    setRepliesLoading(false);
   };
 
   return (
@@ -91,11 +137,11 @@ export const CommentItem: React.FC<CommentItemProps> = ({
               {onLike && (
                 <button
                   onClick={handleLike}
-                  disabled={isLiking}
+                  disabled={isLiking || (isCommentLiked ? isCommentLiked(comment.id) : false)}
                   className={`
                     flex items-center gap-2 text-xs transition-all duration-300 touch-target
-                    ${isLiking 
-                      ? 'text-futuristic-gray/50 cursor-not-allowed' 
+                    ${isLiking || (isCommentLiked ? isCommentLiked(comment.id) : false)
+                      ? 'text-futuristic-gray/50 cursor-not-allowed'
                       : 'text-futuristic-gray hover:text-neon-purple hover:scale-105'
                     }
                   `}
@@ -117,11 +163,9 @@ export const CommentItem: React.FC<CommentItemProps> = ({
               )}
 
               {/* Contador de respostas */}
-              {comment.replies && comment.replies.length > 0 && (
-                <span className="text-xs text-futuristic-gray">
-                  {comment.replies.length} {comment.replies.length === 1 ? 'resposta' : 'respostas'}
-                </span>
-              )}
+              <button onClick={toggleReplies} className="text-xs text-futuristic-gray hover:text-neon-blue transition-all duration-300">
+                {repliesVisible ? 'Ocultar respostas' : 'Ver respostas'}
+              </button>
             </div>
           </div>
         </div>
@@ -138,9 +182,9 @@ export const CommentItem: React.FC<CommentItemProps> = ({
       )}
 
       {/* Respostas */}
-      {comment.replies && comment.replies.length > 0 && (
+      {repliesVisible && (
         <div className="ml-8 sm:ml-12 space-y-4">
-          {comment.replies.map((reply) => (
+          {replies.map((reply) => (
             <div 
               key={reply.id}
               className="bg-darker-surface/20 border border-neon-purple/10 rounded-lg p-4 hover:border-neon-purple/30 transition-all duration-300 backdrop-blur-sm border-l-2 border-l-neon-purple/40"
@@ -171,7 +215,8 @@ export const CommentItem: React.FC<CommentItemProps> = ({
                   {onLike && (
                     <button
                       onClick={() => onLike(reply.id)}
-                      className="flex items-center gap-2 text-xs text-futuristic-gray hover:text-neon-purple transition-all duration-300 touch-target hover:scale-105"
+                      disabled={isCommentLiked ? isCommentLiked(reply.id) : false}
+                      className={`flex items-center gap-2 text-xs transition-all duration-300 touch-target ${isCommentLiked && isCommentLiked(reply.id) ? 'text-futuristic-gray/50 cursor-not-allowed' : 'text-futuristic-gray hover:text-neon-purple hover:scale-105'}`}
                     >
                       <ThumbsUp className="w-3 h-3" />
                       <span>{reply.likes || 0}</span>
@@ -181,6 +226,11 @@ export const CommentItem: React.FC<CommentItemProps> = ({
               </div>
             </div>
           ))}
+          <div className="flex justify-center pt-2">
+            <button onClick={loadMoreReplies} disabled={repliesLoading || !repliesHasMore} className={`text-xs px-4 py-1 rounded-md border ${repliesHasMore ? 'border-neon-purple/30 text-white' : 'border-neon-purple/20 text-futuristic-gray cursor-not-allowed'}`}>
+              {repliesLoading ? 'Carregando respostas...' : (repliesHasMore ? 'Carregar mais respostas' : 'Sem mais respostas')}
+            </button>
+          </div>
         </div>
       )}
     </div>

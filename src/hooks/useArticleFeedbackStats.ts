@@ -116,7 +116,7 @@ export const useArticleFeedbackStats = (articleId: string): UseFeedbackStatsRetu
         {
           event: '*',
           schema: 'public',
-          table: 'feedback',
+          table: 'feedbacks',
           filter: `article_id=eq.${articleId}`
         },
         (payload) => {
