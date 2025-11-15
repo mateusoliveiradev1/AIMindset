@@ -87,7 +87,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   return (
     <div 
       className={`relative overflow-hidden ${className}`}
-      style={{ width, height }}
+      style={{ width, height, contentVisibility: 'auto' }}
     >
       {/* Placeholder com blur effect */}
       {!isLoaded && !hasError && (
@@ -120,6 +120,10 @@ export const LazyImage: React.FC<LazyImageProps> = ({
           onError={handleError}
           loading={priority ? 'eager' : 'lazy'}
           decoding="async"
+          style={{
+            contentVisibility: 'auto',
+            containIntrinsicSize: width && height ? `${width}px ${height}px` : 'auto'
+          }}
         />
       )}
 

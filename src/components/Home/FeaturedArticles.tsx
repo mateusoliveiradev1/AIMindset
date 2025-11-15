@@ -1,4 +1,5 @@
 import React, { useMemo, useCallback, Suspense } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import { Calendar, Clock, ArrowRight, Tag } from 'lucide-react';
 import { useArticles } from '../../hooks/useArticles';
@@ -108,6 +109,11 @@ const FeaturedArticles: React.FC = () => {
 
   return (
     <section className="py-20 bg-darker-surface" style={{ contentVisibility: 'auto', containIntrinsicSize: '1200px' }}>
+      <Helmet>
+        {featuredArticles.slice(0, 3).map((a, i) => (
+          a.image_url ? <link key={i} rel="preload" as="image" href={a.image_url} crossOrigin="anonymous" /> : null
+        ))}
+      </Helmet>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="font-orbitron font-bold text-3xl md:text-4xl mb-4">

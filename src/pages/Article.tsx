@@ -286,6 +286,9 @@ const Article: React.FC = () => {
     <>
       {/* SEO Manager */}
       <SEOManager metadata={metadata} />
+      {article?.image_url && (
+        <PreloadManager criticalResources={[{ href: article.image_url, as: 'image', crossOrigin: 'anonymous' }]} />
+      )}
       
       {/* Reading Progress Bar */}
       <ReadingProgressBar target="article-content" />

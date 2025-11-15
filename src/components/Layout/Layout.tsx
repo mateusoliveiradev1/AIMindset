@@ -53,6 +53,9 @@ const Layout: React.FC<LayoutProps> = ({
         {/* Theme */}
         <meta name="theme-color" content="#0D1B2A" />
         <meta name="msapplication-TileColor" content="#0D1B2A" />
+
+        <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="//images.unsplash.com" />
       </Helmet>
       
       <div className="min-h-screen bg-primary-dark text-white flex flex-col">
