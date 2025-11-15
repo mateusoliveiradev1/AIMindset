@@ -6,7 +6,7 @@ import { devSecurityTest } from './utils/securityTest'
 import { autoReset } from './utils/localStorageReset'
 import { initializeLogging } from './lib/logging'
 import { unifiedPerformanceService } from './services/UnifiedPerformanceService'
-// import { initServiceWorker } from './utils/serviceWorker'
+import { initServiceWorker } from './utils/serviceWorker'
 
 // 🔄 RESET AUTOMÁTICO DO LOCALSTORAGE
 // Executar reset automático antes de qualquer coisa
@@ -51,39 +51,24 @@ if (import.meta.env.DEV) {
   }, 1000);
 }
 
-// Desabilitar Service Worker temporariamente para corrigir erros no preview
-// Desregistrar qualquer Service Worker ativo
+// Listener para mensagens vindas do Service Worker
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function(registrations) {
-    for(let registration of registrations) {
-      registration.unregister().then(() => {
-        console.log('🔄 [MAIN] Service Worker desregistrado:', registration.scope);
-      });
-    }
-  });
-
-  // Listener para mensagens vindas do Service Worker
   navigator.serviceWorker.addEventListener('message', (event) => {
     const data = event.data || {};
     if (data.type === 'CLEAR_BROWSER_STORAGE') {
       try {
-        // Preservar sessão e chaves críticas ao limpar
         const preserveKeys = ['aimindset_session', 'aimindset.auth.token', 'aimindset_user', 'aimindset_supabase_user'];
         const preserved: Record<string, string | null> = {};
         preserveKeys.forEach(k => {
           try { preserved[k] = localStorage.getItem(k); } catch { preserved[k] = null; }
         });
-        // Preservar chaves dinâmicas do Supabase
         try {
           Object.keys(localStorage)
             .filter(k => k.startsWith('sb-') && k.includes('auth-token'))
             .forEach(k => { preserved[k] = localStorage.getItem(k); });
         } catch {}
-
         localStorage.clear();
         sessionStorage.clear();
-
-        // Restaurar preservados
         Object.entries(preserved).forEach(([k, v]) => {
           if (v !== null) {
             try { localStorage.setItem(k, v); } catch { try { sessionStorage.setItem(k, v); } catch {} }
@@ -98,69 +83,21 @@ if ('serviceWorker' in navigator) {
 }
 
 // Inicializar Service Worker para cache offline e performance
-// if (import.meta.env.PROD) {
-//   initServiceWorker({
-//     onUpdate: (registration) => {
-//       console.log('Nova versão disponível. Recarregue a página para atualizar.');
-      
-//       // Opcional: mostrar toast de atualização
-//       const updateToast = document.createElement('div');
-//       updateToast.innerHTML = `
-//         <div style="
-//           position: fixed;
-//           top: 20px;
-//           right: 20px;
-//           background: #1f2937;
-//           color: white;
-//           padding: 16px;
-//           border-radius: 8px;
-//           box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-//           z-index: 9999;
-//           max-width: 300px;
-//           font-family: system-ui, -apple-system, sans-serif;
-//         ">
-//           <div style="font-weight: 600; margin-bottom: 8px;">Atualização Disponível</div>
-//           <div style="font-size: 14px; margin-bottom: 12px;">Uma nova versão está disponível.</div>
-//           <button onclick="window.location.reload()" style="
-//             background: #3b82f6;
-//             color: white;
-//             border: none;
-//             padding: 8px 16px;
-//             border-radius: 4px;
-//             cursor: pointer;
-//             font-size: 14px;
-//           ">Atualizar</button>
-//           <button onclick="this.parentElement.parentElement.remove()" style="
-//             background: transparent;
-//             color: #9ca3af;
-//             border: none;
-//             padding: 8px 16px;
-//             border-radius: 4px;
-//             cursor: pointer;
-//             font-size: 14px;
-//             margin-left: 8px;
-//           ">Depois</button>
-//         </div>
-//       `;
-//       document.body.appendChild(updateToast);
-      
-//       // Auto-remover após 10 segundos
-//       setTimeout(() => {
-//         if (updateToast.parentElement) {
-//           updateToast.remove();
-//         }
-//       }, 10000);
-//     },
-//     onOffline: () => {
-//       console.log('Aplicação funcionando offline');
-//     },
-//     onOnline: () => {
-//       console.log('Conexão restaurada');
-//     }
-//   }).catch(error => {
-//     console.error('Erro ao inicializar Service Worker:', error);
-//   });
-// }
+if (import.meta.env.PROD) {
+  initServiceWorker({
+    onUpdate: () => {
+      console.log('Nova versão disponível. Recarregue a página para atualizar.');
+    },
+    onOffline: () => {
+      console.log('Aplicação funcionando offline');
+    },
+    onOnline: () => {
+      console.log('Conexão restaurada');
+    }
+  }).catch(error => {
+    console.error('Erro ao inicializar Service Worker:', error);
+  });
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

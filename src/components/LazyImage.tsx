@@ -62,13 +62,17 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   const handleLoad = () => {
     setIsLoaded(true);
     onLoad?.();
-    console.log(`🖼️ Imagem carregada: ${src}`);
+    if (import.meta.env.DEV) {
+      console.log(`🖼️ Imagem carregada: ${src}`);
+    }
   };
 
   const handleError = () => {
     setHasError(true);
     onError?.();
-    console.warn(`❌ Erro ao carregar imagem: ${src}`);
+    if (import.meta.env.DEV) {
+      console.warn(`❌ Erro ao carregar imagem: ${src}`);
+    }
   };
 
   // Placeholder blur effect

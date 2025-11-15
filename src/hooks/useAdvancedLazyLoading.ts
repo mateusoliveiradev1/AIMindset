@@ -17,7 +17,7 @@ interface LazyLoadingResult {
 export const useAdvancedLazyLoading = (options: LazyLoadingOptions = {}): LazyLoadingResult => {
   const {
     threshold = 0.1,
-    rootMargin = '50px',
+    rootMargin = '200px',
     triggerOnce = true,
     delay = 0
   } = options;

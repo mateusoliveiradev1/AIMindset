@@ -35,7 +35,7 @@ const DEFAULT_CONFIG: CacheConfig = {
   memoryMaxEntries: 1000,              // 1000 entradas
   indexedDBMaxSize: 500 * 1024 * 1024, // 500MB
   defaultTTL: 30 * 60 * 1000,          // 30 minutos
-  compressionThreshold: 10 * 1024,     // 10KB
+  compressionThreshold: 32 * 1024,     // 32KB
 };
 
 class MultiLayerCache<T = any> {
@@ -101,7 +101,8 @@ class MultiLayerCache<T = any> {
     }
 
     // Usar CompressionStream se disponível
-    if ('CompressionStream' in window) {
+    const saveData = (navigator as any)?.connection?.saveData === true;
+    if (!saveData && 'CompressionStream' in window) {
       try {
         const stream = new CompressionStream('gzip');
         const writer = stream.writable.getWriter();
@@ -142,7 +143,8 @@ class MultiLayerCache<T = any> {
       return JSON.parse(compressedData);
     }
 
-    if ('DecompressionStream' in window) {
+    const saveData = (navigator as any)?.connection?.saveData === true;
+    if (!saveData && 'DecompressionStream' in window) {
       try {
         const compressed = Uint8Array.from(atob(compressedData), c => c.charCodeAt(0));
         const stream = new DecompressionStream('gzip');
@@ -385,6 +387,11 @@ class MultiLayerCache<T = any> {
     return { ...this.stats };
   }
 
+  // Registrar requisição de rede corretamente
+  recordNetworkRequest() {
+    this.stats.networkRequests++;
+  }
+
   // Limpeza automática de entradas expiradas
   async cleanup(): Promise<void> {
     // Limpar memória
@@ -456,7 +463,7 @@ export function useMultiLayerCache<T = any>(namespace: string = 'default') {
 
     // Buscar da rede
     try {
-      cacheRef.current.getStats().networkRequests++;
+      cacheRef.current.recordNetworkRequest();
       const data = await fetcher();
       
       // Salvar no cache

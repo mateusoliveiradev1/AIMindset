@@ -27,6 +27,8 @@ export const useRealTimeSync = (options: UseRealTimeSyncOptions = {}) => {
   const commentsSubscribedRef = useRef(false);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const invalidateQueueRef = useRef<{ scope: string; keys: (string|number|undefined)[] }[]>([]);
+  const invalidateTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Atualizar callbacks sem recriar subscriptions
   useEffect(() => {
@@ -34,11 +36,20 @@ export const useRealTimeSync = (options: UseRealTimeSyncOptions = {}) => {
   }, [options]);
 
   // Função para invalidar todos os caches automaticamente
-  const invalidateAllCaches = useCallback(() => {
-    // Disparar evento customizado para invalidação global de cache
-    window.dispatchEvent(new CustomEvent('realtime-cache-invalidate', {
-      detail: { timestamp: Date.now() }
-    }));
+  const invalidateAllCaches = useCallback((detail?: { scope?: string; keys?: (string|number|undefined)[] }) => {
+    const payload = { scope: detail?.scope || 'global', keys: detail?.keys || [] };
+    invalidateQueueRef.current.push(payload);
+    if (!invalidateTimerRef.current) {
+      invalidateTimerRef.current = setTimeout(() => {
+        const events = [...invalidateQueueRef.current];
+        invalidateQueueRef.current = [];
+        invalidateTimerRef.current && clearTimeout(invalidateTimerRef.current);
+        invalidateTimerRef.current = null;
+        window.dispatchEvent(new CustomEvent('realtime-cache-invalidate', {
+          detail: { timestamp: Date.now(), events }
+        }));
+      }, 300);
+    }
   }, []);
 
   // Configurar subscriptions globais
@@ -64,8 +75,9 @@ export const useRealTimeSync = (options: UseRealTimeSyncOptions = {}) => {
         }, (payload) => {
           console.log('🔄 [RealTimeSync] Feedback change detected:', payload.eventType);
           
-          // Invalidar cache automaticamente
-          invalidateAllCaches();
+          // Invalidar caches de forma seletiva/coalescida
+          const id = (payload as any)?.new?.id ?? (payload as any)?.old?.id;
+          invalidateAllCaches({ scope: 'feedbacks', keys: [id] });
           
           // Chamar callback específico
           if (callbacksRef.current.onFeedbackChange) {
@@ -104,8 +116,8 @@ export const useRealTimeSync = (options: UseRealTimeSyncOptions = {}) => {
         }, (payload) => {
           console.log('🔄 [RealTimeSync] Comment change detected:', payload.eventType);
           
-          // Invalidar cache automaticamente
-          invalidateAllCaches();
+          const id = (payload as any)?.new?.id ?? (payload as any)?.old?.id;
+          invalidateAllCaches({ scope: 'comments', keys: [id] });
           
           // Chamar callback específico
           if (callbacksRef.current.onCommentChange) {

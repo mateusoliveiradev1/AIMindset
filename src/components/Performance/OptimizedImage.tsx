@@ -98,17 +98,19 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = memo(({
   // Fallback padrão para OG/local quando houver erro de imagem externa
   const defaultFallback = fallbackSrc || (publicUrl ? `${publicUrl}/og-image.jpg` : '/og-image.jpg');
   
-  // Usar lazy loading apenas se não for prioridade
-  const lazyOptions = priority ? { triggerOnce: false, threshold: 1 } : { 
+  // Usar carga imediata para imagens prioritárias
+  const optimizedSrc = optimizeImageUrl(src, { width, height, quality, format });
+  const eagerRef = useRef<HTMLDivElement>(null);
+  const lazyOptions = { 
     threshold: 0.1, 
-    rootMargin: '50px',
+    rootMargin: '200px',
     triggerOnce: true 
   };
-  
-  const { ref, src: lazySrc, isLoaded, hasError } = useLazyImage(
-    optimizeImageUrl(src, { width, height, quality, format }),
-    lazyOptions
-  );
+  const lazyHook = useLazyImage(optimizedSrc, lazyOptions);
+  const ref = priority ? eagerRef : lazyHook.ref;
+  const lazySrc = priority ? optimizedSrc : lazyHook.src;
+  const isLoaded = priority ? true : lazyHook.isLoaded;
+  const hasError = priority ? false : lazyHook.hasError;
 
   const handleLoad = useCallback(() => {
     onLoad?.();

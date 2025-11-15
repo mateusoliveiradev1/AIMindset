@@ -104,7 +104,7 @@ function AppContent() {
   //   }
   // }, [hasUpdate, skipWaiting]);
 
-  // 🔁 Restauração automática de sessão para persistência local
+  // 🔁 Restauração automática de sessão com menor polling e por visibilidade/online
   useEffect(() => {
     const restoreSession = async () => {
       try {
@@ -140,26 +140,55 @@ function AppContent() {
 
     restoreSession();
 
-    // Verificação periódica (lightweight) para garantir persistência
-    const interval = setInterval(async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (data?.session) {
-          const stored = localStorage.getItem('aimindset_session') || sessionStorage.getItem('aimindset_session');
-          if (!stored) {
-            const payload = JSON.stringify(data.session);
-            try {
-              localStorage.setItem('aimindset_session', payload);
-            } catch {
-              try { sessionStorage.setItem('aimindset_session', payload); } catch {}
+    let interval: number | null = null;
+    const startInterval = () => {
+      if (interval) return;
+      interval = window.setInterval(async () => {
+        try {
+          const { data } = await supabase.auth.getSession();
+          if (data?.session) {
+            const stored = localStorage.getItem('aimindset_session') || sessionStorage.getItem('aimindset_session');
+            if (!stored) {
+              const payload = JSON.stringify(data.session);
+              try {
+                localStorage.setItem('aimindset_session', payload);
+              } catch {
+                try { sessionStorage.setItem('aimindset_session', payload); } catch {}
+              }
+              console.log('🔄 [App] Sessão sincronizada periodicamente no storage.');
             }
-            console.log('🔄 [App] Sessão sincronizada periodicamente no storage.');
           }
-        }
-      } catch {}
-    }, 2000);
+        } catch {}
+      }, 30000);
+    };
+    const stopInterval = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
 
-    return () => clearInterval(interval);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        restoreSession();
+        startInterval();
+      } else {
+        stopInterval();
+      }
+    };
+    const handleOnline = () => {
+      restoreSession();
+    };
+
+    handleVisibility();
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      stopInterval();
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('online', handleOnline);
+    };
   }, []);
 
   return (
