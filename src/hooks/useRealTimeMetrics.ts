@@ -98,6 +98,10 @@ export function useRealTimeMetrics(articleIds: string[]) {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const mountedRef = useRef(true);
   const loadingRef = useRef(false);
+  const feedbackSubscribedRef = useRef(false);
+  const commentsSubscribedRef = useRef(false);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Memoizar articleIds para evitar re-renders
   const stableArticleIds = useMemo(() => {
@@ -351,6 +355,8 @@ export function useRealTimeMetrics(articleIds: string[]) {
       supabase.removeChannel(channel);
     });
     channelsRef.current = [];
+    feedbackSubscribedRef.current = false;
+    commentsSubscribedRef.current = false;
 
     // Subscription para feedbacks (CORRIGIDO: usar tabela 'feedbacks' não 'feedback')
     const feedbackChannel = supabase
@@ -375,7 +381,25 @@ export function useRealTimeMetrics(articleIds: string[]) {
         }
       )
       .subscribe((status) => {
-        console.log('📡 [REALTIME] Status feedbacks subscription:', status);
+        if (status === 'SUBSCRIBED') {
+          feedbackSubscribedRef.current = true;
+          reconnectAttemptsRef.current = 0;
+          if (reconnectTimerRef.current) {
+            clearTimeout(reconnectTimerRef.current);
+            reconnectTimerRef.current = null;
+          }
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          feedbackSubscribedRef.current = false;
+          if (!reconnectTimerRef.current) {
+            const attempt = reconnectAttemptsRef.current + 1;
+            reconnectAttemptsRef.current = attempt;
+            const delay = Math.min(30000, 1000 * Math.pow(2, attempt - 1));
+            reconnectTimerRef.current = setTimeout(() => {
+              reconnectTimerRef.current = null;
+              setupRealTimeSubscriptions(ids);
+            }, delay);
+          }
+        }
       });
 
     // Subscription para comentários
@@ -401,7 +425,25 @@ export function useRealTimeMetrics(articleIds: string[]) {
         }
       )
       .subscribe((status) => {
-        console.log('📡 [REALTIME] Status comments subscription:', status);
+        if (status === 'SUBSCRIBED') {
+          commentsSubscribedRef.current = true;
+          reconnectAttemptsRef.current = 0;
+          if (reconnectTimerRef.current) {
+            clearTimeout(reconnectTimerRef.current);
+            reconnectTimerRef.current = null;
+          }
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          commentsSubscribedRef.current = false;
+          if (!reconnectTimerRef.current) {
+            const attempt = reconnectAttemptsRef.current + 1;
+            reconnectAttemptsRef.current = attempt;
+            const delay = Math.min(30000, 1000 * Math.pow(2, attempt - 1));
+            reconnectTimerRef.current = setTimeout(() => {
+              reconnectTimerRef.current = null;
+              setupRealTimeSubscriptions(ids);
+            }, delay);
+          }
+        }
       });
 
     channelsRef.current = [feedbackChannel, commentsChannel];
@@ -465,6 +507,18 @@ export function useRealTimeMetrics(articleIds: string[]) {
 
     window.addEventListener('realtime-cache-invalidate', handleCacheInvalidation);
     window.addEventListener('feedback-metrics-updated', handleFeedbackMetricsUpdate as EventListener);
+    const handleOnline = () => {
+      if (!feedbackSubscribedRef.current && !commentsSubscribedRef.current) {
+        setupRealTimeSubscriptions(stableArticleIds);
+      }
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && (!feedbackSubscribedRef.current || !commentsSubscribedRef.current)) {
+        setupRealTimeSubscriptions(stableArticleIds);
+      }
+    };
+    window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibility);
 
     // Cleanup
     return () => {
@@ -478,10 +532,18 @@ export function useRealTimeMetrics(articleIds: string[]) {
         supabase.removeChannel(channel);
       });
       channelsRef.current = [];
+      feedbackSubscribedRef.current = false;
+      commentsSubscribedRef.current = false;
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
 
       // Remover listeners de invalidação de cache
       window.removeEventListener('realtime-cache-invalidate', handleCacheInvalidation);
       window.removeEventListener('feedback-metrics-updated', handleFeedbackMetricsUpdate as EventListener);
+      window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [stableArticleIds, loadAllMetrics, setupRealTimeSubscriptions, setupAutoRefresh]);
 

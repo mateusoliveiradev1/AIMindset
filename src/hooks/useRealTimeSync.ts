@@ -23,6 +23,10 @@ export const useRealTimeSync = (options: UseRealTimeSyncOptions = {}) => {
 
   const channelsRef = useRef<RealtimeChannel[]>([]);
   const callbacksRef = useRef(options);
+  const feedbackSubscribedRef = useRef(false);
+  const commentsSubscribedRef = useRef(false);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Atualizar callbacks sem recriar subscriptions
   useEffect(() => {
@@ -46,6 +50,8 @@ export const useRealTimeSync = (options: UseRealTimeSyncOptions = {}) => {
       supabase.removeChannel(channel);
     });
     channelsRef.current = [];
+    feedbackSubscribedRef.current = false;
+    commentsSubscribedRef.current = false;
 
     try {
       // Subscription para feedbacks (global - todos os artigos)
@@ -66,7 +72,27 @@ export const useRealTimeSync = (options: UseRealTimeSyncOptions = {}) => {
             callbacksRef.current.onFeedbackChange();
           }
         })
-        .subscribe();
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            feedbackSubscribedRef.current = true;
+            reconnectAttemptsRef.current = 0;
+            if (reconnectTimerRef.current) {
+              clearTimeout(reconnectTimerRef.current);
+              reconnectTimerRef.current = null;
+            }
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            feedbackSubscribedRef.current = false;
+            if (!reconnectTimerRef.current) {
+              const attempt = reconnectAttemptsRef.current + 1;
+              reconnectAttemptsRef.current = attempt;
+              const delay = Math.min(30000, 1000 * Math.pow(2, attempt - 1));
+              reconnectTimerRef.current = setTimeout(() => {
+                reconnectTimerRef.current = null;
+                setupGlobalSubscriptions();
+              }, delay);
+            }
+          }
+        });
 
       // Subscription para comentários (global - todos os artigos)
       const commentChannel = supabase
@@ -86,7 +112,27 @@ export const useRealTimeSync = (options: UseRealTimeSyncOptions = {}) => {
             callbacksRef.current.onCommentChange();
           }
         })
-        .subscribe();
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            commentsSubscribedRef.current = true;
+            reconnectAttemptsRef.current = 0;
+            if (reconnectTimerRef.current) {
+              clearTimeout(reconnectTimerRef.current);
+              reconnectTimerRef.current = null;
+            }
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            commentsSubscribedRef.current = false;
+            if (!reconnectTimerRef.current) {
+              const attempt = reconnectAttemptsRef.current + 1;
+              reconnectAttemptsRef.current = attempt;
+              const delay = Math.min(30000, 1000 * Math.pow(2, attempt - 1));
+              reconnectTimerRef.current = setTimeout(() => {
+                reconnectTimerRef.current = null;
+                setupGlobalSubscriptions();
+              }, delay);
+            }
+          }
+        });
 
       channelsRef.current = [feedbackChannel, commentChannel];
 
@@ -108,12 +154,28 @@ export const useRealTimeSync = (options: UseRealTimeSyncOptions = {}) => {
   // Configurar subscriptions na inicialização
   useEffect(() => {
     setupGlobalSubscriptions();
-    return cleanup;
+    const handleOnline = () => {
+      if (!feedbackSubscribedRef.current || !commentsSubscribedRef.current) {
+        setupGlobalSubscriptions();
+      }
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && (!feedbackSubscribedRef.current || !commentsSubscribedRef.current)) {
+        setupGlobalSubscriptions();
+      }
+    };
+    window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      cleanup();
+      window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [setupGlobalSubscriptions, cleanup]);
 
   return {
     invalidateAllCaches,
     cleanup,
-    isConnected: channelsRef.current.length > 0
+    isConnected: feedbackSubscribedRef.current || commentsSubscribedRef.current
   };
 };

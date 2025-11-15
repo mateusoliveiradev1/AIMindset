@@ -45,7 +45,8 @@ export const FeedbackDashboard: React.FC = () => {
     error: realTimeError,
     totalInteractions,
     lastInteraction,
-    forceStatsUpdate
+    forceStatsUpdate,
+    reconnect
   } = useRealTimeInteractions({
     articleIds,
     enableNotifications: true, // Habilitar notificações no painel admin
@@ -271,7 +272,9 @@ export const FeedbackDashboard: React.FC = () => {
             </div>
             <div>
               <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">Status do Tempo Real</p>
-              <p className={`text-xl font-bold ${isConnected ? 'text-lime-green' : 'text-red-400'}`}>{isConnected ? 'Conectado' : 'Desconectado'}</p>
+              <p className={`text-xl font-bold ${isConnected ? 'text-lime-green' : (realTimeError ? 'text-yellow-300' : 'text-red-400')}`}>
+                {isConnected ? 'Conectado' : (realTimeError ? 'Reconectando...' : 'Desconectado')}
+              </p>
             </div>
           </div>
           <div className="text-right">
@@ -281,6 +284,14 @@ export const FeedbackDashboard: React.FC = () => {
               <p className="text-[11px] font-orbitron tracking-wide text-futuristic-gray">
                 Última: {new Date(lastInteraction.timestamp).toLocaleTimeString()}
               </p>
+            )}
+            {!isConnected && (
+              <button
+                onClick={reconnect}
+                className="mt-2 inline-flex items-center px-3 py-1 bg-neon-purple/20 border border-neon-purple/30 rounded-md text-neon-purple hover:bg-neon-purple/30 transition-colors duration-200"
+              >
+                Reconectar
+              </button>
             )}
           </div>
         </div>

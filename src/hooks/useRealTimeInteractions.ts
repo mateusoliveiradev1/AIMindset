@@ -41,6 +41,23 @@ export const useRealTimeInteractions = (options: UseRealTimeInteractionsOptions 
   const channelsRef = useRef<RealtimeChannel[]>([]);
   const debounceTimerRef = useRef<NodeJS.Timeout>();
   const statsUpdateQueueRef = useRef<Set<string>>(new Set());
+  const feedbackSubscribedRef = useRef(false);
+  const commentsSubscribedRef = useRef(false);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const updateConnectionStatus = useCallback(() => {
+    const connected = feedbackSubscribedRef.current || commentsSubscribedRef.current;
+    setIsConnected(connected);
+  }, []);
+
+  const clearReconnect = useCallback(() => {
+    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    reconnectTimerRef.current = null;
+    reconnectAttemptsRef.current = 0;
+  }, []);
+
+  // scheduleReconnect será definido após setupSubscriptions
 
   // Hook de sincronização em tempo real com invalidação automática de cache
   const { invalidateAllCaches } = useRealTimeSync({
@@ -226,6 +243,9 @@ export const useRealTimeInteractions = (options: UseRealTimeInteractionsOptions 
       supabase.removeChannel(channel);
     });
     channelsRef.current = [];
+    feedbackSubscribedRef.current = false;
+    commentsSubscribedRef.current = false;
+    updateConnectionStatus();
 
     try {
       // Subscription para feedbacks
@@ -262,17 +282,32 @@ export const useRealTimeInteractions = (options: UseRealTimeInteractionsOptions 
       // Adicionar aos refs
       channelsRef.current = [feedbackChannel, commentChannel];
 
-      // Subscrever aos canais
       feedbackChannel.subscribe((status) => {
-        console.log('📡 Feedback channel status:', status);
         if (status === 'SUBSCRIBED') {
-          setIsConnected(true);
+          feedbackSubscribedRef.current = true;
           setError(null);
+          updateConnectionStatus();
+          clearReconnect();
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          feedbackSubscribedRef.current = false;
+          updateConnectionStatus();
+          setError('Conexão de feedback desconectada');
+          scheduleReconnect();
         }
       });
 
       commentChannel.subscribe((status) => {
-        console.log('📡 Comment channel status:', status);
+        if (status === 'SUBSCRIBED') {
+          commentsSubscribedRef.current = true;
+          setError(null);
+          updateConnectionStatus();
+          clearReconnect();
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          commentsSubscribedRef.current = false;
+          updateConnectionStatus();
+          setError('Conexão de comentários desconectada');
+          scheduleReconnect();
+        }
       });
 
     } catch (err) {
@@ -281,6 +316,17 @@ export const useRealTimeInteractions = (options: UseRealTimeInteractionsOptions 
       setIsConnected(false);
     }
   }, [articleIds, handleFeedbackChange, handleCommentChange, handleLikeChange]);
+
+  const scheduleReconnect = useCallback((immediate = false) => {
+    if (reconnectTimerRef.current) return;
+    const attempt = reconnectAttemptsRef.current + 1;
+    reconnectAttemptsRef.current = attempt;
+    const base = immediate ? 0 : Math.min(30000, 1000 * Math.pow(2, attempt - 1));
+    reconnectTimerRef.current = setTimeout(() => {
+      reconnectTimerRef.current = null;
+      setupSubscriptions();
+    }, base);
+  }, [setupSubscriptions]);
 
   // Função para carregar stats iniciais
   const loadInitialStats = useCallback(async () => {
@@ -337,6 +383,9 @@ export const useRealTimeInteractions = (options: UseRealTimeInteractionsOptions 
       supabase.removeChannel(channel);
     });
     channelsRef.current = [];
+    feedbackSubscribedRef.current = false;
+    commentsSubscribedRef.current = false;
+    clearReconnect();
 
     // Resetar estados
     setIsConnected(false);
@@ -359,10 +408,20 @@ export const useRealTimeInteractions = (options: UseRealTimeInteractionsOptions 
     };
 
     window.addEventListener('realtime-cache-invalidate', handleCacheInvalidation);
+    const handleOnline = () => {
+      if (!isConnected) scheduleReconnect(true);
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && !isConnected) scheduleReconnect(true);
+    };
+    window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       cleanup();
       window.removeEventListener('realtime-cache-invalidate', handleCacheInvalidation);
+      window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [articleIds, loadInitialStats, setupSubscriptions, cleanup]);
 
@@ -400,6 +459,10 @@ export const useRealTimeInteractions = (options: UseRealTimeInteractionsOptions 
     getStatsForArticle,
     forceStatsUpdate,
     cleanup,
+    reconnect: () => {
+      cleanup();
+      setupSubscriptions();
+    },
     
     // Métricas agregadas
     totalInteractions,
