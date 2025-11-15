@@ -78,11 +78,32 @@ export const useHomeOptimization = () => {
     setRefreshDebounce(timeout);
   }, [loadHomeData, refreshDebounce]);
 
-  // Artigos em destaque usando a nova função SQL híbrida
   const featuredArticles = useMemo(() => {
-    // Usar os dados da função SQL que já implementa o modo híbrido
-    return featuredArticlesData || [];
-  }, [featuredArticlesData]);
+    if (featuredArticlesData && featuredArticlesData.length > 0) {
+      return featuredArticlesData;
+    }
+
+    const source = homeData?.articles || [];
+    if (!source || source.length === 0) {
+      return [];
+    }
+
+    const sorted = [...source].sort((a, b) => {
+      const arA = typeof a.approval_rate === 'number' ? a.approval_rate : 0;
+      const arB = typeof b.approval_rate === 'number' ? b.approval_rate : 0;
+      if (arB !== arA) return arB - arA;
+
+      const pfA = typeof (a as any).positive_feedback === 'number' ? (a as any).positive_feedback : 0;
+      const pfB = typeof (b as any).positive_feedback === 'number' ? (b as any).positive_feedback : 0;
+      if (pfB !== pfA) return pfB - pfA;
+
+      const da = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const db = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return db - da;
+    });
+
+    return sorted.slice(0, 3);
+  }, [featuredArticlesData, homeData?.articles]);
 
   // Memoizar métricas do Hero
   const heroMetrics = useMemo(() => {

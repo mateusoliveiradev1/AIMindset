@@ -87,24 +87,9 @@ const FeaturedArticles: React.FC = () => {
     return <FeaturedArticlesSkeleton />;
   }
 
-  // Se não há artigos em destaque
-  if (featuredArticles.length === 0) {
-    return (
-      <section className="py-16 bg-gradient-to-br from-gray-50 to-white">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12 text-gray-800">
-            Artigos em Destaque
-          </h2>
-          <div className="text-center text-gray-600">
-            <p>Nenhum artigo em destaque encontrado.</p>
-            <p className="text-sm mt-2">
-              Total de artigos: {articles.length} | 
-              Publicados: {articles.filter(a => a.published).length}
-            </p>
-          </div>
-        </div>
-      </section>
-    );
+  // Ocultar a seção quando não houver itens após carregamento
+  if (!loading && featuredArticles.length === 0) {
+    return null;
   }
 
   return (
@@ -126,11 +111,6 @@ const FeaturedArticles: React.FC = () => {
 
         {loading && featuredArticles.length === 0 ? (
           <FeaturedArticlesSkeleton />
-        ) : featuredArticles.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-futuristic-gray text-lg">Nenhum artigo publicado ainda.</p>
-            <p className="text-futuristic-gray text-sm mt-2">Seja o primeiro a criar conteúdo!</p>
-          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
             {featuredArticles.map((article, index) => (
