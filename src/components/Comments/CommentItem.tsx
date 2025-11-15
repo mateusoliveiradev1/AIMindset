@@ -12,6 +12,13 @@ interface CommentItemProps {
   submitting?: boolean;
   fetchReplies?: (parentId: string, page?: number) => Promise<{ replies: Comment[]; hasMore: boolean }>;
   isCommentLiked?: (commentId: string) => boolean;
+  currentUserId?: string;
+  onUpdate?: (id: string, content: string) => Promise<boolean>;
+  onDelete?: (id: string) => Promise<boolean>;
+  activeReplyId?: string | null;
+  onActivateReply?: (id: string | null) => void;
+  countReplies?: (parentId: string) => Promise<number>;
+  initialRepliesCount?: number;
 }
 
 export const CommentItem: React.FC<CommentItemProps> = ({ 
@@ -20,15 +27,29 @@ export const CommentItem: React.FC<CommentItemProps> = ({
   onReply, 
   submitting = false,
   fetchReplies,
-  isCommentLiked
+  isCommentLiked,
+  currentUserId,
+  onUpdate,
+  onDelete,
+  activeReplyId,
+  onActivateReply,
+  countReplies,
+  initialRepliesCount
 }) => {
-  const [showReplyForm, setShowReplyForm] = useState(false);
+  const showReplyForm = activeReplyId === comment.id;
   const [isLiking, setIsLiking] = useState(false);
   const [repliesVisible, setRepliesVisible] = useState(false);
   const [repliesLoading, setRepliesLoading] = useState(false);
   const [repliesPage, setRepliesPage] = useState(1);
   const [repliesHasMore, setRepliesHasMore] = useState(false);
   const [replies, setReplies] = useState<Comment[]>(comment.replies || []);
+  const [repliesCount, setRepliesCount] = useState<number>(
+    typeof initialRepliesCount === 'number' 
+      ? initialRepliesCount 
+      : (comment.replies ? comment.replies.length : 0)
+  );
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(comment.content);
 
   const formatDate = (dateString: string) => {
     try {
@@ -63,7 +84,8 @@ export const CommentItem: React.FC<CommentItemProps> = ({
     
     const success = await onReply(replyData);
     if (success) {
-      setShowReplyForm(false);
+      if (onActivateReply) onActivateReply(null);
+      setRepliesCount(prev => prev + 1);
       if (repliesVisible && fetchReplies) {
         setRepliesPage(1);
         setRepliesLoading(true);
@@ -77,6 +99,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
   };
 
   const toggleReplies = async () => {
+    if (repliesLoading) return;
     if (!fetchReplies) {
       setRepliesVisible(!repliesVisible);
       return;
@@ -87,6 +110,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
       setReplies(res.replies);
       setRepliesHasMore(res.hasMore);
       setRepliesPage(1);
+      setRepliesCount(Array.isArray(res.replies) ? res.replies.length : 0);
       setRepliesLoading(false);
       setRepliesVisible(true);
     } else {
@@ -102,8 +126,21 @@ export const CommentItem: React.FC<CommentItemProps> = ({
     setReplies(prev => [...prev, ...res.replies]);
     setRepliesHasMore(res.hasMore);
     setRepliesPage(next);
+    setRepliesCount(prev => prev + (Array.isArray(res.replies) ? res.replies.length : 0));
     setRepliesLoading(false);
   };
+
+  React.useEffect(() => {
+    if (typeof initialRepliesCount === 'number') {
+      setRepliesCount(initialRepliesCount);
+    }
+  }, [initialRepliesCount]);
+
+  // Removido fetch automático de contagem para evitar excesso de requisições
+
+  const isOwner = currentUserId && comment.user_id === currentUserId;
+  const canEdit = !!onUpdate && !!isOwner;
+  const canDelete = !!onDelete && !!isOwner;
 
   return (
     <div className="space-y-4">
@@ -127,9 +164,41 @@ export const CommentItem: React.FC<CommentItemProps> = ({
               </div>
             </div>
             
-            <p className="text-futuristic-gray text-sm leading-relaxed whitespace-pre-wrap break-words mb-4">
-              {comment.content}
-            </p>
+            {!isEditing ? (
+              <p className="text-futuristic-gray text-sm leading-relaxed whitespace-pre-wrap break-words mb-4">
+                {comment.content.split(/(\@[A-Za-zÀ-ÿ\s]{2,50})/g).map((part, i) => part.startsWith('@') ? (
+                  <span key={i} className="text-neon-blue">{part}</span>
+                ) : (
+                  <span key={i}>{part}</span>
+                ))}
+              </p>
+            ) : (
+              <div className="mb-4">
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="w-full min-h-[90px] text-sm bg-transparent border border-white/10 rounded-md p-2 text-white"
+                />
+                <div className="mt-2 flex gap-2">
+                  <button
+                    onClick={async () => {
+                      if (!onUpdate) return;
+                      const ok = await onUpdate(comment.id, editContent);
+                      if (ok) setIsEditing(false);
+                    }}
+                    className="px-3 py-1 text-xs rounded-md border border-neon-purple/40 text-white hover:bg-neon-purple/20"
+                  >
+                    Salvar
+                  </button>
+                  <button
+                    onClick={() => { setIsEditing(false); setEditContent(comment.content); }}
+                    className="px-3 py-1 text-xs rounded-md border border-white/10 text-futuristic-gray hover:bg-white/5"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Botões de ação */}
             <div className="flex items-center gap-4">
@@ -145,6 +214,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
                       : 'text-futuristic-gray hover:text-neon-purple hover:scale-105'
                     }
                   `}
+                  aria-label={`Curtir comentário de ${comment.user_name}`}
                 >
                   <ThumbsUp className={`w-4 h-4 ${isLiking ? 'animate-pulse' : ''}`} />
                   <span>{comment.likes || 0}</span>
@@ -152,10 +222,14 @@ export const CommentItem: React.FC<CommentItemProps> = ({
               )}
 
               {/* Botão Responder */}
-              {onReply && (
+              {onReply && !isOwner && (
                 <button
-                  onClick={() => setShowReplyForm(!showReplyForm)}
+                  onClick={() => {
+                    if (!onActivateReply) return;
+                    onActivateReply(showReplyForm ? null : comment.id);
+                  }}
                   className="flex items-center gap-2 text-xs text-futuristic-gray hover:text-lime-green transition-all duration-300 touch-target hover:scale-105"
+                  aria-label={`Responder a ${comment.user_name}`}
                 >
                   <MessageCircle className="w-4 h-4" />
                   <span>Responder</span>
@@ -163,9 +237,29 @@ export const CommentItem: React.FC<CommentItemProps> = ({
               )}
 
               {/* Contador de respostas */}
-              <button onClick={toggleReplies} className="text-xs text-futuristic-gray hover:text-neon-blue transition-all duration-300">
-                {repliesVisible ? 'Ocultar respostas' : 'Ver respostas'}
+              <button onClick={toggleReplies} disabled={repliesLoading} className={`text-xs transition-all duration-300 ${repliesLoading ? 'text-futuristic-gray/50 cursor-not-allowed' : 'text-futuristic-gray hover:text-neon-blue'}`} aria-expanded={repliesVisible} aria-controls={`replies_${comment.id}`}>
+                {repliesLoading ? 'Carregando respostas...' : (repliesVisible ? `Ocultar respostas (${repliesCount})` : `Ver respostas (${repliesCount})`)}
               </button>
+
+              {canEdit && !isEditing && (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="text-xs text-futuristic-gray hover:text-white transition-all duration-300"
+                  aria-label="Editar comentário"
+                >
+                  Editar
+                </button>
+              )}
+
+              {canDelete && (
+                <button
+                  onClick={async () => { if (onDelete) await onDelete(comment.id); }}
+                  className="text-xs text-red-400 hover:text-red-300 transition-all duration-300"
+                  aria-label="Excluir comentário"
+                >
+                  Excluir
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -177,13 +271,29 @@ export const CommentItem: React.FC<CommentItemProps> = ({
           <CommentForm 
             onSubmit={handleReply}
             submitting={submitting}
+            parentId={comment.id}
+            placeholder="Escreva sua resposta..."
+            compact={true}
+            replyingToName={comment.user_name}
+            autoFocus={true}
+            articleId={comment.article_id}
+            onCancel={() => onActivateReply && onActivateReply(null)}
+            mentionSuggestions={[...new Set([comment.user_name, ...replies.map(r => r.user_name)].filter(Boolean))]}
           />
+          <div className="mt-2">
+            <button
+              onClick={() => onActivateReply && onActivateReply(null)}
+              className="text-xs text-futuristic-gray hover:text-white transition-all duration-300"
+            >
+              Cancelar resposta
+            </button>
+          </div>
         </div>
       )}
 
       {/* Respostas */}
       {repliesVisible && (
-        <div className="ml-8 sm:ml-12 space-y-4">
+        <div id={`replies_${comment.id}`} className="ml-8 sm:ml-12 space-y-4">
           {replies.map((reply) => (
             <div 
               key={reply.id}
@@ -208,7 +318,11 @@ export const CommentItem: React.FC<CommentItemProps> = ({
                   </div>
                   
                   <p className="text-futuristic-gray text-sm leading-relaxed whitespace-pre-wrap break-words mb-3">
-                    {reply.content}
+                    {reply.content.split(/(\@[A-Za-zÀ-ÿ\s]{2,50})/g).map((part, i) => part.startsWith('@') ? (
+                      <span key={i} className="text-neon-blue">{part}</span>
+                    ) : (
+                      <span key={i}>{part}</span>
+                    ))}
                   </p>
 
                   {/* Botão curtir para respostas */}
@@ -220,6 +334,15 @@ export const CommentItem: React.FC<CommentItemProps> = ({
                     >
                       <ThumbsUp className="w-3 h-3" />
                       <span>{reply.likes || 0}</span>
+                    </button>
+                  )}
+
+                  {currentUserId && reply.user_id === currentUserId && onDelete && (
+                    <button
+                      onClick={async () => { await onDelete(reply.id); }}
+                      className="ml-3 text-xs text-red-400 hover:text-red-300 transition-all duration-300"
+                    >
+                      Excluir
                     </button>
                   )}
                 </div>

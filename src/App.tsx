@@ -53,6 +53,7 @@ const AdminLogs = lazy(() => import('./pages/admin/logs'));
 const AdminBackup = lazy(() => import('./pages/admin/backup'));
 const AdminNotifications = lazy(() => import('./pages/admin/notifications'));
 const AdminSettings = lazy(() => import('./pages/admin/settings'));
+const AuthCallback = lazy(() => import('./pages/AuthCallback'));
 
 // Loading component otimizado
 const PageLoader = () => (
@@ -181,6 +182,9 @@ function AppContent() {
         
         {/* Rota antiga - redirect para nova estrutura */}
         <Route path="/admin-old" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+        
+        {/* OAuth callback route */}
+        <Route path="/auth/v1/callback" element={<AuthCallback />} />
         
         {/* Novas rotas admin modulares com lazy loading otimizado */}
         <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>

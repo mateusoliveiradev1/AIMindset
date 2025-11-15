@@ -82,7 +82,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }, [isAuthenticated, user]);
 
   // 🔥 VERIFICAÇÃO ESPECÍFICA PARA SUPER ADMIN
-  const isSuperAdmin = user && user.role === 'super_admin';
+  const isSuperAdmin = user && user.role === 'super_admin' && user.email === 'warface01031999@gmail.com';
 
   // Log de debug apenas uma vez
   useEffect(() => {

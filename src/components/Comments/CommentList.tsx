@@ -13,6 +13,13 @@ interface CommentListProps {
   submitting?: boolean;
   fetchReplies?: (parentId: string, page?: number) => Promise<{ replies: Comment[]; hasMore: boolean }>;
   isCommentLiked?: (commentId: string) => boolean;
+  currentUserId?: string;
+  onUpdate?: (id: string, content: string) => Promise<boolean>;
+  onDelete?: (id: string) => Promise<boolean>;
+  activeReplyId?: string | null;
+  onActivateReply?: (id: string | null) => void;
+  countReplies?: (parentId: string) => Promise<number>;
+  replyCounts?: Record<string, number>;
 }
 
 export const CommentList: React.FC<CommentListProps> = ({
@@ -24,7 +31,14 @@ export const CommentList: React.FC<CommentListProps> = ({
   onReply,
   submitting,
   fetchReplies,
-  isCommentLiked
+  isCommentLiked,
+  currentUserId,
+  onUpdate,
+  onDelete,
+  activeReplyId,
+  onActivateReply,
+  countReplies,
+  replyCounts
 }) => {
   console.log('🔍 [DEBUG] CommentList - Props recebidas:', {
     commentsLength: comments.length,
@@ -88,6 +102,13 @@ export const CommentList: React.FC<CommentListProps> = ({
             submitting={submitting}
             fetchReplies={fetchReplies}
             isCommentLiked={isCommentLiked}
+            currentUserId={currentUserId}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+            activeReplyId={activeReplyId}
+            onActivateReply={onActivateReply}
+            countReplies={countReplies}
+            initialRepliesCount={replyCounts ? (replyCounts[comment.id] ?? (Array.isArray(comment.replies) ? comment.replies.length : 0)) : (Array.isArray(comment.replies) ? comment.replies.length : 0)}
           />
         ))}
       </div>

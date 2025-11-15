@@ -18,6 +18,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   isLoading: boolean;
+  updateUserName: (newName: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -274,6 +275,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Persistir sessão (inclui access_token)
             saveSessionToStorage(session);
             saveSupabaseUserToStorage(session.user);
+            await applyProfileNameOverride(session.user);
             
             // Verificar se é admin
             const adminUser = await checkAdminUser(session.user.email!);
@@ -353,6 +355,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
             saveSupabaseUserToStorage(session.user);
             setSupabaseUser(session.user);
+            await applyProfileNameOverride(session.user);
             
             // Verificar admin apenas se necessário
             try {
@@ -414,7 +417,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (cleanError) {
         console.warn('⚠️ Erro na limpeza do localStorage:', cleanError);
-        // Tentar limpar tudo como último recurso
+        // Tentar limpeza completa como último recurso
         try {
           localStorage.clear();
         } catch {
@@ -624,16 +627,106 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Considera autenticado quando há usuário do Supabase (independente de ser admin)
   const isAuthenticated = !!supabaseUser;
   
-  // 🔥 LOG DE DEBUG PARA MONITORAR ESTADO - DESABILITADO
-  // useEffect(() => {
-  //   console.log('🔍 ESTADO AUTH ATUAL:', {
-  //     user: !!user,
-  //     supabaseUser: !!supabaseUser,
-  //     isAuthenticated,
-  //     userEmail: user?.email,
-  //     isLoading
-  //   });
-  // }, [user, supabaseUser, isAuthenticated, isLoading]);
+  // 🔥 FUNÇÃO PARA ATUALIZAR NOME DO USUÁRIO NO METADADOS
+  const updateUserName = async (newName: string) => {
+    if (!supabaseUser) return false;
+    
+    try {
+      console.log('💾 Atualizando nome do usuário:', newName);
+      
+      const { error } = await supabase.auth.updateUser({ 
+        data: { name: newName.trim(), full_name: newName.trim() } 
+      });
+      
+      if (error) {
+        console.error('❌ Erro ao atualizar nome no auth:', error);
+        return false;
+      }
+      
+      // Atualizar no estado local
+      const updatedUser = {
+        ...supabaseUser,
+        user_metadata: {
+          ...supabaseUser.user_metadata,
+          name: newName.trim(),
+          full_name: newName.trim()
+        }
+      };
+      
+      setSupabaseUser(updatedUser);
+      saveSupabaseUserToStorage(updatedUser);
+      
+      try {
+        await supabase
+          .from('user_profiles')
+          .upsert({
+            email: supabaseUser.email!,
+            name: newName.trim(),
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'email'
+          });
+      } catch {}
+      
+      try {
+        const key = `aimindset.preferred_name:${supabaseUser.email!}`;
+        localStorage.setItem(key, newName.trim());
+      } catch {}
+      
+      // Atualizar na sessão também
+      const currentSession = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (currentSession) {
+        const sessionData = JSON.parse(currentSession);
+        if (sessionData.user) {
+          sessionData.user.user_metadata = {
+            ...sessionData.user.user_metadata,
+            name: newName.trim()
+          };
+          localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
+        }
+      }
+      
+      console.log('✅ Nome do usuário atualizado com sucesso!');
+      return true;
+    } catch (error) {
+      console.error('💥 Erro ao atualizar nome do usuário:', error);
+      return false;
+    }
+  };
+
+  const applyProfileNameOverride = async (u: SupabaseUser) => {
+    try {
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('name')
+        .eq('email', u.email!)
+        .maybeSingle();
+      let preferred = data?.name;
+      if (!preferred) {
+        try {
+          const key = `aimindset.preferred_name:${u.email!}`;
+          const local = localStorage.getItem(key);
+          preferred = local || undefined;
+        } catch {}
+      }
+      if (preferred) {
+        const updated = {
+          ...u,
+          user_metadata: {
+            ...(u.user_metadata || {}),
+            name: preferred,
+            full_name: preferred
+          }
+        } as SupabaseUser;
+        setSupabaseUser(updated);
+        saveSupabaseUserToStorage(updated);
+        try {
+          const key = `aimindset.preferred_name:${u.email!}`;
+          localStorage.setItem(key, preferred);
+        } catch {}
+      }
+    } catch {}
+  };
 
   const value = {
     user,
@@ -642,7 +735,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAdmin: !!user,
     login,
     logout,
-    isLoading
+    isLoading,
+    updateUserName
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

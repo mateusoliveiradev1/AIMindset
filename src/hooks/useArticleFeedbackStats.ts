@@ -32,6 +32,8 @@ export const useArticleFeedbackStats = (articleId: string): UseFeedbackStatsRetu
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const subscriptionRef = useRef<RealtimeChannel | null>(null);
+  const fetchingRef = useRef<boolean>(false);
+  const debounceTimerRef = useRef<number | null>(null);
 
   const fetchStats = useCallback(async () => {
     if (!articleId) return;
@@ -50,19 +52,40 @@ export const useArticleFeedbackStats = (articleId: string): UseFeedbackStatsRetu
       return;
     }
 
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
     try {
       setLoading(true);
       setError(null);
 
-      console.log('📊 [FEEDBACK-STATS] Buscando estatísticas para artigo:', articleId);
+      const normalizeError = (e: any) => {
+        if (e && typeof e === 'object') {
+          const m = (e as any).message || (e as any).error_description || (e as any).hint || (e as any).code;
+          if (typeof m === 'string' && m.trim()) return m;
+        }
+        return 'Falha na conexão';
+      };
 
-      const { data: feedbacks, error: fetchError } = await supabase
-        .from('feedbacks')
-        .select('type')
-        .eq('article_id', articleId);
+      let feedbacks: any[] | null = null;
+      let fetchError: any = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const res = await supabase
+          .from('feedbacks')
+          .select('type')
+          .eq('article_id', articleId);
+        feedbacks = res.data as any[] | null;
+        fetchError = res.error;
+        if (!fetchError && feedbacks) break;
+        const msg = normalizeError(fetchError);
+        const transient = typeof msg === 'string' && (msg.includes('Failed to fetch') || msg.includes('ERR_INSUFFICIENT_RESOURCES'));
+        if (transient && attempt === 0) {
+          await new Promise(r => setTimeout(r, 300));
+          continue;
+        }
+        break;
+      }
 
       if (fetchError) {
-        console.error('❌ [FEEDBACK-STATS] Erro ao buscar estatísticas:', fetchError);
         throw fetchError;
       }
 
@@ -71,26 +94,20 @@ export const useArticleFeedbackStats = (articleId: string): UseFeedbackStatsRetu
       const negativeFeedbacks = feedbacks?.filter(f => f.type === 'negative').length || 0;
       const approvalRate = totalFeedbacks > 0 ? Math.round((positiveFeedbacks / totalFeedbacks) * 100) : 0;
 
-      setStats({
-        totalFeedbacks,
-        positiveFeedbacks,
-        negativeFeedbacks,
-        approvalRate
-      });
-
-      console.log('✅ [FEEDBACK-STATS] Estatísticas carregadas:', {
-        totalFeedbacks,
-        positiveFeedbacks,
-        negativeFeedbacks,
-        approvalRate
-      });
-
+      setStats({ totalFeedbacks, positiveFeedbacks, negativeFeedbacks, approvalRate });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+      const errorMessage = (() => {
+        if (err && typeof err === 'object') {
+          const m = (err as any).message || (err as any).error_description || (err as any).hint || (err as any).code;
+          if (typeof m === 'string' && m.trim()) return m;
+        }
+        return 'Falha na conexão';
+      })();
       console.error('❌ [FEEDBACK-STATS] Erro ao buscar estatísticas:', err);
       setError(`Erro ao carregar estatísticas: ${errorMessage}`);
     } finally {
       setLoading(false);
+      fetchingRef.current = false;
     }
   }, [articleId]);
 
@@ -120,8 +137,12 @@ export const useArticleFeedbackStats = (articleId: string): UseFeedbackStatsRetu
           filter: `article_id=eq.${articleId}`
         },
         (payload) => {
-          console.log('📡 [FEEDBACK-STATS] Mudança detectada:', payload);
-          fetchStats();
+          if (debounceTimerRef.current) {
+            window.clearTimeout(debounceTimerRef.current);
+          }
+          debounceTimerRef.current = window.setTimeout(() => {
+            fetchStats();
+          }, 300);
         }
       )
       .subscribe((status) => {

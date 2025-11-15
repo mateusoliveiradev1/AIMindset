@@ -9,7 +9,11 @@
     "build:perf": "node scripts/build-performance.js",
     "lint": "eslint .",
     "preview": "vite preview",
-    "check": "tsc -b --noEmit"
+    "check": "tsc -b --noEmit",
+    "setup-google-oauth": "node scripts/setup-google-oauth.js",
+    "google-oauth-wizard": "node scripts/google-oauth-wizard.js",
+    "google-oauth-quick": "node scripts/google-oauth-quick.js",
+    "check-auth": "node scripts/check-auth.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",

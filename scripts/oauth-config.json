@@ -1,0 +1,13 @@
+{
+  "projectRef": "jywjqzhqynhnhetidzsa",
+  "supabaseUrl": "https://jywjqzhqynhnhetidzsa.supabase.co",
+  "callbackUrls": [
+    "https://jywjqzhqynhnhetidzsa.supabase.co/auth/v1/callback",
+    "http://localhost:5173/auth/v1/callback",
+    "http://localhost:3000/auth/v1/callback"
+  ],
+  "siteUrl": "https://jywjqzhqynhnhetidzsa.supabase.co/auth/v1/callback",
+  "googleCloudConsole": "https://console.cloud.google.com/",
+  "supabaseDashboard": "https://app.supabase.com/project/jywjqzhqynhnhetidzsa",
+  "createdAt": "2025-11-15T04:43:58.885Z"
+}

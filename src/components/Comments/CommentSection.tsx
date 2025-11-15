@@ -5,6 +5,8 @@ import { CommentForm } from './CommentForm';
 import { useComments } from '../../hooks/useComments';
 import type { CommentFormData } from '../../hooks/useComments';
 import { useRealTimeInteractions } from '../../hooks/useRealTimeInteractions';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 interface CommentSectionProps {
   articleId: string | number;
@@ -24,8 +26,81 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
     sortMode,
     setSorting,
     fetchReplies,
-    isCommentLiked
+    isCommentLiked,
+    updateComment,
+    deleteComment,
+    countReplies,
+    replyCounts
   } = useComments(String(articleId));
+
+  const { supabaseUser, isAuthenticated, updateUserName } = useAuth();
+  const [editingName, setEditingName] = React.useState(false);
+  const [displayName, setDisplayName] = React.useState<string>('');
+  const skipSyncUntil = React.useRef<number>(0);
+  const [activeReplyId, setActiveReplyId] = React.useState<string | null>(null);
+  const [globalMentionNames, setGlobalMentionNames] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    try {
+      const key = `commentsSort:${String(articleId)}`;
+      const saved = localStorage.getItem(key);
+      if (saved === 'likes' || saved === 'recent') {
+        setSorting(saved as any);
+        refreshComments();
+      }
+    } catch {}
+  }, [articleId]);
+
+  React.useEffect(() => {
+    let canceled = false;
+    const loadGlobalNames = async () => {
+      if (!isAuthenticated) { setGlobalMentionNames([]); return; }
+      try {
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select('name')
+          .limit(100);
+        if (error) return;
+        const names = (data || [])
+          .map((r: any) => r?.name)
+          .filter((n: any) => typeof n === 'string' && n.trim());
+        if (!canceled) setGlobalMentionNames(Array.from(new Set(names)) as string[]);
+      } catch {}
+    };
+    loadGlobalNames();
+    return () => { canceled = true; };
+  }, [isAuthenticated]);
+
+  React.useEffect(() => {
+    if (editingName) return;
+    if (Date.now() < skipSyncUntil.current) return;
+    const meta: any = supabaseUser?.user_metadata || {};
+    let preferred = '';
+    try {
+      const key = `aimindset.preferred_name:${supabaseUser?.email || ''}`;
+      preferred = localStorage.getItem(key) || '';
+    } catch {}
+    const initialName = preferred || meta.name || meta.full_name || supabaseUser?.email?.split('@')[0] || '';
+    if (initialName && initialName !== displayName) {
+      setDisplayName(initialName);
+    }
+  }, [supabaseUser, editingName]);
+
+  // Sincronizar nome quando user_metadata mudar (após edição)
+  React.useEffect(() => {
+    if (editingName) return; // Não atualizar se estiver editando
+    if (Date.now() < skipSyncUntil.current) return; // Evita sobrescrever imediatamente após salvar
+    const meta: any = supabaseUser?.user_metadata || {};
+    let preferred = '';
+    try {
+      const key = `aimindset.preferred_name:${supabaseUser?.email || ''}`;
+      preferred = localStorage.getItem(key) || '';
+    } catch {}
+    const currentName = preferred || meta.name || meta.full_name || supabaseUser?.email?.split('@')[0] || '';
+    if (currentName !== displayName && currentName) {
+      setDisplayName(currentName);
+    }
+  }, [supabaseUser?.user_metadata, editingName]);
 
   // 🚀 NOVO: Hook para tempo real de comentários
   const { 
@@ -75,6 +150,57 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
     return success;
   };
 
+  const handleUpdateComment = async (id: string, content: string) => {
+    return updateComment(id, content);
+  };
+
+  const handleDeleteComment = async (id: string) => {
+    return deleteComment(id);
+  };
+
+  const handleGoogleLogin = async () => {
+    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
+  };
+
+  const handleSaveDisplayName = async () => {
+    if (!isAuthenticated || !supabaseUser) return;
+    
+    try {
+      console.log('💾 Salvando nome de exibição:', displayName.trim());
+      
+      // Usar a função do contexto para atualizar o nome
+      const success = await updateUserName(displayName.trim());
+      
+      if (!success) {
+        console.error('❌ Erro ao atualizar nome no contexto');
+        return;
+      }
+      skipSyncUntil.current = Date.now() + 2000; // Evita piscar para o nome antigo
+      setDisplayName(displayName.trim());
+      try {
+        const key = `aimindset.preferred_name:${supabaseUser?.email || ''}`;
+        localStorage.setItem(key, displayName.trim());
+      } catch {}
+      
+      // Atualizar todos os comentários do usuário
+      const { error: commentsError } = await supabase
+        .from('comments')
+        .update({ user_name: displayName.trim() })
+        .eq('user_id', supabaseUser.id);
+      
+      if (commentsError) {
+        console.error('❌ Erro ao atualizar comentários:', commentsError);
+      }
+      
+      setEditingName(false);
+      await refreshComments();
+      
+      console.log('✅ Nome de exibição salvo com sucesso!');
+    } catch (error) {
+      console.error('💥 Erro ao salvar nome:', error);
+    }
+  };
+
   console.log('📊 [DEBUG] CommentSection - Estado atual:', {
     commentsCount: comments.length,
     loading,
@@ -90,16 +216,52 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
       data-comments-section="true"
       id="comments"
     >
+      {!isAuthenticated && (
+        <div className="flex justify-center">
+          <button
+            onClick={handleGoogleLogin}
+            className="px-4 py-2 text-xs rounded-md border border-neon-purple/40 text-white hover:bg-neon-purple/20"
+          >
+            Entrar com Google
+          </button>
+        </div>
+      )}
+
+      {isAuthenticated && (
+        <div className="flex items-center justify-between p-3 rounded-md border border-white/10 bg-black/20">
+          {!editingName ? (
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-futuristic-gray">Nome exibido:</span>
+              <span className="text-white font-medium">{displayName || 'Usuário'}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <input
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="px-3 py-1 text-xs bg-transparent border border-white/10 rounded-md text-white"
+              />
+              <button onClick={handleSaveDisplayName} className="px-3 py-1 text-xs rounded-md border border-neon-purple/40 text-white hover:bg-neon-purple/20">Salvar</button>
+              <button onClick={() => { const meta: any = supabaseUser?.user_metadata || {}; setEditingName(false); setDisplayName(meta.name || meta.full_name || supabaseUser?.email?.split('@')[0] || ''); }} className="px-3 py-1 text-xs rounded-md border border-white/10 text-futuristic-gray hover:bg-white/5">Cancelar</button>
+            </div>
+          )}
+          <div>
+            {!editingName ? (
+              <button onClick={() => setEditingName(true)} className="px-3 py-1 text-xs rounded-md border border-white/10 text-futuristic-gray hover:bg-white/5">Editar nome</button>
+            ) : null}
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-end gap-2">
         <button
-          onClick={() => { setSorting('recent'); refreshComments(); }}
+          onClick={() => { setSorting('recent'); try { localStorage.setItem(`commentsSort:${String(articleId)}`, 'recent'); } catch {}; refreshComments(); }}
           disabled={loading}
           className={`px-3 py-1 text-xs rounded-md border ${sortMode === 'recent' ? 'border-neon-purple text-white bg-neon-purple/20' : 'border-neon-purple/20 text-futuristic-gray'}`}
         >
           Mais recentes
         </button>
         <button
-          onClick={() => { setSorting('likes'); refreshComments(); }}
+          onClick={() => { setSorting('likes'); try { localStorage.setItem(`commentsSort:${String(articleId)}`, 'likes'); } catch {}; refreshComments(); }}
           disabled={loading}
           className={`px-3 py-1 text-xs rounded-md border ${sortMode === 'likes' ? 'border-neon-purple text-white bg-neon-purple/20' : 'border-neon-purple/20 text-futuristic-gray'}`}
         >
@@ -149,13 +311,27 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
         submitting={submitting}
         fetchReplies={async (parentId: string, page: number = 1) => fetchReplies(parentId, page)}
         isCommentLiked={(id: string) => isCommentLiked(id)}
+        currentUserId={supabaseUser?.id}
+        onUpdate={handleUpdateComment}
+        onDelete={handleDeleteComment}
+        activeReplyId={activeReplyId}
+        onActivateReply={(id) => setActiveReplyId(id)}
+        countReplies={async (parentId: string) => countReplies(parentId)}
+        replyCounts={replyCounts}
       />
 
-      {/* Formulário para adicionar comentário */}
-      <CommentForm
-        onSubmit={handleAddComment}
-        submitting={submitting}
-      />
+      {/* Formulário para adicionar comentário - ocultar quando houver resposta ativa */}
+      {!activeReplyId && (
+        <CommentForm
+          onSubmit={handleAddComment}
+          submitting={submitting}
+          articleId={String(articleId)}
+          mentionSuggestions={[...new Set([
+            ...comments.map(c => c.user_name).filter(Boolean),
+            ...globalMentionNames
+          ])]}
+        />
+      )}
     </div>
   );
 };
