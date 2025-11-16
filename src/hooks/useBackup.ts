@@ -76,7 +76,9 @@ export const useBackup = () => {
       
       if (rpcError) {
         console.error('❌ [DEBUG] Erro RPC ao criar backup:', rpcError);
-        throw new Error(rpcError.message || 'Erro ao executar função de backup');
+        const code = (rpcError as any).code ? ` [code: ${(rpcError as any).code}]` : '';
+        const details = (rpcError as any).details ? ` [details: ${(rpcError as any).details}]` : '';
+        throw new Error(`${rpcError.message || 'Erro ao executar função de backup'}${code}${details}`);
       }
       
       if (!data) {

@@ -94,11 +94,7 @@ const FeaturedArticles: React.FC = () => {
 
   return (
     <section className="py-20 bg-darker-surface" style={{ contentVisibility: 'auto', containIntrinsicSize: '1200px' }}>
-      <Helmet>
-        {featuredArticles.slice(0, 3).map((a, i) => (
-          a.image_url ? <link key={i} rel="preload" as="image" href={a.image_url} crossOrigin="anonymous" /> : null
-        ))}
-      </Helmet>
+      {/* Preload de imagens removido para evitar warnings e uso desnecessário */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="font-orbitron font-bold text-3xl md:text-4xl mb-4">

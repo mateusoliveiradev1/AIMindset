@@ -88,14 +88,7 @@ const Home: React.FC = () => {
         style={refreshIndicatorStyle}
       />
       <SEOManager metadata={metadata} />
-      {/* Preload das primeiras imagens em destaque para LCP menor no mobile */}
-      {preloadImages.length > 0 && (
-        <Helmet>
-          {preloadImages.map((href, i) => (
-            <link key={i} rel="preload" as="image" href={href} />
-          ))}
-        </Helmet>
-      )}
+      {/* Preload de imagens removido para evitar warnings e uso desnecessário */}
       <Hero />
       
       {/* Card inteligente do próximo artigo agendado - só aparece quando há artigo */}
