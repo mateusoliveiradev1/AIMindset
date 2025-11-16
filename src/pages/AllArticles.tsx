@@ -64,9 +64,10 @@ const AllArticles: React.FC = () => {
   const { searchArticles, isSearching } = useArticleSearch();
   const [searchedArticles, setSearchedArticles] = useState<any[] | null>(null);
   const normalize = useCallback((s: string) => s.normalize('NFD').replace(/\p{Diacritic}+/gu, '').toLowerCase(), []);
-  const highlightText = useCallback((text: string) => {
-    if (!searchQuery.trim()) return text;
-    const terms = searchQuery.split(/\s+/).filter(t => t.length > 0).map(t => normalize(t));
+  const highlightText = useCallback((text: string, query?: string) => {
+    const searchTerm = query || searchQuery;
+    if (!searchTerm.trim()) return text;
+    const terms = searchTerm.split(/\s+/).filter(t => t.length > 0).map(t => normalize(t));
     const orig = Array.from(text);
     const norm = Array.from(normalize(text));
     const ranges: { start: number; end: number }[] = [];
@@ -264,8 +265,7 @@ const AllArticles: React.FC = () => {
         setSearchedArticles(null);
         return;
       }
-      const filters = parseAdvancedQuery(searchQuery);
-      const { results } = await searchArticles(articles, searchQuery, { fuzzy: true, threshold: 0.8, filters });
+      const { results } = await searchArticles(articles, searchQuery, { fuzzy: true, threshold: 0.8 });
       if (active) setSearchedArticles(results);
     };
     run();
@@ -535,6 +535,8 @@ const AllArticles: React.FC = () => {
                 formatDate={formatDate}
                 calculateReadTime={calculateReadTime}
                 viewMode={viewMode}
+                searchQuery={searchQuery}
+                highlightText={highlightText}
               />
             ))}
           </div>
@@ -560,7 +562,9 @@ const ArticleCard = memo<{
   formatDate: (date: string) => string;
   calculateReadTime: (content: string) => number;
   viewMode: 'grid' | 'list';
-}>(({ article, categories, formatDate, calculateReadTime, viewMode }) => {
+  searchQuery?: string;
+  highlightText?: (text: string, query: string) => string | JSX.Element;
+}>(({ article, categories, formatDate, calculateReadTime, viewMode, searchQuery = '', highlightText }) => {
   if (viewMode === 'list') {
     return (
       <Card className="glass-effect hover-lift group">
@@ -607,13 +611,13 @@ const ArticleCard = memo<{
 
             <Link to={`/artigo/${article.slug}`} className="group">
               <h3 className="text-xl font-orbitron font-bold text-white group-hover:text-lime-green transition-colors duration-300 line-clamp-2">
-                {highlightText(article.title)}
+                {highlightText(article.title, searchQuery)}
               </h3>
             </Link>
 
             {article.excerpt && (
               <p className="text-futuristic-gray text-sm line-clamp-2">
-                {highlightText(article.excerpt)}
+                {highlightText(article.excerpt, searchQuery)}
               </p>
             )}
 
@@ -683,13 +687,13 @@ const ArticleCard = memo<{
         <div className="space-y-3">
           <Link to={`/artigo/${article.slug}`} className="group">
             <h3 className="text-xl font-orbitron font-bold text-white group-hover:text-lime-green transition-colors duration-300 line-clamp-2">
-              {highlightText(article.title)}
+              {highlightText(article.title, searchQuery)}
             </h3>
           </Link>
 
           {article.excerpt && (
             <p className="text-futuristic-gray text-sm line-clamp-3">
-              {highlightText(article.excerpt)}
+              {highlightText(article.excerpt, searchQuery)}
             </p>
           )}
 
