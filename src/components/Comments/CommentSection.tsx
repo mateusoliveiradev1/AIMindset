@@ -38,6 +38,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
   const skipSyncUntil = React.useRef<number>(0);
   const [activeReplyId, setActiveReplyId] = React.useState<string | null>(null);
   const [globalMentionNames, setGlobalMentionNames] = React.useState<string[]>([]);
+  const refreshTimerRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
     try {
@@ -111,23 +112,20 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
     debounceMs: 500 // Resposta rápida para comentários
   });
 
-  // Atualizar comentários quando houver mudanças em tempo real
+  // Atualizar comentários quando houver mudanças em tempo real (insert/update/delete/likes)
   useEffect(() => {
-    const articleStats = realTimeStats[String(articleId)];
-    if (articleStats) {
-      // Verificar se há novos comentários
-      const lastCommentInteraction = interactions.find(
-        interaction => 
-          interaction.type === 'comment' && 
-          interaction.articleId === String(articleId) &&
-          interaction.action === 'insert'
-      );
-      
-      if (lastCommentInteraction) {
-        refreshComments();
-      }
-    }
-  }, [realTimeStats, interactions, articleId, refreshComments]);
+    const relevant = interactions.find(interaction => (
+      interaction.articleId === String(articleId) && (
+        interaction.type === 'comment' || (interaction.type === 'like' && interaction.action === 'update')
+      )
+    ));
+    if (!relevant) return;
+    if (refreshTimerRef.current) return;
+    refreshTimerRef.current = window.setTimeout(() => {
+      refreshComments();
+      refreshTimerRef.current = null;
+    }, 300);
+  }, [interactions, articleId, refreshComments]);
 
   const handleAddComment = async (commentData: CommentFormData) => {
     const success = await addComment(commentData);

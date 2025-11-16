@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { User, Clock, ThumbsUp, MessageCircle } from 'lucide-react';
+import { AvatarImage } from '../Performance/ImageOptimizer';
+import { useAuth } from '../../contexts/AuthContext';
 import type { Comment, CommentFormData } from '../../hooks/useComments';
 import { CommentForm } from './CommentForm';
 
@@ -36,6 +38,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
   countReplies,
   initialRepliesCount
 }) => {
+  const { supabaseUser } = useAuth();
   const showReplyForm = activeReplyId === comment.id;
   const [isLiking, setIsLiking] = useState(false);
   const [repliesVisible, setRepliesVisible] = useState(false);
@@ -147,16 +150,31 @@ export const CommentItem: React.FC<CommentItemProps> = ({
       {/* Comentário principal */}
       <div className="bg-darker-surface/30 border border-neon-purple/20 rounded-lg p-6 hover:border-neon-purple/40 transition-all duration-300 backdrop-blur-sm">
         <div className="flex items-start gap-4">
-          {/* Avatar com gradiente */}
-          <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-neon-purple/30 to-neon-blue/30 rounded-full flex items-center justify-center border border-neon-purple/30">
-            <User className="w-6 h-6 text-white" />
+          <div className="flex-shrink-0 w-12 h-12">
+            {(() => {
+              const own = supabaseUser && comment.user_id === supabaseUser.id;
+              const src = own ? (supabaseUser?.user_metadata as any)?.avatar_url : (comment as any).user_avatar_url;
+              if (src) return <AvatarImage src={src} alt="Avatar" size={48} />;
+              return (
+                <div className="w-12 h-12 bg-gradient-to-br from-neon-purple/30 to-neon-blue/30 rounded-full flex items-center justify-center border border-neon-purple/30">
+                  <User className="w-6 h-6 text-white" />
+                </div>
+              );
+            })()}
           </div>
           
           {/* Conteúdo do comentário */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-3">
               <h4 className="font-montserrat font-semibold text-white text-base truncate">
-                {comment.user_name}
+                {(() => {
+                  const own = supabaseUser && comment.user_id === supabaseUser.id;
+                  if (own) {
+                    const meta: any = supabaseUser?.user_metadata || {};
+                    return meta.name || meta.full_name || supabaseUser?.email?.split('@')[0] || comment.user_name;
+                  }
+                  return comment.user_name;
+                })()}
               </h4>
               <div className="flex items-center gap-1 text-xs text-futuristic-gray flex-shrink-0">
                 <Clock className="w-3 h-3" />
@@ -229,7 +247,14 @@ export const CommentItem: React.FC<CommentItemProps> = ({
                     onActivateReply(showReplyForm ? null : comment.id);
                   }}
                   className="flex items-center gap-2 text-xs text-futuristic-gray hover:text-lime-green transition-all duration-300 touch-target hover:scale-105"
-                  aria-label={`Responder a ${comment.user_name}`}
+                  aria-label={`Responder a ${(() => {
+                    const own = supabaseUser && comment.user_id === supabaseUser.id;
+                    if (own) {
+                      const meta: any = supabaseUser?.user_metadata || {};
+                      return meta.name || meta.full_name || supabaseUser?.email?.split('@')[0] || comment.user_name;
+                    }
+                    return comment.user_name;
+                  })()}`}
                 >
                   <MessageCircle className="w-4 h-4" />
                   <span>Responder</span>
@@ -300,9 +325,17 @@ export const CommentItem: React.FC<CommentItemProps> = ({
               className="bg-darker-surface/20 border border-neon-purple/10 rounded-lg p-4 hover:border-neon-purple/30 transition-all duration-300 backdrop-blur-sm border-l-2 border-l-neon-purple/40"
             >
               <div className="flex items-start gap-3">
-                {/* Avatar menor para respostas */}
-                <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-neon-purple/20 to-neon-blue/20 rounded-full flex items-center justify-center border border-neon-purple/20">
-                  <User className="w-4 h-4 text-white" />
+                <div className="flex-shrink-0 w-8 h-8">
+                  {(() => {
+                    const own = supabaseUser && reply.user_id === supabaseUser.id;
+                    const src = own ? (supabaseUser?.user_metadata as any)?.avatar_url : (reply as any).user_avatar_url;
+                    if (src) return <AvatarImage src={src} alt="Avatar" size={32} />;
+                    return (
+                      <div className="w-8 h-8 bg-gradient-to-br from-neon-purple/20 to-neon-blue/20 rounded-full flex items-center justify-center border border-neon-purple/20">
+                        <User className="w-4 h-4 text-white" />
+                      </div>
+                    );
+                  })()}
                 </div>
                 
                 {/* Conteúdo da resposta */}
