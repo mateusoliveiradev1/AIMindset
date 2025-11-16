@@ -21,6 +21,7 @@ interface AuthContextType {
   updateUserName: (newName: string) => Promise<boolean>;
   updateUserAvatar: (avatarUrl: string) => Promise<boolean>;
   removeUserAvatar: () => Promise<boolean>;
+  updateUserDetails: (details: { full_name?: string; bio?: string; social?: { twitter?: string; instagram?: string; linkedin?: string; website?: string }; preferences?: { theme?: 'light' | 'dark' | 'system'; language?: 'pt-BR' | 'en-US'; reduceMotion?: boolean } }) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -769,6 +770,78 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUserDetails = async (details: { full_name?: string; bio?: string; social?: { twitter?: string; instagram?: string; linkedin?: string; website?: string }; preferences?: { theme?: 'light' | 'dark' | 'system'; language?: 'pt-BR' | 'en-US'; reduceMotion?: boolean } }) => {
+    if (!supabaseUser) return false;
+    try {
+      const safeString = (v?: string) => typeof v === 'string' ? v.trim().slice(0, 200) : undefined;
+      const full_name = safeString(details.full_name);
+      const bio = safeString(details.bio);
+      const social = details.social || {};
+
+      const sanitizedSocial = {
+        twitter: safeString(social.twitter),
+        instagram: safeString(social.instagram),
+        linkedin: safeString(social.linkedin),
+        website: safeString(social.website)
+      };
+      // Preferências serão implementadas futuramente
+
+      const { error } = await supabase.auth.updateUser({ 
+        data: {
+          full_name,
+          bio,
+          social: sanitizedSocial
+        } 
+      });
+      if (error) {}
+
+      const updatedUser = {
+        ...supabaseUser,
+        user_metadata: {
+          ...supabaseUser.user_metadata,
+          full_name,
+          bio,
+          social: sanitizedSocial,
+          // Preferências serão implementadas futuramente
+        }
+      } as SupabaseUser;
+      setSupabaseUser(updatedUser);
+      saveSupabaseUserToStorage(updatedUser);
+
+      const prefsJson = JSON.stringify({ social: sanitizedSocial });
+      try {
+        await supabase
+          .from('user_profiles')
+          .upsert({
+            email: supabaseUser.email!,
+            full_name,
+            bio,
+            preferences_json: prefsJson,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'email' });
+      } catch {}
+
+      try {
+        const { supabaseServiceClient } = await import('../lib/supabase-admin');
+        await supabaseServiceClient
+          .from('user_profiles')
+          .upsert({
+            email: supabaseUser.email!,
+            full_name,
+            bio,
+            preferences_json: prefsJson,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'email' });
+      } catch {}
+
+      // Preferências serão implementadas futuramente
+
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const removeUserAvatar = async () => {
     if (!supabaseUser) return false;
     try {
@@ -871,6 +944,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateUserName,
     updateUserAvatar,
     removeUserAvatar
+    ,updateUserDetails
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
