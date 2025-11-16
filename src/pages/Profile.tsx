@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { AvatarImage } from '../components/Performance/ImageOptimizer';
 import { supabase } from '../lib/supabase';
+import { toast } from 'sonner';
 
 const Profile: React.FC = () => {
   const { supabaseUser, isAuthenticated, updateUserName, updateUserAvatar, removeUserAvatar } = useAuth();
@@ -14,12 +15,20 @@ const Profile: React.FC = () => {
   const [avatarUploading, setAvatarUploading] = React.useState(false);
   const [avatarError, setAvatarError] = React.useState('');
   const [avatarPreview, setAvatarPreview] = React.useState<string | null>(null);
+  const [initialName, setInitialName] = React.useState('');
 
   React.useEffect(() => {
     const meta: any = supabaseUser?.user_metadata || {};
     const initial = meta.name || meta.full_name || supabaseUser?.email?.split('@')[0] || '';
     setName(initial);
+    setInitialName(initial);
   }, [supabaseUser]);
+
+  React.useEffect(() => {
+    return () => {
+      if (avatarPreview) URL.revokeObjectURL(avatarPreview);
+    };
+  }, [avatarPreview]);
 
   const handleSave = async () => {
     if (!name.trim()) return;
@@ -28,6 +37,7 @@ const Profile: React.FC = () => {
     const ok = await updateUserName(name.trim());
     setSaving(false);
     setMessage(ok ? 'Nome atualizado com sucesso.' : 'Falha ao atualizar nome.');
+    if (ok) toast.success('Nome atualizado'); else toast.error('Falha ao atualizar nome');
   };
 
   const handleAvatarChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
@@ -52,9 +62,33 @@ const Profile: React.FC = () => {
     setAvatarUploading(true);
     setAvatarError('');
     try {
-      const ext = (file.name.split('.').pop() || 'webp').toLowerCase();
-      const path = `avatars/${supabaseUser.id}/avatar-${Date.now()}.${ext}`;
-      const { data, error } = await supabase.storage.from('avatars').upload(path, file, { cacheControl: '3600', upsert: true });
+      const processed = await (async () => {
+        const img = document.createElement('img');
+        const url = URL.createObjectURL(file);
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error('Falha ao carregar imagem'));
+          img.src = url;
+        });
+        URL.revokeObjectURL(url);
+        const max = 512;
+        const ratio = Math.min(max / img.width, max / img.height, 1);
+        const w = Math.max(1, Math.floor(img.width * ratio));
+        const h = Math.max(1, Math.floor(img.height * ratio));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Canvas indisponível');
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, w, h);
+        const blob: Blob = await new Promise((resolve, reject) => {
+          canvas.toBlob(b => b ? resolve(b) : reject(new Error('Falha ao processar imagem')), 'image/webp', 0.85);
+        });
+        return new File([blob], 'avatar.webp', { type: 'image/webp' });
+      })();
+      const path = `avatars/${supabaseUser.id}/avatar-${Date.now()}.webp`;
+      const { data, error } = await supabase.storage.from('avatars').upload(path, processed, { cacheControl: '3600', upsert: true });
       if (error) {
         throw error;
       }
@@ -65,6 +99,7 @@ const Profile: React.FC = () => {
         setAvatarError('Falha ao atualizar avatar.');
       }
       setMessage('Avatar atualizado.');
+      toast.success('Avatar atualizado');
     } catch (err: any) {
       const m = err?.message || 'Erro no upload.';
       if (typeof m === 'string' && m.toLowerCase().includes('bucket')) {
@@ -75,9 +110,33 @@ const Profile: React.FC = () => {
             fileSizeLimit: '2MB',
             allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp']
           });
-          const ext = (file!.name.split('.').pop() || 'webp').toLowerCase();
-          const path = `avatars/${supabaseUser!.id}/avatar-${Date.now()}.${ext}`;
-          const { error: upErr } = await supabase.storage.from('avatars').upload(path, file!, { cacheControl: '3600', upsert: true });
+          const processed = await (async () => {
+            const img = document.createElement('img');
+            const urlTmp = URL.createObjectURL(file!);
+            await new Promise<void>((resolve, reject) => {
+              img.onload = () => resolve();
+              img.onerror = () => reject(new Error('Falha ao carregar imagem'));
+              img.src = urlTmp;
+            });
+            URL.revokeObjectURL(urlTmp);
+            const max = 512;
+            const ratio = Math.min(max / img.width, max / img.height, 1);
+            const w = Math.max(1, Math.floor(img.width * ratio));
+            const h = Math.max(1, Math.floor(img.height * ratio));
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('Canvas indisponível');
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, w, h);
+            const blob: Blob = await new Promise((resolve, reject) => {
+              canvas.toBlob(b => b ? resolve(b) : reject(new Error('Falha ao processar imagem')), 'image/webp', 0.85);
+            });
+            return new File([blob], 'avatar.webp', { type: 'image/webp' });
+          })();
+          const path = `avatars/${supabaseUser!.id}/avatar-${Date.now()}.webp`;
+          const { error: upErr } = await supabase.storage.from('avatars').upload(path, processed, { cacheControl: '3600', upsert: true });
           if (upErr) throw upErr;
           const { data: pub2 } = supabase.storage.from('avatars').getPublicUrl(path);
           const url2 = pub2.publicUrl;
@@ -87,12 +146,15 @@ const Profile: React.FC = () => {
           } else {
             setMessage('Avatar atualizado.');
             setAvatarError('');
+            toast.success('Avatar atualizado');
           }
         } catch (createErr: any) {
           setAvatarError(createErr?.message || m);
+          toast.error(createErr?.message || m);
         }
       } else {
         setAvatarError(m);
+        toast.error(m);
       }
     } finally {
       setAvatarUploading(false);
@@ -172,9 +234,10 @@ const Profile: React.FC = () => {
               onChange={(e) => setName(e.target.value)}
               className="w-full px-3 py-2 bg-dark-surface/50 border border-neon-purple/30 rounded-lg text-white"
               placeholder="Seu nome"
+              aria-label="Nome exibido"
             />
           </div>
-          <Button onClick={handleSave} disabled={saving} className="w-full">
+          <Button onClick={handleSave} disabled={saving || name.trim() === initialName.trim()} className="w-full">
             {saving ? 'Salvando...' : 'Salvar alterações'}
           </Button>
           {message && (
