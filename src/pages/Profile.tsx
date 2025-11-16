@@ -7,7 +7,7 @@ import { AvatarImage } from '../components/Performance/ImageOptimizer';
 import { supabase } from '../lib/supabase';
 
 const Profile: React.FC = () => {
-  const { supabaseUser, isAuthenticated, updateUserName, updateUserAvatar } = useAuth();
+  const { supabaseUser, isAuthenticated, updateUserName, updateUserAvatar, removeUserAvatar } = useAuth();
   const [name, setName] = React.useState('');
   const [saving, setSaving] = React.useState(false);
   const [message, setMessage] = React.useState('');
@@ -140,6 +140,18 @@ const Profile: React.FC = () => {
                   await handleAvatarUpload(f);
                 }} disabled={avatarUploading}>
                   {avatarUploading ? 'Enviando...' : 'Enviar avatar'}
+                </Button>
+                <Button onClick={async () => {
+                  setAvatarError('');
+                  const ok = await removeUserAvatar();
+                  if (!ok) {
+                    setAvatarError('Falha ao remover avatar.');
+                  } else {
+                    setAvatarPreview(null);
+                    setMessage('Avatar removido.');
+                  }
+                }} variant="outline" disabled={avatarUploading}>
+                  Remover avatar
                 </Button>
               </div>
               {avatarError && <p className="text-red-400 text-sm mt-2">{avatarError}</p>}
