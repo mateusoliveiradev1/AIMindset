@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, X, Filter } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 interface SearchBarProps {
   value: string;
@@ -9,6 +9,9 @@ interface SearchBarProps {
   showClearButton?: boolean;
   onFocus?: () => void;
   onBlur?: () => void;
+  suggestions?: string[];
+  onSelectSuggestion?: (value: string) => void;
+  isLoading?: boolean;
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({
@@ -18,9 +21,13 @@ const SearchBar: React.FC<SearchBarProps> = ({
   className = "",
   showClearButton = true,
   onFocus,
-  onBlur
+  onBlur,
+  suggestions = [],
+  onSelectSuggestion,
+  isLoading = false
 }) => {
   const [isFocused, setIsFocused] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState<number>(-1);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFocus = () => {
@@ -41,6 +48,21 @@ const SearchBar: React.FC<SearchBarProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       inputRef.current?.blur();
+    }
+    if (e.key === 'ArrowDown' && suggestions.length > 0) {
+      e.preventDefault();
+      setHighlightIndex(prev => (prev + 1) % suggestions.length);
+    }
+    if (e.key === 'ArrowUp' && suggestions.length > 0) {
+      e.preventDefault();
+      setHighlightIndex(prev => (prev - 1 + suggestions.length) % suggestions.length);
+    }
+    if (e.key === 'Enter' && suggestions.length > 0 && highlightIndex >= 0) {
+      e.preventDefault();
+      const sel = suggestions[highlightIndex];
+      if (sel) {
+        onSelectSuggestion?.(sel);
+      }
     }
   };
 
@@ -91,6 +113,13 @@ const SearchBar: React.FC<SearchBarProps> = ({
         </button>
       )}
 
+      {/* Loading Indicator */}
+      {isLoading && (
+        <div className="absolute right-12 top-1/2 -translate-y-1/2">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-lime-green" />
+        </div>
+      )}
+
       {/* Focus Ring Effect */}
       <div className={`
         absolute inset-0 rounded-xl pointer-events-none
@@ -104,6 +133,22 @@ const SearchBar: React.FC<SearchBarProps> = ({
         transition-all duration-500
         ${isFocused ? 'shadow-lg shadow-lime-green/20' : ''}
       `} />
+      {isFocused && suggestions.length > 0 && (
+        <div className="absolute mt-2 left-0 right-0 bg-dark-surface/90 backdrop-blur-sm border-2 border-neon-purple/30 rounded-xl shadow-lg z-10">
+          <ul className="max-h-48 overflow-auto py-2">
+            {suggestions.map((s, idx) => (
+              <li
+                key={`${s}-${idx}`}
+                onMouseDown={() => onSelectSuggestion?.(s)}
+                onMouseEnter={() => setHighlightIndex(idx)}
+                className={`px-4 py-2 text-white cursor-pointer transition-colors duration-200 ${highlightIndex === idx ? 'bg-neon-purple/30' : 'hover:bg-neon-purple/20'}`}
+              >
+                {s}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 };

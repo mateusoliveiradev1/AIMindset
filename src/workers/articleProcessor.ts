@@ -115,7 +115,23 @@ class TaskQueue {
 
   private async performSearch(data: { articles: Article[]; query: string; options?: any }): Promise<any> {
     const { articles, query, options = {} } = data;
-    const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 2);
+    const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}+/gu, '').toLowerCase();
+    const filters = options.filters || {};
+    const baseTerms = query.toLowerCase().split(' ').filter(term => term.length > 2 && !term.includes(':') && !term.startsWith('-'));
+    const normalizedTerms = baseTerms.map(t => normalize(t));
+    const synonyms: Record<string, string[]> = {
+      'ia': ['inteligencia artificial','ai'],
+      'ml': ['machine learning'],
+      'dl': ['deep learning']
+    };
+    const expandedTerms = new Set<string>();
+    normalizedTerms.forEach(t => {
+      expandedTerms.add(t);
+      const syns = synonyms[t];
+      if (syns) syns.forEach(s => expandedTerms.add(normalize(s)));
+    });
+    const searchTerms = Array.from(expandedTerms);
+    const excludeTerms: string[] = Array.isArray(filters.exclude) ? filters.exclude.map((t: string) => normalize(t)) : [];
     
     if (searchTerms.length === 0) {
       return { results: articles, totalFound: articles.length };
@@ -128,35 +144,69 @@ class TaskQueue {
         article.excerpt,
         typeof article.category === 'string' ? article.category : article.category?.name,
         ...(article.tags || [])
-      ].join(' ').toLowerCase();
+      ].join(' ');
+      const searchableNorm = normalize(searchableText);
+      if (excludeTerms.length > 0 && excludeTerms.some(term => searchableNorm.includes(term))) {
+        return false;
+      }
+      if (filters.title) {
+        const t = normalize(filters.title);
+        if (!normalize(article.title).includes(t)) return false;
+      }
+      if (filters.tag) {
+        let tagsArray: string[] = [];
+        if (Array.isArray(article.tags)) {
+          tagsArray = article.tags.map(tag => typeof tag === 'string' ? tag : String(tag));
+        } else if (typeof article.tags === 'string') {
+          tagsArray = article.tags.split(/[\,\s]+/).map(t => t.trim());
+        }
+        const target = normalize(filters.tag);
+        const hasTag = tagsArray.some(tag => normalize(tag).includes(target));
+        if (!hasTag) return false;
+      }
+      if (filters.category) {
+        const target = normalize(filters.category);
+        const catName = typeof article.category === 'string' ? article.category : article.category?.name;
+        if (!catName || !normalize(String(catName)).includes(target)) return false;
+      }
+      if (filters.dateRange) {
+        const date = new Date(article.created_at);
+        const now = new Date();
+        const diffDays = Math.ceil((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+        const ok = filters.dateRange === 'all' ||
+          (filters.dateRange === 'week' && diffDays <= 7) ||
+          (filters.dateRange === 'month' && diffDays <= 30) ||
+          (filters.dateRange === 'year' && diffDays <= 365);
+        if (!ok) return false;
+      }
 
       // Busca fuzzy simples
       if (options.fuzzy) {
         return searchTerms.some(term => 
-          this.fuzzyMatch(searchableText, term, options.threshold || 0.8)
+          this.fuzzyMatch(searchableNorm, term, options.threshold || 0.8)
         );
       }
 
       // Busca exata
-      return searchTerms.every(term => searchableText.includes(term));
+      return searchTerms.every(term => searchableNorm.includes(term));
     });
 
     // Calcular relevância
     const scoredResults = results.map(article => {
       let score = 0;
-      const titleLower = article.title.toLowerCase();
-      const contentLower = article.content.toLowerCase();
+      const titleLower = normalize(article.title);
+      const contentLower = normalize(article.content);
+      const excerptLower = article.excerpt ? normalize(article.excerpt) : '';
+      const matchedFields: string[] = [];
 
       searchTerms.forEach(term => {
-        // Título tem peso maior
-        if (titleLower.includes(term)) score += 10;
-        // Conteúdo tem peso menor
-        if (contentLower.includes(term)) score += 1;
-        // Início do título tem peso ainda maior
-        if (titleLower.startsWith(term)) score += 20;
+        if (titleLower.includes(term)) { score += 10; if (!matchedFields.includes('title')) matchedFields.push('title'); }
+        if (titleLower.startsWith(term)) { score += 20; if (!matchedFields.includes('title')) matchedFields.push('title'); }
+        if (contentLower.includes(term)) { score += 1; if (!matchedFields.includes('content')) matchedFields.push('content'); }
+        if (excerptLower && excerptLower.includes(term)) { score += 2; if (!matchedFields.includes('excerpt')) matchedFields.push('excerpt'); }
       });
 
-      return { ...article, relevanceScore: score };
+      return { ...article, relevanceScore: score, matchedFields };
     });
 
     // Ordenar por relevância

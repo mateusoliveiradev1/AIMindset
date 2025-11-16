@@ -16,6 +16,7 @@ import { useInfiniteScroll } from '../hooks/useInfiniteScroll';
 import { InfiniteScrollLoader } from '../components/UI/InfiniteScrollLoader';
 import { VirtualizedArticleList } from '../components/Performance/VirtualizedArticleList';
 import { usePerformanceOptimization } from '../hooks/usePerformanceOptimization';
+import { useArticleSearch } from '../hooks/useWebWorker';
 import { hybridCache } from '../utils/hybridCache';
 import { SortBy } from '../types';
 import { useAutoFeedbackSync } from '../hooks/useAutoFeedbackSync';
@@ -48,7 +49,6 @@ const AllArticles: React.FC = () => {
   // Performance optimization hook
   const {
     createDebouncedSearch,
-    filterArticles,
     sortArticles,
     startRenderMeasurement,
     endRenderMeasurement,
@@ -60,6 +60,44 @@ const AllArticles: React.FC = () => {
     enableMemoryManagement: true,
     enablePerformanceMonitoring: true
   });
+
+  const { searchArticles, isSearching } = useArticleSearch();
+  const [searchedArticles, setSearchedArticles] = useState<any[] | null>(null);
+  const normalize = useCallback((s: string) => s.normalize('NFD').replace(/\p{Diacritic}+/gu, '').toLowerCase(), []);
+  const highlightText = useCallback((text: string) => {
+    if (!searchQuery.trim()) return text;
+    const terms = searchQuery.split(/\s+/).filter(t => t.length > 0).map(t => normalize(t));
+    const orig = Array.from(text);
+    const norm = Array.from(normalize(text));
+    const ranges: { start: number; end: number }[] = [];
+    terms.forEach(term => {
+      let i = 0;
+      while (i <= norm.length - term.length) {
+        if (norm.slice(i, i + term.length).join('') === term) {
+          ranges.push({ start: i, end: i + term.length });
+          i += term.length;
+        } else {
+          i++;
+        }
+      }
+    });
+    ranges.sort((a,b) => a.start - b.start);
+    const merged: { start: number; end: number }[] = [];
+    ranges.forEach(r => {
+      const last = merged[merged.length - 1];
+      if (!last || r.start > last.end) merged.push({ ...r }); else last.end = Math.max(last.end, r.end);
+    });
+    if (merged.length === 0) return text;
+    const parts: React.ReactNode[] = [];
+    let cursor = 0;
+    merged.forEach(({ start, end }, idx) => {
+      if (cursor < start) parts.push(orig.slice(cursor, start).join(''));
+      parts.push(<span key={`hl-${idx}`} className="bg-lime-green/20 text-lime-green">{orig.slice(start, end).join('')}</span>);
+      cursor = end;
+    });
+    if (cursor < orig.length) parts.push(orig.slice(cursor).join(''));
+    return <>{parts}</>;
+  }, [searchQuery, normalize]);
 
   // SEO para página de todos os artigos
   const seoHook = useSEO({
@@ -121,6 +159,46 @@ const AllArticles: React.FC = () => {
     [createDebouncedSearch, setSearchParams]
   );
 
+  const suggestions = useMemo(() => {
+    if (!searchQuery.trim() || searchQuery.length < 2) return [] as string[];
+    const q = searchQuery.toLowerCase();
+    const set = new Set<string>();
+    articles.forEach(a => {
+      a.title.toLowerCase().split(' ').forEach(w => { if (w.includes(q) && w.length > 2) set.add(w); });
+      if (a.tags) {
+        if (Array.isArray(a.tags)) {
+          a.tags.forEach(t => { const s = (typeof t === 'string' ? t : String(t)).toLowerCase(); if (s.includes(q)) set.add(s); });
+        } else if (typeof a.tags === 'string') {
+          a.tags.split(',').map(t => t.trim().toLowerCase()).forEach(s => { if (s.includes(q)) set.add(s); });
+        }
+      }
+    });
+    return Array.from(set).slice(0, 5);
+  }, [articles, searchQuery]);
+
+  const parseAdvancedQuery = useCallback((q: string) => {
+    const filters: any = { exclude: [] };
+    q.split(/\s+/).forEach(term => {
+      if (!term) return;
+      if (term.startsWith('-')) {
+        const v = term.substring(1).trim();
+        if (v) filters.exclude.push(v);
+        return;
+      }
+      if (term.includes(':')) {
+        const [key, value] = term.split(':');
+        const v = value?.trim();
+        if (!v) return;
+        if (key === 'title') filters.title = v;
+        else if (key === 'tag') filters.tag = v;
+        else if (key === 'category') filters.category = v;
+        else if (key === 'date') filters.dateRange = v;
+        return;
+      }
+    });
+    return filters;
+  }, []);
+
   // Filtered and sorted articles with performance optimization
   const processedArticles = useMemo(() => {
     console.log('🔍 [DEBUG CRÍTICO ALLARTICLES] Iniciando processamento dos artigos');
@@ -138,15 +216,30 @@ const AllArticles: React.FC = () => {
 
     startRenderMeasurement();
     
-    // Filtrar artigos
-    const filtered = filterArticles(articles, searchQuery, selectedCategory);
+    let filtered = articles;
+    if (selectedCategory && selectedCategory !== 'all' && selectedCategory !== '') {
+      filtered = filtered.filter(article => {
+        if (typeof article.category === 'string') {
+          return article.category === selectedCategory;
+        }
+        if (article.category && 'id' in article.category) {
+          return article.category.id === selectedCategory;
+        }
+        if (article.category && 'name' in article.category) {
+          return article.category.name === selectedCategory;
+        }
+        return false;
+      });
+    }
+
+    const toSort = searchQuery.trim() && searchedArticles ? searchedArticles : filtered;
     console.log('🔍 [DEBUG CRÍTICO ALLARTICLES] Artigos após filtro:', filtered?.map(a => ({
       title: a.title,
       approval_rate: a.approval_rate
     })));
     
     // Ordenar artigos
-    const sorted = sortArticles(filtered, sortBy);
+    const sorted = sortArticles(toSort, sortBy);
     console.log('🔍 [DEBUG CRÍTICO ALLARTICLES] Artigos após ordenação por', sortBy, ':', sorted?.map(a => ({
       title: a.title,
       approval_rate: a.approval_rate,
@@ -162,7 +255,22 @@ const AllArticles: React.FC = () => {
     endRenderMeasurement();
     
     return sorted;
-  }, [articles, searchQuery, selectedCategory, sortBy, filterArticles, sortArticles, startRenderMeasurement, endRenderMeasurement]);
+  }, [articles, searchQuery, selectedCategory, sortBy, sortArticles, startRenderMeasurement, endRenderMeasurement, searchedArticles]);
+
+  React.useEffect(() => {
+    let active = true;
+    const run = async () => {
+      if (!searchQuery.trim()) {
+        setSearchedArticles(null);
+        return;
+      }
+      const filters = parseAdvancedQuery(searchQuery);
+      const { results } = await searchArticles(articles, searchQuery, { fuzzy: true, threshold: 0.8, filters });
+      if (active) setSearchedArticles(results);
+    };
+    run();
+    return () => { active = false; };
+  }, [articles, searchQuery, searchArticles, parseAdvancedQuery]);
 
   // Handle search input
   const handleSearchChange = useCallback((value: string) => {
@@ -271,6 +379,9 @@ const AllArticles: React.FC = () => {
                 onChange={handleSearchChange}
                 placeholder="Buscar artigos por título, conteúdo ou tags..."
                 className="flex-1 max-w-2xl"
+                suggestions={suggestions}
+                onSelectSuggestion={(v) => handleSearchChange(v)}
+                isLoading={isSearching}
               />
             </div>
 
@@ -496,13 +607,13 @@ const ArticleCard = memo<{
 
             <Link to={`/artigo/${article.slug}`} className="group">
               <h3 className="text-xl font-orbitron font-bold text-white group-hover:text-lime-green transition-colors duration-300 line-clamp-2">
-                {article.title}
+                {highlightText(article.title)}
               </h3>
             </Link>
 
             {article.excerpt && (
               <p className="text-futuristic-gray text-sm line-clamp-2">
-                {article.excerpt}
+                {highlightText(article.excerpt)}
               </p>
             )}
 
@@ -572,13 +683,13 @@ const ArticleCard = memo<{
         <div className="space-y-3">
           <Link to={`/artigo/${article.slug}`} className="group">
             <h3 className="text-xl font-orbitron font-bold text-white group-hover:text-lime-green transition-colors duration-300 line-clamp-2">
-              {article.title}
+              {highlightText(article.title)}
             </h3>
           </Link>
 
           {article.excerpt && (
             <p className="text-futuristic-gray text-sm line-clamp-3">
-              {article.excerpt}
+              {highlightText(article.excerpt)}
             </p>
           )}
 
