@@ -314,8 +314,22 @@ async function handleCacheFirst(request, cacheName) {
     return networkResponse;
   } catch (error) {
     console.error('[SW] Static asset fetch failed:', error);
-    // Retornar página offline se disponível
-    return caches.match('/offline.html') || new Response('Offline', { status: 503 });
+    // Fallback por destino para evitar erros de MIME
+    const dest = request.destination;
+    if (dest === 'document') {
+      return (await caches.match('/offline.html')) || new Response('Offline', { status: 503 });
+    }
+    if (dest === 'script') {
+      return new Response('/* offline */', { status: 200, headers: { 'Content-Type': 'application/javascript' } });
+    }
+    if (dest === 'style') {
+      return new Response('/* offline */', { status: 200, headers: { 'Content-Type': 'text/css' } });
+    }
+    if (dest === 'image') {
+      return (await caches.match('/placeholder.svg')) || new Response('', { status: 503 });
+    }
+    // Demais assets: resposta genérica
+    return new Response('Offline', { status: 503 });
   }
 }
 

@@ -143,6 +143,16 @@ const Header: React.FC = () => {
                     <Settings className="w-5 h-5" />
                   </Link>
                 )}
+                {isAuthenticated && (
+                  <Link
+                    to="/perfil"
+                    className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300"
+                    aria-label="Perfil"
+                    title="Meu Perfil"
+                  >
+                    <User className="w-5 h-5" />
+                  </Link>
+                )}
                 <button
                   onClick={handleLogout}
                   className="p-2 text-futuristic-gray hover:text-red-400 transition-colors duration-300"

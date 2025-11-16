@@ -640,7 +640,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) {
         console.error('❌ Erro ao atualizar nome no auth:', error);
-        return false;
       }
       
       // Atualizar no estado local
@@ -666,6 +665,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }, {
             onConflict: 'email'
           });
+      } catch {}
+
+      try {
+        const { supabaseServiceClient } = await import('../lib/supabase-admin');
+        await supabaseServiceClient
+          .from('user_profiles')
+          .upsert({
+            email: supabaseUser.email!,
+            name: newName.trim(),
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'email'
+          });
+        await supabaseServiceClient
+          .from('comments')
+          .update({ user_name: newName.trim() })
+          .eq('user_id', supabaseUser.id);
       } catch {}
       
       try {

@@ -38,6 +38,7 @@ const Categories = lazy(() => import('./pages/Categories'));
 const Article = lazy(() => import('./pages/Article'));
 const Newsletter = lazy(() => import('./pages/Newsletter'));
 const Privacy = lazy(() => import('./pages/Privacy'));
+const Profile = lazy(() => import('./pages/Profile'));
 const Admin = lazy(() => import('./pages/Admin'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
 const AdminLayout = lazy(() => import('./pages/admin/layout'));
@@ -205,6 +206,7 @@ function AppContent() {
         <Route path="/newsletter" element={<Layout><Newsletter /></Layout>} />
         <Route path="/sobre" element={<Layout><LazyComponents.About /></Layout>} />
         <Route path="/politica-privacidade" element={<Layout><Privacy /></Layout>} />
+        <Route path="/perfil" element={<Layout><Profile /></Layout>} />
         
         {/* Admin routes without Layout */}
         <Route path="/admin/login" element={<AdminLogin />} />

@@ -33,8 +33,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
     replyCounts
   } = useComments(String(articleId));
 
-  const { supabaseUser, isAuthenticated, updateUserName } = useAuth();
-  const [editingName, setEditingName] = React.useState(false);
+  const { supabaseUser, isAuthenticated } = useAuth();
   const [displayName, setDisplayName] = React.useState<string>('');
   const skipSyncUntil = React.useRef<number>(0);
   const [activeReplyId, setActiveReplyId] = React.useState<string | null>(null);
@@ -72,7 +71,6 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
   }, [isAuthenticated]);
 
   React.useEffect(() => {
-    if (editingName) return;
     if (Date.now() < skipSyncUntil.current) return;
     const meta: any = supabaseUser?.user_metadata || {};
     let preferred = '';
@@ -84,12 +82,11 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
     if (initialName && initialName !== displayName) {
       setDisplayName(initialName);
     }
-  }, [supabaseUser, editingName]);
+  }, [supabaseUser]);
 
   // Sincronizar nome quando user_metadata mudar (após edição)
   React.useEffect(() => {
-    if (editingName) return; // Não atualizar se estiver editando
-    if (Date.now() < skipSyncUntil.current) return; // Evita sobrescrever imediatamente após salvar
+    if (Date.now() < skipSyncUntil.current) return;
     const meta: any = supabaseUser?.user_metadata || {};
     let preferred = '';
     try {
@@ -100,7 +97,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
     if (currentName !== displayName && currentName) {
       setDisplayName(currentName);
     }
-  }, [supabaseUser?.user_metadata, editingName]);
+  }, [supabaseUser?.user_metadata]);
 
   // 🚀 NOVO: Hook para tempo real de comentários
   const { 
@@ -163,44 +160,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
     await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${siteUrl}/auth/v1/callback` } });
   };
 
-  const handleSaveDisplayName = async () => {
-    if (!isAuthenticated || !supabaseUser) return;
-    
-    try {
-      console.log('💾 Salvando nome de exibição:', displayName.trim());
-      
-      // Usar a função do contexto para atualizar o nome
-      const success = await updateUserName(displayName.trim());
-      
-      if (!success) {
-        console.error('❌ Erro ao atualizar nome no contexto');
-        return;
-      }
-      skipSyncUntil.current = Date.now() + 2000; // Evita piscar para o nome antigo
-      setDisplayName(displayName.trim());
-      try {
-        const key = `aimindset.preferred_name:${supabaseUser?.email || ''}`;
-        localStorage.setItem(key, displayName.trim());
-      } catch {}
-      
-      // Atualizar todos os comentários do usuário
-      const { error: commentsError } = await supabase
-        .from('comments')
-        .update({ user_name: displayName.trim() })
-        .eq('user_id', supabaseUser.id);
-      
-      if (commentsError) {
-        console.error('❌ Erro ao atualizar comentários:', commentsError);
-      }
-      
-      setEditingName(false);
-      await refreshComments();
-      
-      console.log('✅ Nome de exibição salvo com sucesso!');
-    } catch (error) {
-      console.error('💥 Erro ao salvar nome:', error);
-    }
-  };
+  // Edição de nome movida para a página de Perfil
 
   console.log('📊 [DEBUG] CommentSection - Estado atual:', {
     commentsCount: comments.length,
@@ -230,26 +190,12 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
 
       {isAuthenticated && (
         <div className="flex items-center justify-between p-3 rounded-md border border-white/10 bg-black/20">
-          {!editingName ? (
-            <div className="flex items-center gap-3 text-sm">
-              <span className="text-futuristic-gray">Nome exibido:</span>
-              <span className="text-white font-medium">{displayName || 'Usuário'}</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <input
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                className="px-3 py-1 text-xs bg-transparent border border-white/10 rounded-md text-white"
-              />
-              <button onClick={handleSaveDisplayName} className="px-3 py-1 text-xs rounded-md border border-neon-purple/40 text-white hover:bg-neon-purple/20">Salvar</button>
-              <button onClick={() => { const meta: any = supabaseUser?.user_metadata || {}; setEditingName(false); setDisplayName(meta.name || meta.full_name || supabaseUser?.email?.split('@')[0] || ''); }} className="px-3 py-1 text-xs rounded-md border border-white/10 text-futuristic-gray hover:bg-white/5">Cancelar</button>
-            </div>
-          )}
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-futuristic-gray">Nome exibido:</span>
+            <span className="text-white font-medium">{displayName || 'Usuário'}</span>
+          </div>
           <div>
-            {!editingName ? (
-              <button onClick={() => setEditingName(true)} className="px-3 py-1 text-xs rounded-md border border-white/10 text-futuristic-gray hover:bg-white/5">Editar nome</button>
-            ) : null}
+            <a href="/perfil" className="px-3 py-1 text-xs rounded-md border border-white/10 text-futuristic-gray hover:bg-white/5">Editar no Perfil</a>
           </div>
         </div>
       )}
