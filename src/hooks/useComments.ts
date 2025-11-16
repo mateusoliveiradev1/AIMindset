@@ -15,6 +15,7 @@ export interface Comment {
   likes: number;              // NOVO: Contador de curtidas
   replies?: Comment[];        // NOVO: Array de respostas (computed)
   user_id?: string | null;
+  user_avatar_url?: string | null;
 }
 
 export interface CommentFormData {
@@ -240,6 +241,7 @@ export const useComments = (articleId: string, initialSort: SortMode = 'recent')
       const supaUser = userResp?.user || null;
       const meta = supaUser?.user_metadata || {};
       const resolvedName = (meta as any).name || (meta as any).full_name || supaUser?.email?.split('@')[0] || commentData.user_name.trim();
+      const resolvedAvatar = (meta as any).avatar_url || null;
 
       try {
         const sinceIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -279,7 +281,8 @@ export const useComments = (articleId: string, initialSort: SortMode = 'recent')
             user_name: resolvedName,
             content: commentData.content.trim(),
             parent_id: commentData.parent_id || null,
-            user_id: supaUser ? supaUser.id : null
+            user_id: supaUser ? supaUser.id : null,
+            user_avatar_url: resolvedAvatar
           }
         ]);
 

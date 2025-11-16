@@ -19,6 +19,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   isLoading: boolean;
   updateUserName: (newName: string) => Promise<boolean>;
+  updateUserAvatar: (avatarUrl: string) => Promise<boolean>;
+  removeUserAvatar: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -710,6 +712,120 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const updateUserAvatar = async (avatarUrl: string) => {
+    if (!supabaseUser) return false;
+    try {
+      const { error } = await supabase.auth.updateUser({ data: { avatar_url: avatarUrl } });
+      if (error) {
+        console.error('❌ Erro ao atualizar avatar no auth:', error);
+      }
+      const updatedUser = {
+        ...supabaseUser,
+        user_metadata: {
+          ...supabaseUser.user_metadata,
+          avatar_url: avatarUrl
+        }
+      };
+      setSupabaseUser(updatedUser);
+      saveSupabaseUserToStorage(updatedUser);
+      try {
+        await supabase
+          .from('user_profiles')
+          .upsert({
+            email: supabaseUser.email!,
+            avatar_url: avatarUrl,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'email' });
+      } catch {}
+      try {
+        const { supabaseServiceClient } = await import('../lib/supabase-admin');
+        await supabaseServiceClient
+          .from('user_profiles')
+          .upsert({
+            email: supabaseUser.email!,
+            avatar_url: avatarUrl,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'email' });
+        await supabaseServiceClient
+          .from('comments')
+          .update({ user_avatar_url: avatarUrl })
+          .eq('user_id', supabaseUser.id);
+      } catch {}
+      const currentSession = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (currentSession) {
+        const sessionData = JSON.parse(currentSession);
+        if (sessionData.user) {
+          sessionData.user.user_metadata = {
+            ...sessionData.user.user_metadata,
+            avatar_url: avatarUrl
+          };
+          localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error('💥 Erro ao atualizar avatar do usuário:', error);
+      return false;
+    }
+  };
+
+  const removeUserAvatar = async () => {
+    if (!supabaseUser) return false;
+    try {
+      const { error } = await supabase.auth.updateUser({ data: { avatar_url: null } });
+      if (error) {
+        console.error('❌ Erro ao remover avatar no auth:', error);
+      }
+      const updatedUser = {
+        ...supabaseUser,
+        user_metadata: {
+          ...supabaseUser.user_metadata,
+          avatar_url: null
+        }
+      };
+      setSupabaseUser(updatedUser);
+      saveSupabaseUserToStorage(updatedUser);
+      try {
+        await supabase
+          .from('user_profiles')
+          .upsert({
+            email: supabaseUser.email!,
+            avatar_url: null,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'email' });
+      } catch {}
+      try {
+        const { supabaseServiceClient } = await import('../lib/supabase-admin');
+        await supabaseServiceClient
+          .from('user_profiles')
+          .upsert({
+            email: supabaseUser.email!,
+            avatar_url: null,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'email' });
+        await supabaseServiceClient
+          .from('comments')
+          .update({ user_avatar_url: null })
+          .eq('user_id', supabaseUser.id);
+      } catch {}
+      const currentSession = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (currentSession) {
+        const sessionData = JSON.parse(currentSession);
+        if (sessionData.user) {
+          sessionData.user.user_metadata = {
+            ...sessionData.user.user_metadata,
+            avatar_url: null
+          };
+          localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error('💥 Erro ao remover avatar do usuário:', error);
+      return false;
+    }
+  };
+
   const applyProfileNameOverride = async (u: SupabaseUser) => {
     try {
       const { data } = await supabase
@@ -752,7 +868,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     logout,
     isLoading,
-    updateUserName
+    updateUserName,
+    updateUserAvatar,
+    removeUserAvatar
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
