@@ -16,6 +16,7 @@ const Footer: React.FC = () => {
       { name: 'Sobre', href: '/sobre' },
       { name: 'Newsletter', href: '/newsletter' },
       { name: 'Contato', href: '/contato' },
+      { name: 'FAQ', href: '/faq' },
       { name: 'Política de Privacidade', href: '/politica-privacidade' },
     ],
     affiliates: [
@@ -101,6 +102,9 @@ const Footer: React.FC = () => {
                     className="text-futuristic-gray hover:text-lime-green transition-colors duration-300 font-roboto text-sm"
                   >
                     {link.name}
+                    {link.name === 'FAQ' && (
+                      <span className="ml-2 text-[10px] leading-none px-2 py-[2px] rounded-full border border-lime-green/30 text-lime-green bg-lime-green/10">Novo</span>
+                    )}
                   </Link>
                 </li>
               ))}

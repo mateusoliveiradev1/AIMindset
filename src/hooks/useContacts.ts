@@ -57,13 +57,43 @@ export const useContacts = (): UseContactsReturn => {
       
       const { error: insertError } = await supabase
         .from('contacts')
-        .insert([{
+        .insert([{ 
           ...contactData,
           status: 'new'
         }]);
 
       if (insertError) {
         throw insertError;
+      }
+
+      // Tentar enviar notificação por email (ambiente com função /api)
+      try {
+        const adminEmail = (import.meta as any).env?.VITE_CONTACT_NOTIFY_EMAIL || 'warface01031999@gmail.com';
+        const source = typeof window !== 'undefined' && window.location.pathname.includes('faq')
+          ? 'faq_inline_form'
+          : 'contact_form';
+
+        await fetch('/api/send-alert-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recipients: [adminEmail],
+            alertData: {
+              type: 'contact_message',
+              source,
+              message: `${contactData.subject || 'Contato'} de ${contactData.name} <${contactData.email}>`,
+              details: {
+                name: contactData.name,
+                email: contactData.email,
+                subject: (contactData as any).subject || 'Contato',
+                message: contactData.message
+              },
+              timestamp: new Date().toISOString()
+            }
+          })
+        });
+      } catch (emailErr) {
+        console.warn('Email de contato não enviado (ambiente local ou função indisponível):', emailErr);
       }
 
       // Don't refresh contacts here since this is typically called from the public contact form

@@ -4,7 +4,7 @@ import { supabaseServiceClient } from '../lib/supabase';
 
 interface SEOData {
   id: string;
-  page_type: 'home' | 'article' | 'category' | 'about' | 'contact' | 'newsletter' | 'privacy' | 'all_articles' | 'admin';
+  page_type: 'home' | 'article' | 'category' | 'about' | 'contact' | 'newsletter' | 'privacy' | 'all_articles' | 'admin' | 'faq';
   page_slug?: string;
   title: string;
   description: string;
@@ -17,7 +17,7 @@ interface SEOData {
 }
 
 interface UseSEOOptions {
-  pageType: 'home' | 'article' | 'category' | 'about' | 'contact' | 'newsletter' | 'privacy' | 'all_articles' | 'admin';
+  pageType: 'home' | 'article' | 'category' | 'about' | 'contact' | 'newsletter' | 'privacy' | 'all_articles' | 'admin' | 'faq';
   pageSlug?: string;
   fallbackTitle?: string;
   fallbackDescription?: string;
@@ -401,6 +401,11 @@ export const useSEO = (options: UseSEOOptions) => {
       canonicalUrl = `${baseUrl}/contato`;
     } else if (pageType === 'privacy') {
       canonicalUrl = `${baseUrl}/privacidade`;
+    } else if (pageType === 'faq') {
+      canonicalUrl = `${baseUrl}/faq`;
+      title = 'FAQ - Perguntas Frequentes e Ajuda | AIMindset';
+      description = 'Tire dúvidas sobre conteúdo, newsletter, privacidade e comentários sem conta. Suporte e contato direto.';
+      keywords = ['faq', 'perguntas frequentes', 'suporte', 'contato', 'comentários sem conta', 'newsletter', 'privacidade', ...fallbackKeywords];
     }
 
     return {

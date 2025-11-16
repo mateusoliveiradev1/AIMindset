@@ -93,6 +93,12 @@ export const LazyContact = createNamedChunk(
   { minLoadingTime: 100 }
 );
 
+export const LazyFAQ = createNamedChunk(
+  'FAQPage',
+  () => import('@/pages/FAQ'),
+  { minLoadingTime: 100 }
+);
+
 // Componentes lazy para área administrativa
 export const LazyAdminDashboard = createNamedChunk(
   'AdminDashboard',
@@ -176,6 +182,7 @@ export const AllArticlesWithLoading = withLazyLoading(LazyAllArticles, 'Carregan
 export const ArticleDetailWithLoading = withLazyLoading(LazyArticleDetail, 'Carregando artigo...');
 export const AboutWithLoading = withLazyLoading(LazyAbout, 'Carregando sobre...');
 export const ContactWithLoading = withLazyLoading(LazyContact, 'Carregando contato...');
+export const FAQWithLoading = withLazyLoading(LazyFAQ, 'Carregando FAQ...');
 
 // Wrappers para admin
 export const AdminDashboardWithLoading = withLazyLoading(LazyAdminDashboard, 'Carregando dashboard...');
@@ -204,6 +211,7 @@ export default {
   ArticleDetail: ArticleDetailWithLoading,
   About: AboutWithLoading,
   Contact: ContactWithLoading,
+  FAQ: FAQWithLoading,
   AdminDashboard: AdminDashboardWithLoading,
   AdminArticles: AdminArticlesWithLoading,
   AdminCategories: AdminCategoriesWithLoading,

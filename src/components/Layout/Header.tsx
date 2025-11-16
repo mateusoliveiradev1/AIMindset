@@ -22,6 +22,7 @@ const Header: React.FC = () => {
     { name: 'Produtividade', href: '/categoria/produtividade' },
     { name: 'Futuro', href: '/categoria/futuro' },
     { name: 'Newsletter', href: '/newsletter' },
+    { name: 'FAQ', href: '/faq' },
   ];
 
   const isActive = (path: string) => location.pathname === path;

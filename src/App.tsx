@@ -205,6 +205,7 @@ function AppContent() {
         <Route path="/contato" element={<Layout><LazyComponents.Contact /></Layout>} />
         <Route path="/newsletter" element={<Layout><Newsletter /></Layout>} />
         <Route path="/sobre" element={<Layout><LazyComponents.About /></Layout>} />
+        <Route path="/faq" element={<Layout><LazyComponents.FAQ /></Layout>} />
         <Route path="/politica-privacidade" element={<Layout><Privacy /></Layout>} />
         <Route path="/perfil" element={<Layout><Profile /></Layout>} />
         
@@ -257,7 +258,8 @@ function App() {
                 '/artigos',
                 '/categorias',
                 '/sobre',
-                '/contato'
+                '/contato',
+                '/faq'
               ]}
               enableImageOptimization={true}
               enableLazyLoading={true}
