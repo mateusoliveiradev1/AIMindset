@@ -1,0 +1,149 @@
+/* Profile Page Custom Styles */
+
+/* Custom Slider for Avatar Zoom */
+.slider-neon {
+  background: linear-gradient(to right, #1a1a1a 0%, #6A0DAD 50%, #32CD32 100%);
+}
+
+.slider-neon::-webkit-slider-thumb {
+  appearance: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6A0DAD 0%, #32CD32 100%);
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(106, 13, 173, 0.5);
+  transition: all 0.3s ease;
+}
+
+.slider-neon::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 15px rgba(106, 13, 173, 0.8);
+  transform: scale(1.1);
+}
+
+.slider-neon::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6A0DAD 0%, #32CD32 100%);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 10px rgba(106, 13, 173, 0.5);
+}
+
+/* Avatar Hover Effects */
+.avatar-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.avatar-glow::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #6A0DAD, #32CD32, #6A0DAD);
+  border-radius: 50%;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.avatar-glow:hover::before {
+  opacity: 1;
+  animation: avatar-spin 3s linear infinite;
+}
+
+@keyframes avatar-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Card Hover Animations */
+.profile-card-hover {
+  transition: all 0.3s ease;
+}
+
+.profile-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(106, 13, 173, 0.15);
+}
+
+/* Form Input Focus Effects */
+.profile-input-focus {
+  transition: all 0.3s ease;
+}
+
+.profile-input-focus:focus {
+  box-shadow: 0 0 0 2px rgba(106, 13, 173, 0.3), 0 0 0 4px rgba(50, 205, 50, 0.1);
+}
+
+/* Social Link Icons */
+.social-icon-hover {
+  transition: all 0.3s ease;
+}
+
+.social-icon-hover:hover {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 5px currentColor);
+}
+
+/* Status Indicators */
+.status-pulse {
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Profile Header Gradient */
+.profile-header-gradient {
+  background: linear-gradient(135deg, 
+    rgba(106, 13, 173, 0.1) 0%, 
+    rgba(50, 205, 50, 0.1) 50%, 
+    rgba(13, 27, 42, 0.1) 100%);
+  backdrop-filter: blur(10px);
+}
+
+/* Drag and Drop Visual Feedback */
+.drag-active {
+  border-color: #32CD32 !important;
+  background-color: rgba(50, 205, 50, 0.05);
+}
+
+.drag-over {
+  border-color: #6A0DAD !important;
+  background-color: rgba(106, 13, 173, 0.1);
+  box-shadow: 0 0 20px rgba(106, 13, 173, 0.3);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .profile-avatar-section {
+    order: -1;
+  }
+}
+
+/* Loading States */
+.loading-shimmer {
+  background: linear-gradient(90deg, 
+    rgba(26, 26, 26, 0.8) 25%, 
+    rgba(106, 13, 173, 0.2) 50%, 
+    rgba(26, 26, 26, 0.8) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}

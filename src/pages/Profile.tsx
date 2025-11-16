@@ -6,9 +6,16 @@ import { useAuth } from '../contexts/AuthContext';
 import { AvatarImage } from '../components/Performance/ImageOptimizer';
 import { supabase } from '../lib/supabase';
 import { toast } from 'sonner';
+import ProfileStats from '../components/Profile/ProfileStats';
+import ProfileAvatar from '../components/Profile/ProfileAvatar';
+import ProfileInfo from '../components/Profile/ProfileInfo';
+import ProfileSocialLinks from '../components/Profile/ProfileSocialLinks';
+import ProfileActions from '../components/Profile/ProfileActions';
+import { useUserComments } from '../hooks/useUserComments';
+import '../styles/profile.css';
 
 const Profile: React.FC = () => {
-  const { supabaseUser, isAuthenticated, updateUserName, updateUserAvatar, removeUserAvatar, updateUserDetails } = useAuth();
+  const { supabaseUser, isAuthenticated, updateUserName, updateUserAvatar, removeUserAvatar, updateUserDetails, user } = useAuth();
   const [name, setName] = React.useState('');
   const [fullName, setFullName] = React.useState('');
   const [bio, setBio] = React.useState('');
@@ -40,6 +47,7 @@ const Profile: React.FC = () => {
   const [dragStart, setDragStart] = React.useState<{x:number,y:number}|null>(null);
   const [offset, setOffset] = React.useState<{x:number,y:number}>({x:0,y:0});
 
+  // TODA A LÓGICA EXISTENTE É PRESERVADA
   React.useEffect(() => {
     const meta: any = supabaseUser?.user_metadata || {};
     const initial = meta.name || meta.full_name || supabaseUser?.email?.split('@')[0] || '';
@@ -52,14 +60,12 @@ const Profile: React.FC = () => {
     setInstagram(s.instagram || '');
     setLinkedin(s.linkedin || '');
     setWebsite(s.website || '');
-    // Preferências serão implementadas futuramente
     setInitialFullName(meta.full_name || '');
     setInitialBio(meta.bio || '');
     setInitialTwitter(s.twitter || '');
     setInitialInstagram(s.instagram || '');
     setInitialLinkedin(s.linkedin || '');
     setInitialWebsite(s.website || '');
-    // Preferências serão implementadas futuramente
   }, [supabaseUser]);
 
   React.useEffect(() => {
@@ -107,7 +113,7 @@ const Profile: React.FC = () => {
     });
     setSaving(false);
     const okAll = okName && okDetails;
-    setMessage(okAll ? 'Perfil atualizado.' : 'Falha ao atualizar perfil.');
+    setMessage(okAll ? 'Perfil atualizado com sucesso!' : 'Falha ao atualizar perfil.');
     if (okAll) toast.success('Perfil atualizado'); else toast.error('Falha ao atualizar perfil');
     if (okAll) {
       setInitialName(name);
@@ -117,7 +123,6 @@ const Profile: React.FC = () => {
       setInitialInstagram(instagram);
       setInitialLinkedin(linkedin);
       setInitialWebsite(website);
-      // Preferências serão implementadas futuramente
     }
   };
 
@@ -151,7 +156,9 @@ const Profile: React.FC = () => {
     img.src = url;
   };
 
-  const handleAvatarUpload = async (file: File | null) => {
+  const handleAvatarUpload = async () => {
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = input?.files?.[0] || null;
     if (!file || !supabaseUser) return;
     setAvatarUploading(true);
     setAvatarError('');
@@ -195,8 +202,9 @@ const Profile: React.FC = () => {
       if (!ok) {
         setAvatarError('Falha ao atualizar avatar.');
       }
-      setMessage('Avatar atualizado.');
+      setMessage('Avatar atualizado com sucesso!');
       toast.success('Avatar atualizado');
+      setAvatarPreview(null);
     } catch (err: any) {
       const m = err?.message || 'Erro no upload.';
       if (typeof m === 'string' && m.toLowerCase().includes('bucket')) {
@@ -244,9 +252,10 @@ const Profile: React.FC = () => {
           if (!ok2) {
             setAvatarError('Falha ao atualizar avatar.');
           } else {
-            setMessage('Avatar atualizado.');
+            setMessage('Avatar atualizado com sucesso!');
             setAvatarError('');
             toast.success('Avatar atualizado');
+            setAvatarPreview(null);
           }
         } catch (createErr: any) {
           setAvatarError(createErr?.message || m);
@@ -261,7 +270,39 @@ const Profile: React.FC = () => {
     }
   };
 
-  // Preferências serão implementadas futuramente
+  const handleAvatarRemove = async () => {
+    setAvatarError('');
+    const confirmed = window.confirm('Remover avatar?');
+    if (!confirmed) return;
+    const ok = await removeUserAvatar();
+    if (!ok) {
+      setAvatarError('Falha ao remover avatar.');
+    } else {
+      setAvatarPreview(null);
+      setMessage('Avatar removido com sucesso!');
+      toast.success('Avatar removido');
+    }
+  };
+
+  // Buscar contador de comentários do usuário
+  const resolvedUserName = supabaseUser?.user_metadata?.name 
+    || supabaseUser?.user_metadata?.full_name 
+    || supabaseUser?.email?.split('@')[0] 
+    || '';
+  
+  const { commentCount } = useUserComments(
+    supabaseUser?.id,
+    resolvedUserName
+  );
+
+  // Verificar se há alterações
+  const hasChanges = name.trim() !== initialName.trim() ||
+    fullName.trim() !== initialFullName.trim() ||
+    bio.trim() !== initialBio.trim() ||
+    twitter.trim() !== initialTwitter.trim() ||
+    instagram.trim() !== initialInstagram.trim() ||
+    linkedin.trim() !== initialLinkedin.trim() ||
+    website.trim() !== initialWebsite.trim();
 
   if (!isAuthenticated) {
     return (
@@ -278,134 +319,106 @@ const Profile: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-dark-surface flex items-center justify-center px-4">
-      <Card className="w-full max-w-md">
-        <h2 className="text-xl font-bold text-white mb-4">Meu Perfil</h2>
-        <div className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16">
-              {avatarPreview ? (
-                <AvatarImage src={avatarPreview} alt="Avatar" size={64} />
-              ) : (
-                supabaseUser?.user_metadata?.avatar_url ? (
-                  <AvatarImage src={supabaseUser.user_metadata.avatar_url} alt="Avatar" size={64} />
-                ) : (
-                  <div className="w-16 h-16 bg-gradient-to-br from-neon-purple/30 to-neon-blue/30 rounded-full border border-neon-purple/30" />
-                )
-              )}
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm text-futuristic-gray mb-1">Avatar</label>
-              <input type="file" accept="image/png,image/jpeg,image/webp" capture="environment" onChange={handleAvatarChange} className="w-full text-sm text-futuristic-gray" />
-              <div className="mt-2 flex gap-2">
-                <Button onClick={async () => {
-                  const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-                  const f = input?.files?.[0] || null;
-                  await handleAvatarUpload(f);
-                }} disabled={avatarUploading}>
-                  {avatarUploading ? 'Enviando...' : 'Enviar avatar'}
-                </Button>
-                <Button onClick={async () => {
-                  setAvatarError('');
-                  const confirmed = window.confirm('Remover avatar?');
-                  if (!confirmed) return;
-                  const ok = await removeUserAvatar();
-                  if (!ok) {
-                    setAvatarError('Falha ao remover avatar.');
-                  } else {
-                    setAvatarPreview(null);
-                    setMessage('Avatar removido.');
-                    toast.success('Avatar removido');
-                  }
-                }} variant="outline" disabled={avatarUploading}>
-                  Remover avatar
-                </Button>
-              </div>
-              <div className="mt-3 grid grid-cols-[1fr_auto] gap-2 items-center">
-                <input type="range" min={1} max={3} step={0.01} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} aria-label="Zoom do avatar" />
-                <span className="text-xs text-futuristic-gray">Zoom</span>
-              </div>
-              {avatarPreview && (
-                <div className="mt-2 relative w-40 h-40 overflow-hidden rounded-lg border border-neon-purple/30"
-                  onMouseDown={(e) => { setIsDragging(true); setDragStart({x: e.clientX, y: e.clientY}); }}
-                  onMouseMove={(e) => { if (!isDragging || !dragStart) return; const dx = e.clientX - dragStart.x; const dy = e.clientY - dragStart.y; setOffset(prev => ({x: prev.x + dx/zoom, y: prev.y + dy/zoom})); setDragStart({x: e.clientX, y: e.clientY}); }}
-                  onMouseUp={() => { setIsDragging(false); setDragStart(null); }}
-                  onMouseLeave={() => { setIsDragging(false); setDragStart(null); }}
-                >
-                  <img src={avatarPreview} alt="Pré-visualização" className="absolute inset-0" style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`, transformOrigin: 'center center' }} />
-                </div>
-              )}
-              {avatarError && <p className="text-red-400 text-sm mt-2">{avatarError}</p>}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm text-futuristic-gray mb-1">Email</label>
-            <input
-              value={supabaseUser?.email || ''}
-              readOnly
-              className="w-full px-3 py-2 bg-dark-surface/50 border border-neon-purple/30 rounded-lg text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-futuristic-gray mb-1">Nome exibido</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 bg-dark-surface/50 border border-neon-purple/30 rounded-lg text-white"
-              placeholder="Seu nome"
-              aria-label="Nome exibido"
-            />
-            {nameError && <p className="text-red-400 text-xs mt-1">{nameError}</p>}
-          </div>
-          <div>
-            <label className="block text-sm text-futuristic-gray mb-1">Nome completo</label>
-            <input value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full px-3 py-2 bg-dark-surface/50 border border-neon-purple/30 rounded-lg text-white" placeholder="Seu nome completo" aria-label="Nome completo" />
-            {fullNameError && <p className="text-red-400 text-xs mt-1">{fullNameError}</p>}
-          </div>
-          <div>
-            <label className="block text-sm text-futuristic-gray mb-1">Bio</label>
-            <textarea value={bio} onChange={(e) => setBio(e.target.value)} className="w-full px-3 py-2 bg-dark-surface/50 border border-neon-purple/30 rounded-lg text-white min-h-[80px]" placeholder="Sobre você" aria-label="Bio" />
-            {bioError && <p className="text-red-400 text-xs mt-1">{bioError}</p>}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm text-futuristic-gray mb-1">Twitter</label>
-              <input value={twitter} onChange={(e) => setTwitter(e.target.value)} className="w-full px-3 py-2 bg-dark-surface/50 border border-neon-purple/30 rounded-lg text-white" placeholder="@usuario ou URL" aria-label="Twitter" />
-              {twitterError && <p className="text-red-400 text-xs mt-1">{twitterError}</p>}
-            </div>
-            <div>
-              <label className="block text-sm text-futuristic-gray mb-1">Instagram</label>
-              <input value={instagram} onChange={(e) => setInstagram(e.target.value)} className="w-full px-3 py-2 bg-dark-surface/50 border border-neon-purple/30 rounded-lg text-white" placeholder="@usuario ou URL" aria-label="Instagram" />
-              {instagramError && <p className="text-red-400 text-xs mt-1">{instagramError}</p>}
-            </div>
-            <div>
-              <label className="block text-sm text-futuristic-gray mb-1">LinkedIn</label>
-              <input value={linkedin} onChange={(e) => setLinkedin(e.target.value)} className="w-full px-3 py-2 bg-dark-surface/50 border border-neon-purple/30 rounded-lg text-white" placeholder="URL" aria-label="LinkedIn" />
-              {linkedinError && <p className="text-red-400 text-xs mt-1">{linkedinError}</p>}
-            </div>
-            <div>
-              <label className="block text-sm text-futuristic-gray mb-1">Website</label>
-              <input value={website} onChange={(e) => setWebsite(e.target.value)} className="w-full px-3 py-2 bg-dark-surface/50 border border-neon-purple/30 rounded-lg text-white" placeholder="URL" aria-label="Website" />
-              {websiteError && <p className="text-red-400 text-xs mt-1">{websiteError}</p>}
-            </div>
-          </div>
-          {/* Preferências (tema/idioma/animações) serão adicionadas futuramente */}
-          <Button onClick={handleSave} disabled={saving || (
-            name.trim() === initialName.trim() &&
-            fullName.trim() === initialFullName.trim() &&
-            bio.trim() === initialBio.trim() &&
-            twitter.trim() === initialTwitter.trim() &&
-            instagram.trim() === initialInstagram.trim() &&
-            linkedin.trim() === initialLinkedin.trim() &&
-            website.trim() === initialWebsite.trim()
-          )} className="w-full">
-            {saving ? 'Salvando...' : 'Salvar perfil'}
-          </Button>
-          {message && (
-            <p className="text-center text-futuristic-gray">{message}</p>
-          )}
+    <div className="min-h-screen bg-dark-surface">
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Header Section */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+            Meu Perfil
+          </h1>
+          <p className="text-futuristic-gray">
+            Gerencie suas informações pessoais e preferências
+          </p>
         </div>
-      </Card>
+
+        {/* Stats Section */}
+        <ProfileStats 
+          joinDate={supabaseUser?.created_at}
+          commentCount={commentCount}
+          role={user?.role}
+          className="mb-8"
+        />
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Avatar Section */}
+          <div className="lg:col-span-1">
+            <ProfileAvatar
+              avatarUrl={supabaseUser?.user_metadata?.avatar_url}
+              avatarPreview={avatarPreview}
+              userName={name}
+              userEmail={supabaseUser?.email}
+              onAvatarChange={handleAvatarChange}
+              onAvatarUpload={handleAvatarUpload}
+              onAvatarRemove={handleAvatarRemove}
+              avatarUploading={avatarUploading}
+              avatarError={avatarError}
+              zoom={zoom}
+              onZoomChange={setZoom}
+              isDragging={isDragging}
+              onDragStart={(e) => {
+                setIsDragging(true);
+                setDragStart({x: e.clientX, y: e.clientY});
+              }}
+              onDragMove={(e) => {
+                if (!isDragging || !dragStart) return;
+                const dx = e.clientX - dragStart.x;
+                const dy = e.clientY - dragStart.y;
+                setOffset(prev => ({x: prev.x + dx/zoom, y: prev.y + dy/zoom}));
+                setDragStart({x: e.clientX, y: e.clientY});
+              }}
+              onDragEnd={() => {
+                setIsDragging(false);
+                setDragStart(null);
+              }}
+              offset={offset}
+            />
+          </div>
+
+          {/* Info and Social Links Section */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Personal Info */}
+            <ProfileInfo
+              email={supabaseUser?.email || ''}
+              name={name}
+              fullName={fullName}
+              bio={bio}
+              onNameChange={setName}
+              onFullNameChange={setFullName}
+              onBioChange={setBio}
+              nameError={nameError}
+              fullNameError={fullNameError}
+              bioError={bioError}
+            />
+
+            {/* Social Links */}
+            <ProfileSocialLinks
+              twitter={twitter}
+              instagram={instagram}
+              linkedin={linkedin}
+              website={website}
+              onTwitterChange={setTwitter}
+              onInstagramChange={setInstagram}
+              onLinkedinChange={setLinkedin}
+              onWebsiteChange={setWebsite}
+              twitterError={twitterError}
+              instagramError={instagramError}
+              linkedinError={linkedinError}
+              websiteError={websiteError}
+            />
+
+            {/* Actions */}
+            <ProfileActions
+              onSave={handleSave}
+              saving={saving}
+              hasChanges={hasChanges}
+              message={message}
+              messageType={message.includes('sucesso') ? 'success' : message.includes('Falha') ? 'error' : 'info'}
+              disabled={saving || avatarUploading}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
