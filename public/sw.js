@@ -1,20 +1,19 @@
 // Service Worker EXTREMO para performance máxima
-const CACHE_NAME = 'aimindset-extreme-v2.0.0';
-const STATIC_CACHE = 'static-extreme-v2.0.0';
-const DYNAMIC_CACHE = 'dynamic-extreme-v2.0.0';
-const API_CACHE = 'api-extreme-v2.0.0';
-const SUPABASE_CACHE = 'supabase-extreme-v2.0.0';
-const ARTICLES_CACHE = 'articles-extreme-v2.0.0';
-const IMAGE_CACHE = 'images-extreme-v2.0.0';
-const FONT_CACHE = 'fonts-extreme-v2.0.0';
-const CSS_CACHE = 'css-extreme-v2.0.0';
-const JS_CACHE = 'js-extreme-v2.0.0';
+const CACHE_NAME = 'aimindset-extreme-v2.1.0';
+const STATIC_CACHE = 'static-extreme-v2.1.0';
+const DYNAMIC_CACHE = 'dynamic-extreme-v2.1.0';
+const API_CACHE = 'api-extreme-v2.1.0';
+const SUPABASE_CACHE = 'supabase-extreme-v2.1.0';
+const ARTICLES_CACHE = 'articles-extreme-v2.1.0';
+const IMAGE_CACHE = 'images-extreme-v2.1.0';
+const FONT_CACHE = 'fonts-extreme-v2.1.0';
+const CSS_CACHE = 'css-extreme-v2.1.0';
+const JS_CACHE = 'js-extreme-v2.1.0';
 
 // Recursos críticos para cache agressivo
 const CRITICAL_ASSETS = [
   '/',
   '/index.html',
-  '/manifest.json',
   '/favicon.ico',
   '/favicon.svg',
   '/apple-touch-icon.png',

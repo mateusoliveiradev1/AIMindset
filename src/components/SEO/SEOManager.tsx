@@ -355,8 +355,8 @@ export const SEOManager: React.FC<SEOManagerProps> = ({ metadata }) => {
       <link rel="manifest" href="/site.webmanifest" />
       
       {/* Theme color */}
-      <meta name="theme-color" content="#3B82F6" />
-      <meta name="msapplication-TileColor" content="#3B82F6" />
+      <meta name="theme-color" content="#0D1B2A" />
+      <meta name="msapplication-TileColor" content="#0D1B2A" />
       <meta name="msapplication-config" content="/browserconfig.xml" />
       
       {/* Sitemap hint */}
