@@ -38,7 +38,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
   countReplies,
   initialRepliesCount
 }) => {
-  const { supabaseUser } = useAuth();
+  const { supabaseUser, user } = useAuth();
   const showReplyForm = activeReplyId === comment.id;
   const [isLiking, setIsLiking] = useState(false);
   const [repliesVisible, setRepliesVisible] = useState(false);
@@ -150,13 +150,13 @@ export const CommentItem: React.FC<CommentItemProps> = ({
       {/* Comentário principal */}
       <div className="bg-darker-surface/30 border border-neon-purple/20 rounded-lg p-6 hover:border-neon-purple/40 transition-all duration-300 backdrop-blur-sm">
         <div className="flex items-start gap-4">
-          <div className="flex-shrink-0 w-12 h-12">
+          <div className={`flex-shrink-0 w-12 h-12 ${supabaseUser && comment.user_id === supabaseUser.id ? 'rounded-full ring-2 ring-lime-green/60 shadow-[0_0_12px_rgba(163,230,53,0.25)]' : ''}`}>
             {(() => {
               const own = supabaseUser && comment.user_id === supabaseUser.id;
               const src = own ? (supabaseUser?.user_metadata as any)?.avatar_url : (comment as any).user_avatar_url;
               if (src) return <AvatarImage src={src} alt="Avatar" size={48} />;
               return (
-                <div className="w-12 h-12 bg-gradient-to-br from-neon-purple/30 to-neon-blue/30 rounded-full flex items-center justify-center border border-neon-purple/30">
+                <div className={`w-12 h-12 bg-gradient-to-br from-neon-purple/30 to-neon-blue/30 rounded-full flex items-center justify-center border ${own ? 'border-lime-green/60' : 'border-neon-purple/30'}`}>
                   <User className="w-6 h-6 text-white" />
                 </div>
               );
@@ -176,6 +176,9 @@ export const CommentItem: React.FC<CommentItemProps> = ({
                   return comment.user_name;
                 })()}
               </h4>
+              {supabaseUser && comment.user_id === supabaseUser.id && (
+                <span className="text-xs text-lime-green border border-lime-green/30 rounded-full px-2 py-[1px]" aria-label="Autor">Autor</span>
+              )}
               <div className="flex items-center gap-1 text-xs text-futuristic-gray flex-shrink-0">
                 <Clock className="w-3 h-3" />
                 <span>{formatDate(comment.created_at)}</span>

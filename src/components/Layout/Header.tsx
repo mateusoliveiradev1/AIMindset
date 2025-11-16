@@ -144,14 +144,19 @@ const Header: React.FC = () => {
                   </Link>
                 )}
                 {isAuthenticated && (
-                  <Link
-                    to="/perfil"
-                    className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300"
-                    aria-label="Perfil"
-                    title="Meu Perfil"
-                  >
-                    <User className="w-5 h-5" />
-                  </Link>
+                  <div className="flex items-center gap-1">
+                    <Link
+                      to="/perfil"
+                      className="p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300"
+                      aria-label="Perfil"
+                      title="Meu Perfil"
+                    >
+                      <User className="w-5 h-5" />
+                    </Link>
+                    {user?.role === 'super_admin' && (
+                      <span className="text-[10px] leading-none px-2 py-[2px] rounded-full border border-lime-green/30 text-lime-green">Admin</span>
+                    )}
+                  </div>
                 )}
                 <button
                   onClick={handleLogout}
