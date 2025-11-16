@@ -48,6 +48,7 @@ const Toast: React.FC<ToastProps> = ({ id, type, message, duration = 5000, onClo
       className={`fixed top-4 right-4 z-50 flex items-center space-x-3 p-4 rounded-lg border backdrop-blur-sm transition-all duration-300 ${
         isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
       } ${getBackgroundColor()}`}
+      style={{ willChange: 'transform, opacity' }}
     >
       {getIcon()}
       <p className="text-white font-medium">{message}</p>
