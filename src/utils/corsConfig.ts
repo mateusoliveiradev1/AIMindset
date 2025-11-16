@@ -3,6 +3,8 @@ export class CORSConfig {
   private static readonly ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://localhost:3000',
+    'https://www.aimindset.com.br',
+    'https://aimindset.com.br',
     'https://aimindset.vercel.app',
     'https://aimindset.netlify.app'
   ];

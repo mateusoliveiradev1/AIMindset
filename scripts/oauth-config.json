@@ -4,7 +4,9 @@
   "callbackUrls": [
     "https://jywjqzhqynhnhetidzsa.supabase.co/auth/v1/callback",
     "http://localhost:5173/auth/v1/callback",
-    "http://localhost:3000/auth/v1/callback"
+    "http://localhost:3000/auth/v1/callback",
+    "https://www.aimindset.com.br/auth/v1/callback",
+    "https://aimindset.com.br/auth/v1/callback"
   ],
   "siteUrl": "https://jywjqzhqynhnhetidzsa.supabase.co/auth/v1/callback",
   "googleCloudConsole": "https://console.cloud.google.com/",

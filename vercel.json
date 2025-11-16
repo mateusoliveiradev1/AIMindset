@@ -5,6 +5,15 @@
   "installCommand": "npm install",
   "devCommand": "npm run dev",
 
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "aimindset.com.br" }],
+      "destination": "https://www.aimindset.com.br/$1",
+      "permanent": true
+    }
+  ],
+
   "rewrites": [
     {
       "source": "/sitemap.xml",

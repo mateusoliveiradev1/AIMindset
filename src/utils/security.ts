@@ -342,6 +342,8 @@ export const validateOrigin = (): boolean => {
   const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:3000',
+    'https://www.aimindset.com.br',
+    'https://aimindset.com.br',
     'https://aimindset.vercel.app',
     window.location.origin
   ];

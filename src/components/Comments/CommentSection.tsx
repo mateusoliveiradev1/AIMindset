@@ -159,7 +159,8 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ articleId }) => 
   };
 
   const handleGoogleLogin = async () => {
-    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
+    const siteUrl = import.meta.env.VITE_SITE_URL || import.meta.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${siteUrl}/auth/v1/callback` } });
   };
 
   const handleSaveDisplayName = async () => {

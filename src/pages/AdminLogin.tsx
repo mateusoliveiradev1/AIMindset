@@ -264,10 +264,11 @@ const AdminLogin: React.FC = () => {
                   setError('');
                   console.log('🚀 Iniciando login Google para admin...');
                   
+                  const siteUrl = import.meta.env.VITE_SITE_URL || import.meta.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
                   const { data, error: googleError } = await supabase.auth.signInWithOAuth({
                     provider: 'google',
                     options: {
-                      redirectTo: `${window.location.origin}/auth/v1/callback`
+                      redirectTo: `${siteUrl}/auth/v1/callback`
                     }
                   });
                   

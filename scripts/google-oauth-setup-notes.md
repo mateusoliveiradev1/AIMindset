@@ -21,6 +21,8 @@ http://localhost:3000
 - https://jywjqzhqynhnhetidzsa.supabase.co/auth/v1/callback
 - http://localhost:5173/auth/v1/callback
 - http://localhost:3000/auth/v1/callback
+- https://www.aimindset.com.br/auth/v1/callback
+- https://aimindset.com.br/auth/v1/callback
 
 ## Próximos Passos
 1. Execute: npm run check-auth
@@ -29,5 +31,5 @@ http://localhost:3000
 4. Confira ownership de comentários
 
 ## Notas
-- Criado em: 2025-11-15T05:02:48.848Z
+- Criado em: 2025-11-16T00:14:22.892Z
 - Lembre-se de copiar Client ID e Client Secret!
