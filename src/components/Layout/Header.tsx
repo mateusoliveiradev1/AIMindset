@@ -18,17 +18,18 @@ const Header: React.FC = () => {
 
   const navigation = [
     { name: 'Home', href: '/' },
-    { name: 'IA & Tecnologia', href: '/categoria/ia-tecnologia' },
-    { name: 'Produtividade', href: '/categoria/produtividade' },
-    { name: 'Futuro', href: '/categoria/futuro' },
+    { name: 'Categorias', href: '/categoria' },
+    { name: 'Artigos', href: '/artigos' },
     { name: 'Newsletter', href: '/newsletter' },
+    { name: 'Sobre', href: '/sobre' },
+    { name: 'Contato', href: '/contato' },
     { name: 'FAQ', href: '/faq' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
 
   // Páginas onde o botão de busca não deve aparecer
-  const hiddenSearchPages = ['/admin', '/admin/login', '/about', '/contact', '/privacy'];
+  const hiddenSearchPages = ['/admin', '/admin/login', '/sobre', '/contato', '/politica-privacidade'];
   const shouldShowSearch = !hiddenSearchPages.some(page => location.pathname.startsWith(page));
 
   // Focar no input quando a busca é aberta
@@ -54,6 +55,8 @@ const Header: React.FC = () => {
   }, [isSearchOpen]);
 
   const handleSearchToggle = () => {
+    // Abrir busca fecha menu mobile e vice-versa
+    if (!isSearchOpen) setIsMenuOpen(false);
     setIsSearchOpen(!isSearchOpen);
     if (isSearchOpen) {
       setSearchQuery('');
@@ -179,7 +182,10 @@ const Header: React.FC = () => {
 
             {/* Mobile Menu Button */}
             <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              onClick={() => {
+                setIsMenuOpen(!isMenuOpen);
+                if (!isMenuOpen) setIsSearchOpen(false);
+              }}
               className="md:hidden p-2 text-futuristic-gray hover:text-lime-green transition-colors duration-300 header-menu-btn"
               aria-label="Menu"
             >
@@ -241,3 +247,16 @@ const Header: React.FC = () => {
 };
 
 export default Header;
+  // Fechar menu ao mudar de rota e bloquear scroll quando menu está aberto
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    try {
+      document.body.style.overflow = isMenuOpen ? 'hidden' : '';
+    } catch {}
+    return () => {
+      try { document.body.style.overflow = ''; } catch {}
+    };
+  }, [isMenuOpen]);
