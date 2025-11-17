@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Calendar, Clock, User, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { CountdownTimer } from '../Home/CountdownTimer';
 
 interface ScheduledArticle {
   id: string;
@@ -33,6 +34,18 @@ export const ScheduledArticlesList: React.FC = () => {
     if (user) {
       loadScheduledArticles();
     }
+  }, [user, filter]);
+
+  useEffect(() => {
+    let t: any;
+    if (user && filter === 'scheduled') {
+      t = setInterval(() => {
+        loadScheduledArticles();
+      }, 60000);
+    }
+    return () => {
+      if (t) clearInterval(t);
+    };
   }, [user, filter]);
 
   const loadScheduledArticles = async () => {
@@ -156,8 +169,9 @@ export const ScheduledArticlesList: React.FC = () => {
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-montserrat font-semibold text-white">
+        <h3 className="text-lg font-montserrat font-semibold text-white flex items-center gap-2">
           Artigos Agendados
+          <span className="px-2 py-0.5 rounded-full text-xs bg-white/10 text-white/80 border border-neon-purple/30">{scheduledArticles.length}</span>
         </h3>
         <div className="flex space-x-2">
           {(['all', 'scheduled', 'published', 'cancelled'] as const).map((status) => (
@@ -215,27 +229,13 @@ export const ScheduledArticlesList: React.FC = () => {
                     </p>
                   )}
 
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 group">
                     <span className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(article.scheduling_status)}`}>
                       {getStatusIcon(article.scheduling_status)}
                       <span>{getStatusLabel(article.scheduling_status)}</span>
                     </span>
                     {article.scheduling_status === 'scheduled' && (
-                      <span className="text-[11px] text-futuristic-gray" aria-label="Tempo restante">
-                        {/* Apenas texto adicional, sem alterar visual do painel */}
-                        publica em {(() => {
-                          const target = new Date(article.scheduled_for).getTime();
-                          const now = Date.now();
-                          const diff = target - now;
-                          if (diff <= 0) return '0min';
-                          const min = Math.floor(diff / 60000);
-                          if (min < 60) return `${min}min`;
-                          const h = Math.floor(min / 60);
-                          if (h < 24) return `${h}h`;
-                          const d = Math.floor(h / 24);
-                          return `${d}d`;
-                        })()}
-                      </span>
+                      <CountdownTimer targetDate={article.scheduled_for} className="countdown-chip" showProgress progressOnHover />
                     )}
                   </div>
                 </div>

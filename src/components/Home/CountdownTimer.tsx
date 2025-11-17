@@ -4,6 +4,7 @@ interface CountdownTimerProps {
   targetDate: string; // ISO timestamp
   className?: string;
   showProgress?: boolean; // mostra barra de progresso horizontal
+  progressOnHover?: boolean; // barra/percentual visíveis apenas no hover do grupo
 }
 
 // Função para formatar o tempo de forma mobile-friendly
@@ -38,64 +39,80 @@ const formatTimeRemaining = (timeLeft: number): string => {
 };
 
 // Componente otimizado para mobile - 60fps garantido
-export const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate, className = '', showProgress = false }) => {
+export const CountdownTimer: React.FC<CountdownTimerProps> = ({ targetDate, className = '', showProgress = false, progressOnHover = false }) => {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [isUrgent, setIsUrgent] = useState(false);
   const [totalDuration, setTotalDuration] = useState<number>(0);
 
   useEffect(() => {
     const targetTime = new Date(targetDate).getTime();
-    
-    const updateTimer = () => {
+    let timer: any;
+
+    const tick = () => {
       const now = Date.now();
       const remaining = Math.max(0, targetTime - now);
-      
+
       setTimeLeft(remaining);
-      setIsUrgent(remaining < 60 * 60 * 1000); // Menos de 1h = urgente
+      const urgent = remaining < 60 * 60 * 1000;
+      setIsUrgent(urgent);
       if (totalDuration === 0) {
-        // Define a duração total na primeira atualização
         setTotalDuration(remaining);
       }
-      
-      // Auto-cleanup quando chegar a 0
-      if (remaining === 0) {
-        clearInterval(interval);
-      }
+
+      if (remaining === 0) return;
+
+      const delay = urgent ? 1000 : 60000;
+      timer = setTimeout(tick, delay);
     };
 
-    // Atualização imediata
-    updateTimer();
-    
-    // Atualização a cada segundo (otimizado para mobile)
-    const interval = setInterval(updateTimer, 1000);
-    
-    return () => clearInterval(interval);
-  }, [targetDate]);
+    tick();
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [targetDate, totalDuration]);
 
   // Não renderiza se já passou
   if (timeLeft <= 0) return null;
 
   const progress = totalDuration > 0 ? Math.max(0, Math.min(100, ((totalDuration - timeLeft) / totalDuration) * 100)) : 0;
+  const severityClass = timeLeft <= 60 * 60 * 1000
+    ? 'from-red-500 to-red-400'
+    : timeLeft <= 6 * 60 * 60 * 1000
+      ? 'from-amber-400 to-amber-500'
+      : 'from-lime-400 to-fuchsia-500';
+  const targetLabel = new Date(targetDate).toLocaleString('pt-BR');
+  const progressVisibilityClass = progressOnHover ? 'opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200' : '';
+  const animationDuration = isUrgent ? 1000 : 60000;
 
   return (
-    <div className={`inline-flex items-center gap-2 ${className}`}>
+    <div className={`inline-flex items-center gap-2 ${className}`} title={targetLabel}>
       <span className={`text-sm font-medium ${
         isUrgent 
           ? 'text-red-500 animate-pulse' 
           : 'text-white/90'
-      }`}>
+      }`} aria-live="polite">
         {formatTimeRemaining(timeLeft)}
       </span>
       {isUrgent && (
         <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
       )}
       {showProgress && (
-        <div className="relative w-24 h-1.5 bg-white/20 rounded-full overflow-hidden">
+        <div
+          className={`relative w-32 h-2 bg-white/20 rounded-full overflow-hidden ${progressVisibilityClass}`}
+          role="progressbar"
+          aria-valuenow={Math.round(progress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
           <div
-            className={`absolute left-0 top-0 h-full bg-gradient-to-r from-lime-400 to-fuchsia-500 transition-[width] duration-300 ease-out ${isUrgent ? 'animate-pulse' : ''}`}
-            style={{ width: `${progress}%` }}
+            className={`absolute left-0 top-0 h-full bg-gradient-to-r ${severityClass} ease-out ${isUrgent ? 'animate-pulse' : ''}`}
+            style={{ width: `${progress}%`, transition: `width ${animationDuration}ms linear`, willChange: 'width' }}
           />
+          <div className="absolute inset-0 progress-shimmer" />
         </div>
+      )}
+      {showProgress && (
+        <span className={`text-xs text-white/80 ${progressVisibilityClass}`}>{Math.round(progress)}%</span>
       )}
     </div>
   );

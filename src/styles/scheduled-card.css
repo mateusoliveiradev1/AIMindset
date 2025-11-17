@@ -158,3 +158,27 @@
     text-shadow: none;
   }
 }
+
+/* Barra de progresso com efeito de enchimento contínuo */
+@keyframes progress-stripes {
+  0% { background-position: 0 0; }
+  100% { background-position: 40px 0; }
+}
+
+.progress-shimmer {
+  pointer-events: none;
+  background-image: repeating-linear-gradient(45deg,
+    rgba(255,255,255,0.15) 0,
+    rgba(255,255,255,0.15) 10px,
+    transparent 10px,
+    transparent 20px
+  );
+  background-size: 40px 40px;
+  animation: progress-stripes 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-shimmer {
+    animation: none;
+  }
+}
