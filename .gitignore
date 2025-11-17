@@ -60,3 +60,4 @@ coverage/
 .env.production.local
 .cache/
 .vercel
+.trae/documents/
