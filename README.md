@@ -228,13 +228,13 @@ curl -X POST http://localhost:3001/api/send-alert-email \
 ## Diagramas
 ### Arquitetura Geral
 ```mermaid
-graph LR;
-  A[Cliente React (Vite)] --> B[API Express];
+graph TD;
+  A[Cliente React] --> B[API Express];
   B --> C[Supabase];
   B --> D[Resend];
   A --> E[GA4 Web Vitals];
-  A --> F[Service Worker & Workers];
-  B --> G[Sitemap & Robots];
+  A --> F[Service Worker e Workers];
+  B --> G[Sitemap e Robots];
 ```
 
 ### Fluxo de Alertas
@@ -245,12 +245,12 @@ sequenceDiagram
   participant DB as Supabase
   participant Mail as Resend
 
-  App->>API: POST /api/send-alert-email
-  API->>Mail: send(alertData)
-  API->>DB: INSERT system_logs (alert_sent/failed)
-  App-->>API: /api/test-email-system (teste)
-  API->>Mail: send(test)
-  API->>DB: INSERT system_logs (test)
+  App->>API: send-alert-email
+  API->>Mail: send
+  API->>DB: log alert_sent/failed
+  App-->>API: test-email-system
+  API->>Mail: send
+  API->>DB: log test
 ```
 
 ## FAQ
