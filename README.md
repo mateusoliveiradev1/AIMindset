@@ -18,6 +18,7 @@
     <a href="./SISTEMA_ALERTAS.md" style="display:inline-block;padding:8px 14px;margin:4px;background:#111827;border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:9999px;text-decoration:none">🚨 Sistema de Alertas</a>
     <a href="./SISTEMA_LOGS_IMPLEMENTADO.md" style="display:inline-block;padding:8px 14px;margin:4px;background:#111827;border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:9999px;text-decoration:none">📊 Sistema de Logs</a>
     <a href="./VERCEL_ENV_SETUP.md" style="display:inline-block;padding:8px 14px;margin:4px;background:#111827;border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:9999px;text-decoration:none">🚀 Deploy (Vercel)</a>
+    <a href="https://www.aimindset.com.br/" style="display:inline-block;padding:8px 14px;margin:4px;background:#00d4ff;border:1px solid rgba(255,255,255,0.35);color:#111827;font-weight:700;border-radius:9999px;text-decoration:none">🌐 Acessar Site</a>
   </div>
 </div>
 
@@ -45,7 +46,6 @@ npm run dev
 - [API (Endpoints)](#api-endpoints)
 - [Segurança](#segurança)
 - [Screenshots](#screenshots)
-- [Diagramas](#diagramas)
 - [FAQ](#faq)
 - [Troubleshooting](#troubleshooting)
 - [Checklist de Qualidade](#checklist-de-qualidade)
@@ -225,33 +225,11 @@ curl -X POST http://localhost:3001/api/send-alert-email \
 
 ---
 
-## Diagramas
-### Arquitetura Geral
-```mermaid
-graph TD;
-  A[Cliente React] --> B[API Express];
-  B --> C[Supabase];
-  B --> D[Resend];
-  A --> E[GA4 Web Vitals];
-  A --> F[Service Worker e Workers];
-  B --> G[Sitemap e Robots];
-```
-
-### Fluxo de Alertas
-```mermaid
-sequenceDiagram
-  participant App
-  participant API
-  participant DB as Supabase
-  participant Mail as Resend
-
-  App->>API: send-alert-email
-  API->>Mail: send
-  API->>DB: log alert_sent/failed
-  App-->>API: test-email-system
-  API->>Mail: send
-  API->>DB: log test
-```
+## (Resumo visual removido)
+Para manter o README 100% estável em qualquer renderer, os diagramas foram removidos. A arquitetura em alto nível:
+- Cliente React (Vite) consome API Express.
+- API integra com Supabase (DB/RPC/RLS) e Resend (emails).
+- Web Vitals enviados para GA4; Service Worker otimiza carregamento; SEO via sitemap/robots.
 
 ## FAQ
 - O projeto usa Docker? Não. Desenvolvimento roda com `npm run dev` e APIs em `node server.js`.
