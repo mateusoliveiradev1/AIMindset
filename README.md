@@ -158,6 +158,19 @@ npm run preview
 - Autenticação Google: `npm run setup-google-oauth`, `npm run google-oauth-wizard`, `npm run google-oauth-quick`, `npm run check-auth`.
 - Pasta `scripts/` com utilitários de manutenção, debug, testes e banco.
 
+## Favicons & Branding
+- Para usar a imagem oficial como fonte dos favicons (Apple/Android/desktop):
+```
+# coloque sua imagem em public/brand-brain.png
+node scripts/generate-icons.mjs public/brand-brain.png
+```
+- Isso gera `favicon-16x16.png`, `favicon-32x32.png`, `apple-touch-icon.png`, `android-chrome-192x192.png` e `android-chrome-512x512.png` com fundo `#0D1B2A` e padding seguro.
+ - Status: favicons atualizados com a imagem oficial e já referenciados em `index.html` e `site.webmanifest`.
+ - Arquivos esperados em `public/`:
+   - `favicon.ico`, `favicon.svg`, `favicon-16x16.png`, `favicon-32x32.png`
+   - `apple-touch-icon.png`
+   - `android-chrome-192x192.png`, `android-chrome-512x512.png`
+
 ## Observabilidade & Alertas
 - Referências: `SISTEMA_LOGS_IMPLEMENTADO.md`, `SISTEMA_ALERTAS.md`.
 - Resumo:
@@ -264,6 +277,7 @@ Para manter o README 100% estável em qualquer renderer, os diagramas foram remo
 - Tipografia clara e escaneável
 - Feedback imediato (toasts, estados, indicadores)
 - Acessibilidade: foco, labels e semântica
+ - Branding: ícone cérebro verde consistente em todos os favicons
 
 ## Troubleshooting
 - Variáveis Supabase faltando: ver `.env.example` e `VERCEL_ENV_SETUP.md`.

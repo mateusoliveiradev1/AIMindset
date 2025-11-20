@@ -3,7 +3,9 @@ import path from 'path'
 import fs from 'fs'
 
 const root = process.cwd()
-const svgPath = path.join(root, 'public', 'favicon.svg')
+const defaultSvgPath = path.join(root, 'public', 'favicon.svg')
+const inputArg = process.argv[2]
+const inputPath = inputArg ? path.resolve(root, inputArg) : defaultSvgPath
 const outDir = path.join(root, 'public')
 
 async function ensureFile(p) {
@@ -13,7 +15,7 @@ async function ensureFile(p) {
 async function generatePng(size, filename) {
   const outPath = path.join(outDir, filename)
   await ensureFile(outPath)
-  const buffer = await sharp(svgPath)
+  const buffer = await sharp(inputPath)
     .resize(size, size, { fit: 'contain', background: '#0D1B2A' })
     .png()
     .toBuffer()
@@ -22,6 +24,12 @@ async function generatePng(size, filename) {
 }
 
 async function main() {
+  if (!fs.existsSync(inputPath)) {
+    console.error('Source image not found:', inputPath)
+    console.error('Usage: node scripts/generate-icons.mjs [public/brand-brain.png]')
+    process.exit(1)
+  }
+  console.log('Source image:', path.relative(root, inputPath))
   // Favicons
   await generatePng(16, 'favicon-16x16.png')
   await generatePng(32, 'favicon-32x32.png')
