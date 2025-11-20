@@ -1,10 +1,34 @@
-# 🧠 AIMindset
+<div align="center">
+  <img src="public/android-chrome-512x512.png" alt="AIMindset" width="96" height="96" />
+  <h1>🧠 AIMindset</h1>
+  <p>Agendamento inteligente • Performance de ponta • SEO sólido • Observabilidade real</p>
 
-Plataforma de conteúdo com foco em agendamento inteligente, performance de ponta, SEO sólido e observabilidade completa.
+  <img alt="Stack" src="https://img.shields.io/badge/React-18-61DAFB?logo=react&style=for-the-badge" />
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&style=for-the-badge" />
+  <img alt="Vite" src="https://img.shields.io/badge/Vite-6-646CFF?logo=vite&style=for-the-badge" />
+  <img alt="Supabase" src="https://img.shields.io/badge/Supabase-DB%2FRPC-3ECF8E?logo=supabase&style=for-the-badge" />
+  <img alt="Express" src="https://img.shields.io/badge/Express-API-000000?logo=express&style=for-the-badge" />
+  <img alt="Resend" src="https://img.shields.io/badge/Email-Resend-000000?logo=resend&style=for-the-badge" />
+  <img alt="Web Vitals" src="https://img.shields.io/badge/Web%20Vitals-OK-4285F4?logo=google&style=for-the-badge" />
+  <img alt="License" src="https://img.shields.io/badge/License-MIT-brightgreen?style=for-the-badge" />
 
-![React](https://img.shields.io/badge/React-18-61DAFB?logo=react) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript) ![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite) ![Supabase](https://img.shields.io/badge/Supabase-DB%2FRPC-3ECF8E?logo=supabase) ![Express](https://img.shields.io/badge/Express-API-000000?logo=express) ![Resend](https://img.shields.io/badge/Email-Resend-000000?logo=resend) ![Web%20Vitals](https://img.shields.io/badge/Web%20Vitals-OK-4285F4?logo=google) ![License](https://img.shields.io/badge/License-MIT-green)
+  <p>
+    <a href="./SISTEMA_ALERTAS.md">🚨 Sistema de Alertas</a> •
+    <a href="./SISTEMA_LOGS_IMPLEMENTADO.md">📊 Sistema de Logs</a> •
+    <a href="./VERCEL_ENV_SETUP.md">🚀 Deploy (Vercel)</a>
+  </p>
+</div>
 
-- Links rápidos: `SISTEMA_ALERTAS.md` • `SISTEMA_LOGS_IMPLEMENTADO.md` • `VERCEL_ENV_SETUP.md`
+> 💡 O AIMindset entrega uma experiência minimalista e ágil, com foco em conteúdo e confiabilidade operacional.
+
+---
+
+## Quickstart
+```
+npm install
+npm run dev
+```
+> Para APIs locais: `node server.js` (requer `SUPABASE_SERVICE_ROLE_KEY`).
 
 ## Índice
 - [Visão Geral](#visão-geral)
@@ -35,14 +59,14 @@ Plataforma de conteúdo com foco em agendamento inteligente, performance de pont
 - Painel administrativo com monitoramento de logs, estatísticas e gestão de alertas.
 
 ## Features
-- Agendamento de artigos com preview minimalista e card premium (glassmorphism).
-- Contador regressivo com barra de progresso e pulso quando urgente.
-- Edição e reagendamento com validações inteligentes e feedback via toasts.
-- Logs completos (backend/app/system) com estatísticas em tempo real.
-- SEO: sitemap e robots automatizados; `react-helmet-async` para metadados.
-- Performance: Web Vitals, lazy/virtualização, otimização de recursos e imagens.
-- PWA: Service Worker (`public/sw.js`) e otimizações de carregamento.
-- Alertas por email com templates HTML profissionais via Resend.
+- 🗓️ Agendamento com preview minimalista e card premium (glassmorphism)
+- ⏱️ Contador regressivo com barra de progresso e pulso urgente
+- ✏️ Edição/Reagendamento com validações e toasts claros
+- 📈 Logs completos (backend/app/system) com estatísticas em tempo real
+- 🔍 SEO sólido: sitemap/robots e metadados com `react-helmet-async`
+- ⚡ Performance: Web Vitals, lazy/virtualização e otimização de assets
+- 📦 PWA com Service Worker (`public/sw.js`)
+- 📧 Alertas por email com templates HTML profissionais (Resend)
 
 ## Arquitetura
 - Frontend: React 18, Vite 6, TypeScript, Tailwind, Zustand, Zod, `react-router-dom`.
@@ -131,14 +155,17 @@ npm run preview
   - Estatísticas e monitoramento no painel administrativo.
 
 ## API (Endpoints)
-- `POST /api/system-logs` — insere logs do sistema (`server.js:62`).
-- `POST /api/auto-backup` — executa backup com limpeza inteligente (`server.js:97`).
-- `GET /api/backup-status` — status, próximos horários e estatísticas (`server.js:229`).
-- `POST /api/backup-status` — força verificação de saúde + alerta (`server.js:348`).
-- `GET /health` — saúde do servidor (`server.js:408`).
-- `POST /api/send-alert-email` — envia alertas por email (`api/server.ts:27`).
-- `POST /api/test-email-system` — testa sistema de email (`api/server.ts:72`).
-- `GET /sitemap.xml`, `GET /robots.txt` — SEO (`api/server.ts:18`).
+| Método | Rota | Descrição | Referência |
+|-------|------|-----------|------------|
+| POST | `/api/system-logs` | Inserir logs do sistema | `server.js:62` |
+| POST | `/api/auto-backup` | Backup automático com limpeza | `server.js:97` |
+| GET | `/api/backup-status` | Status e estatísticas | `server.js:229` |
+| POST | `/api/backup-status` | Forçar verificação de saúde | `server.js:348` |
+| GET | `/health` | Saúde do servidor | `server.js:408` |
+| POST | `/api/send-alert-email` | Enviar alertas por email | `api/server.ts:27` |
+| POST | `/api/test-email-system` | Testar sistema de email | `api/server.ts:72` |
+| GET | `/sitemap.xml` | Sitemap | `api/server.ts:18` |
+| GET | `/robots.txt` | Robots | `api/server.ts:18` |
 
 ### Exemplos (curl)
 ```
@@ -176,12 +203,16 @@ curl -X POST http://localhost:3001/api/send-alert-email \
 - RLS em todas as tabelas de logs no Supabase.
 - Service Role apenas server-side; rate limiting simples para `/api/system-logs` (`server.js:38-52`).
 
+---
+
 ## Screenshots
 - Placeholder de branding: ![Logo](public/favicon.svg)
 - Recomendações:
   - Adicionar captura do preview minimalista
   - Adicionar captura do card de agendamento premium
   - Adicionar captura da aba "Logs & Monitoramento" no admin
+
+---
 
 ## Diagramas
 ### Arquitetura Geral
@@ -216,6 +247,25 @@ sequenceDiagram
 - Como configuro GA4? Ver `VERCEL_ENV_SETUP.md` e `.env.example` (`GA4_MEASUREMENT_ID`, `GA4_API_SECRET`).
 - Onde envio emails? Endpoint `POST /api/send-alert-email` (`api/server.ts:27`), via Resend.
 - Como garantir RLS? Políticas definidas no Supabase; use Service Role somente no backend.
+
+<details>
+  <summary>Setup avançado (variáveis e dicas)</summary>
+
+  - Cliente: `VITE_*` e `NEXT_PUBLIC_*`
+  - Servidor: `SUPABASE_*`, `RESEND_API_KEY`, `GA4_*`
+  - Segurança: não exponha Service Role no cliente
+  - Deploy: ver `VERCEL_ENV_SETUP.md`
+
+</details>
+
+<details>
+  <summary>Observabilidade (Logs & Alertas)</summary>
+
+  - Logs: backend/app/system com estatísticas
+  - Alertas: templates HTML profissionais via Resend
+  - Painel admin: gestão de assinantes e testes de alertas
+
+</details>
 
 ## Troubleshooting
 - Variáveis Supabase faltando: ver `.env.example` e `VERCEL_ENV_SETUP.md`.
