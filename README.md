@@ -6,6 +6,29 @@ Plataforma de conteúdo com foco em agendamento inteligente, performance de pont
 
 - Links rápidos: `SISTEMA_ALERTAS.md` • `SISTEMA_LOGS_IMPLEMENTADO.md` • `VERCEL_ENV_SETUP.md`
 
+## Índice
+- [Visão Geral](#visão-geral)
+- [Features](#features)
+- [Arquitetura](#arquitetura)
+- [Estrutura de Pastas](#estrutura-de-pastas)
+- [Setup](#setup)
+- [Desenvolvimento](#desenvolvimento)
+- [Build & Deploy](#build--deploy)
+- [Scripts Úteis](#scripts-úteis)
+- [Observabilidade & Alertas](#observabilidade--alertas)
+- [API (Endpoints)](#api-endpoints)
+- [Segurança](#segurança)
+- [Screenshots](#screenshots)
+- [Diagramas](#diagramas)
+- [FAQ](#faq)
+- [Troubleshooting](#troubleshooting)
+- [Checklist de Qualidade](#checklist-de-qualidade)
+- [Changelog Real](#changelog-real)
+- [Roadmap](#roadmap)
+- [Licença](#licença)
+- [Contribuição](#contribuição)
+- [Créditos](#créditos)
+
 ## Visão Geral
 - Frontend moderno em React + Vite com otimizações avançadas de UX, performance e SEO.
 - APIs/Serviços para logs, alertas e backup integrados ao Supabase e Resend.
@@ -117,9 +140,96 @@ npm run preview
 - `POST /api/test-email-system` — testa sistema de email (`api/server.ts:72`).
 - `GET /sitemap.xml`, `GET /robots.txt` — SEO (`api/server.ts:18`).
 
+### Exemplos (curl)
+```
+# Inserir log de sistema
+curl -X POST http://localhost:3001/api/system-logs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "app_error",
+    "message": "Falha ao processar pagamento",
+    "context": { "order_id": "123", "user_id": "abc" }
+  }'
+
+# Executar backup automático
+curl -X POST http://localhost:3001/api/auto-backup
+
+# Verificar status do backup
+curl http://localhost:3001/api/backup-status
+
+# Enviar email de alerta
+curl -X POST http://localhost:3001/api/send-alert-email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "recipients": ["admin@example.com"],
+    "alertData": {
+      "type": "error",
+      "source": "backup_system",
+      "message": "Falha na rotina de backup",
+      "timestamp": "2025-11-19T12:00:00.000Z",
+      "details": { "job": "backup_all_data" }
+    }
+  }'
+```
+
 ## Segurança
 - RLS em todas as tabelas de logs no Supabase.
 - Service Role apenas server-side; rate limiting simples para `/api/system-logs` (`server.js:38-52`).
+
+## Screenshots
+- Placeholder de branding: ![Logo](public/favicon.svg)
+- Recomendações:
+  - Adicionar captura do preview minimalista
+  - Adicionar captura do card de agendamento premium
+  - Adicionar captura da aba "Logs & Monitoramento" no admin
+
+## Diagramas
+### Arquitetura Geral
+```mermaid
+flowchart LR
+  A[Cliente React (Vite)] --> B[Express API]
+  B --> C[Supabase (DB/RPC/RLS)]
+  B --> D[Resend (Emails)]
+  A --> E[GA4 (Web Vitals)]
+  A --> F[Service Worker / Workers]
+  B --> G[Sitemap/Robots]
+```
+
+### Fluxo de Alertas
+```mermaid
+sequenceDiagram
+  participant App
+  participant API
+  participant DB as Supabase
+  participant Mail as Resend
+
+  App->>API: POST /api/send-alert-email
+  API->>Mail: send(alertData)
+  API->>DB: INSERT system_logs (alert_sent/failed)
+  App-->>API: /api/test-email-system (teste)
+  API->>Mail: send(test)
+  API->>DB: INSERT system_logs (test)
+```
+
+## FAQ
+- O projeto usa Docker? Não. Desenvolvimento roda com `npm run dev` e APIs em `node server.js`.
+- Como configuro GA4? Ver `VERCEL_ENV_SETUP.md` e `.env.example` (`GA4_MEASUREMENT_ID`, `GA4_API_SECRET`).
+- Onde envio emails? Endpoint `POST /api/send-alert-email` (`api/server.ts:27`), via Resend.
+- Como garantir RLS? Políticas definidas no Supabase; use Service Role somente no backend.
+
+## Troubleshooting
+- Variáveis Supabase faltando: ver `.env.example` e `VERCEL_ENV_SETUP.md`.
+- Emails não enviam: verificar `RESEND_API_KEY`, domínio verificado e logs (`system_logs`).
+- GA4 sem eventos: conferir `ENVIRONMENT` e Measurement Protocol; usar DebugView.
+- Rate limit em logs: reduzir chamadas por IP (implementado em `server.js:38-52`).
+
+## Checklist de Qualidade
+- `npm run lint` sem erros
+- `npm run check` sem problemas de tipos
+- `npm run build` com sucesso
+- `.env` completo (Supabase, Resend, GA4)
+- `/health` responde OK
+- Web Vitals enviados em produção
 
 ## Changelog Real
 ### Fase 2.0
