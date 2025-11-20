@@ -228,13 +228,13 @@ curl -X POST http://localhost:3001/api/send-alert-email \
 ## Diagramas
 ### Arquitetura Geral
 ```mermaid
-flowchart LR
-  A[Cliente React (Vite)] --> B[Express API]
-  B --> C[Supabase (DB/RPC/RLS)]
-  B --> D[Resend (Emails)]
-  A --> E[GA4 (Web Vitals)]
-  A --> F[Service Worker / Workers]
-  B --> G[Sitemap/Robots]
+graph LR;
+  A[Cliente React (Vite)] --> B[API Express];
+  B --> C[Supabase];
+  B --> D[Resend];
+  A --> E[GA4 Web Vitals];
+  A --> F[Service Worker & Workers];
+  B --> G[Sitemap & Robots];
 ```
 
 ### Fluxo de Alertas
