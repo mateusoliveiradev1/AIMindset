@@ -1,22 +1,24 @@
-<div align="center">
-  <img src="public/android-chrome-512x512.png" alt="AIMindset" width="96" height="96" />
-  <h1>🧠 AIMindset</h1>
-  <p>Agendamento inteligente • Performance de ponta • SEO sólido • Observabilidade real</p>
+<div align="center" style="padding:28px;margin:0 0 16px 0;background:linear-gradient(135deg,#00d4ff 0%,#9333ea 100%);border-radius:16px;color:#ffffff">
+  <img src="public/android-chrome-512x512.png" alt="AIMindset" width="96" height="96" style="border-radius:20%" />
+  <h1 style="margin:8px 0 0 0">AIMindset</h1>
+  <p style="margin:6px 0 12px 0;opacity:0.95">Agendamento inteligente • Performance • SEO • Observabilidade</p>
 
-  <img alt="Stack" src="https://img.shields.io/badge/React-18-61DAFB?logo=react&style=for-the-badge" />
-  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&style=for-the-badge" />
-  <img alt="Vite" src="https://img.shields.io/badge/Vite-6-646CFF?logo=vite&style=for-the-badge" />
-  <img alt="Supabase" src="https://img.shields.io/badge/Supabase-DB%2FRPC-3ECF8E?logo=supabase&style=for-the-badge" />
-  <img alt="Express" src="https://img.shields.io/badge/Express-API-000000?logo=express&style=for-the-badge" />
-  <img alt="Resend" src="https://img.shields.io/badge/Email-Resend-000000?logo=resend&style=for-the-badge" />
-  <img alt="Web Vitals" src="https://img.shields.io/badge/Web%20Vitals-OK-4285F4?logo=google&style=for-the-badge" />
-  <img alt="License" src="https://img.shields.io/badge/License-MIT-brightgreen?style=for-the-badge" />
+  <div>
+    <img alt="React" src="https://img.shields.io/badge/React-18-061DAFB?logo=react&style=for-the-badge" />
+    <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&style=for-the-badge" />
+    <img alt="Vite" src="https://img.shields.io/badge/Vite-6-646CFF?logo=vite&style=for-the-badge" />
+    <img alt="Supabase" src="https://img.shields.io/badge/Supabase-DB%2FRPC-3ECF8E?logo=supabase&style=for-the-badge" />
+    <img alt="Express" src="https://img.shields.io/badge/Express-API-000000?logo=express&style=for-the-badge" />
+    <img alt="Resend" src="https://img.shields.io/badge/Email-Resend-000000?logo=resend&style=for-the-badge" />
+    <img alt="Web Vitals" src="https://img.shields.io/badge/Web%20Vitals-OK-4285F4?logo=google&style=for-the-badge" />
+    <img alt="License" src="https://img.shields.io/badge/License-MIT-brightgreen?style=for-the-badge" />
+  </div>
 
-  <p>
-    <a href="./SISTEMA_ALERTAS.md">🚨 Sistema de Alertas</a> •
-    <a href="./SISTEMA_LOGS_IMPLEMENTADO.md">📊 Sistema de Logs</a> •
-    <a href="./VERCEL_ENV_SETUP.md">🚀 Deploy (Vercel)</a>
-  </p>
+  <div style="margin-top:14px">
+    <a href="./SISTEMA_ALERTAS.md" style="display:inline-block;padding:8px 14px;margin:4px;background:#111827;border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:9999px;text-decoration:none">🚨 Sistema de Alertas</a>
+    <a href="./SISTEMA_LOGS_IMPLEMENTADO.md" style="display:inline-block;padding:8px 14px;margin:4px;background:#111827;border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:9999px;text-decoration:none">📊 Sistema de Logs</a>
+    <a href="./VERCEL_ENV_SETUP.md" style="display:inline-block;padding:8px 14px;margin:4px;background:#111827;border:1px solid rgba(255,255,255,0.25);color:#fff;border-radius:9999px;text-decoration:none">🚀 Deploy (Vercel)</a>
+  </div>
 </div>
 
 > 💡 O AIMindset entrega uma experiência minimalista e ágil, com foco em conteúdo e confiabilidade operacional.
@@ -59,14 +61,23 @@ npm run dev
 - Painel administrativo com monitoramento de logs, estatísticas e gestão de alertas.
 
 ## Features
-- 🗓️ Agendamento com preview minimalista e card premium (glassmorphism)
-- ⏱️ Contador regressivo com barra de progresso e pulso urgente
-- ✏️ Edição/Reagendamento com validações e toasts claros
-- 📈 Logs completos (backend/app/system) com estatísticas em tempo real
-- 🔍 SEO sólido: sitemap/robots e metadados com `react-helmet-async`
-- ⚡ Performance: Web Vitals, lazy/virtualização e otimização de assets
-- 📦 PWA com Service Worker (`public/sw.js`)
-- 📧 Alertas por email com templates HTML profissionais (Resend)
+<table>
+  <tr>
+    <td>🗓️ <strong>Agendamento Premium</strong><br/><span>Preview minimalista + glassmorphism</span></td>
+    <td>⏱️ <strong>Contador Inteligente</strong><br/><span>Barra de progresso + pulso urgente</span></td>
+    <td>✏️ <strong>Reagendar com UX</strong><br/><span>Validações + toasts claras</span></td>
+  </tr>
+  <tr>
+    <td>📈 <strong>Logs & Stats</strong><br/><span>Backend/App/System em tempo real</span></td>
+    <td>🔍 <strong>SEO Sólido</strong><br/><span>Sitemap/Robots + metadados</span></td>
+    <td>⚡ <strong>Alta Performance</strong><br/><span>Web Vitals, lazy, virtualização</span></td>
+  </tr>
+  <tr>
+    <td>📦 <strong>PWA</strong><br/><span>Service Worker otimizado</span></td>
+    <td>📧 <strong>Alertas por Email</strong><br/><span>Templates profissionais (Resend)</span></td>
+    <td>🛡️ <strong>Segurança</strong><br/><span>RLS e rate limiting</span></td>
+  </tr>
+</table>
 
 ## Arquitetura
 - Frontend: React 18, Vite 6, TypeScript, Tailwind, Zustand, Zod, `react-router-dom`.
@@ -267,6 +278,15 @@ sequenceDiagram
 
 </details>
 
+---
+
+## Princípios de Design
+- Minimalismo funcional: conteúdo em primeiro lugar
+- Contraste e hierarquia visual consistentes
+- Tipografia clara e escaneável
+- Feedback imediato (toasts, estados, indicadores)
+- Acessibilidade: foco, labels e semântica
+
 ## Troubleshooting
 - Variáveis Supabase faltando: ver `.env.example` e `VERCEL_ENV_SETUP.md`.
 - Emails não enviam: verificar `RESEND_API_KEY`, domínio verificado e logs (`system_logs`).
@@ -302,3 +322,4 @@ sequenceDiagram
 
 ## Créditos
 - AIMindset — engenharia, conteúdo e experiência.
+> 🔎 Dica: use o índice para navegar rapidamente entre sessões.
