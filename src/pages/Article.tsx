@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, Tag, Share2, Twitter, Linkedin, Facebook, ArrowLeft, ArrowRight } from 'lucide-react';
 import { MarkdownLazy } from '../components/Performance/MarkdownLazy';
+import AdBanner from '../components/Monetization/AdBanner';
+import { injectAffiliateLinks } from '../utils/affiliateManager';
 import { toast } from 'sonner';
 import { useArticles } from '../hooks/useArticles';
 import { useReadingTime } from '../hooks/useReadingTime';
@@ -142,6 +144,16 @@ const Article: React.FC = () => {
   }, [isPreviewParam, slug, articlePublished]);
   
   const article = articlePublished || (isPreviewParam ? previewArticle : null);
+  
+  // Process content with affiliate links
+  const processedContent = React.useMemo(() => {
+    if (!article?.content) return '';
+    if (isPreviewMode) {
+      return getLimitedContent(previewArticle?.content || '');
+    }
+    return injectAffiliateLinks(article.content);
+  }, [article?.content, isPreviewMode, previewArticle?.content]);
+
   const articleCategory = categories.find(cat => cat.id === article?.category_id);
   const displayTitle = sanitizeTitle(article?.title || '');
   
@@ -300,7 +312,10 @@ const Article: React.FC = () => {
             <aside className="lg:w-64 order-2 lg:order-1">
               <div className="lg:sticky lg:top-20 lg:h-screen lg:overflow-y-auto lg:pb-20">
                 {!isPreviewMode && (
-                  <TableOfContents articleSlug={slug} />
+                  <>
+                    <TableOfContents articleSlug={slug} />
+                    <AdBanner format="rectangle" slotId="sidebar-ad" className="mt-8 hidden lg:block" />
+                  </>
                 )}
               </div>
             </aside>
@@ -437,6 +452,7 @@ const Article: React.FC = () => {
 
               {/* Article Content */}
               <article id="article-content" data-article-content className="prose prose-invert prose-lg max-w-none mb-12">
+                {!isPreviewMode && <AdBanner slotId="top-content-ad" className="mb-8" />}
                 <MarkdownLazy 
                   className="font-roboto text-futuristic-gray leading-relaxed"
                   components={{
@@ -515,8 +531,9 @@ const Article: React.FC = () => {
                     )
                   }}
                 >
-                  {isPreviewMode ? getLimitedContent(previewArticle?.content || '') : article.content}
+                  {processedContent}
                 </MarkdownLazy>
+                {!isPreviewMode && <AdBanner slotId="bottom-content-ad" className="mt-8" />}
               </article>
     
               {/* Tags - ocultas no modo preview para manter minimalista */}

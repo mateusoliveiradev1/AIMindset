@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:rss": "node scripts/generate-rss.mjs",
     "build:perf": "node scripts/build-performance.js",
     "lint": "eslint .",
     "preview": "vite preview",

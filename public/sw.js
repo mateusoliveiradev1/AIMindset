@@ -108,15 +108,20 @@ self.addEventListener('install', (event) => {
       // Cache agressivo de recursos críticos
       caches.open(STATIC_CACHE).then((cache) => {
         console.log('[SW] Caching critical assets and routes aggressively');
-        return cache.addAll([...CRITICAL_ASSETS, ...CRITICAL_ROUTES]);
+        // Remover duplicatas usando Set antes de passar para addAll
+        const urlsToCache = [...new Set([...CRITICAL_ASSETS, ...CRITICAL_ROUTES])];
+        return cache.addAll(urlsToCache);
       }),
       // Pre-cache de recursos dinâmicos importantes
       caches.open(DYNAMIC_CACHE).then((cache) => {
         console.log('[SW] Pre-caching dynamic resources');
-        return Promise.allSettled([
-          cache.add('/').catch(() => {}),
-          cache.add('/?utm_source=pwa').catch(() => {})
-        ]);
+        const dynamicUrls = ['/', '/?utm_source=pwa'];
+        // Evitar duplicatas se já estiverem em CRITICAL_ASSETS
+        const urlsToCache = dynamicUrls.filter(url => !CRITICAL_ASSETS.includes(url) && !CRITICAL_ROUTES.includes(url));
+        
+        return Promise.allSettled(
+          urlsToCache.map(url => cache.add(url).catch(() => {}))
+        );
       }),
       // Pular waiting para ativar imediatamente
       self.skipWaiting()
