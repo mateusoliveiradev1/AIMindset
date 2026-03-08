@@ -51,17 +51,17 @@ export const generateSitemap = async (req: Request, res: Response) => {
 
     staticPages.forEach(page => {
       // Buscar metadados SEO específicos se disponíveis
-      const seoMeta = seoData?.find(meta => 
+      const seoMeta = seoData?.find(meta =>
         meta.page_type === page.type ||
         (page.type === 'all_articles' && meta.page_type === 'all_articles') ||
-        meta.page_slug === page.loc.replace('/', '') || 
+        meta.page_slug === page.loc.replace('/', '') ||
         meta.canonical_url?.includes(page.loc)
       );
 
       urls.push({
         loc: `${baseUrl}${page.loc}`,
-        lastmod: seoMeta?.updated_at ? 
-          new Date(seoMeta.updated_at).toISOString().split('T')[0] : 
+        lastmod: seoMeta?.updated_at ?
+          new Date(seoMeta.updated_at).toISOString().split('T')[0] :
           new Date().toISOString().split('T')[0],
         changefreq: page.changefreq,
         priority: page.priority
@@ -89,14 +89,14 @@ export const generateSitemap = async (req: Request, res: Response) => {
     } else if (articles) {
       articles.forEach(article => {
         // Buscar metadados SEO específicos do artigo
-        const seoMeta = seoData?.find(meta => 
+        const seoMeta = seoData?.find(meta =>
           meta.page_type === 'article' && meta.page_slug === article.slug
         );
 
         const articleUrl: SitemapUrl = {
           loc: `${baseUrl}/artigo/${article.slug}`,
-          lastmod: seoMeta?.updated_at ? 
-            new Date(seoMeta.updated_at).toISOString().split('T')[0] : 
+          lastmod: seoMeta?.updated_at ?
+            new Date(seoMeta.updated_at).toISOString().split('T')[0] :
             new Date(article.updated_at || article.created_at).toISOString().split('T')[0],
           changefreq: 'weekly',
           priority: 0.8
@@ -133,7 +133,7 @@ export const generateSitemap = async (req: Request, res: Response) => {
     } else if (categories) {
       categories.forEach(category => {
         // Buscar metadados SEO específicos da categoria
-        const seoMeta = seoData?.find(meta => 
+        const seoMeta = seoData?.find(meta =>
           meta.page_type === 'category' && meta.page_slug === category.slug
         );
 
@@ -143,11 +143,37 @@ export const generateSitemap = async (req: Request, res: Response) => {
 
         urls.push({
           loc: `${baseUrl}/categoria/${category.slug}`,
-          lastmod: seoMeta?.updated_at ? 
-            new Date(seoMeta.updated_at).toISOString().split('T')[0] : 
+          lastmod: seoMeta?.updated_at ?
+            new Date(seoMeta.updated_at).toISOString().split('T')[0] :
             new Date(category.updated_at || category.created_at).toISOString().split('T')[0],
           changefreq: articleCount > 5 ? 'daily' : 'weekly',
           priority: priority
+        });
+      });
+    }
+
+    // Buscar páginas de pSEO (Programmatic SEO)
+    const { data: pseoPages, error: pseoError } = await supabase
+      .from('programmatic_pages')
+      .select('slug, title, updated_at, created_at')
+      .order('updated_at', { ascending: false });
+
+    if (pseoError) {
+      console.error('Erro ao buscar páginas pSEO:', pseoError);
+    } else if (pseoPages) {
+      pseoPages.forEach(page => {
+        // Buscar metadados SEO específicos
+        const seoMeta = seoData?.find(meta =>
+          meta.page_type === 'pseo' && meta.page_slug === page.slug
+        );
+
+        urls.push({
+          loc: `${baseUrl}/pseo/${page.slug}`,
+          lastmod: seoMeta?.updated_at ?
+            new Date(seoMeta.updated_at).toISOString().split('T')[0] :
+            new Date(page.updated_at || page.created_at).toISOString().split('T')[0],
+          changefreq: 'weekly',
+          priority: 0.7
         });
       });
     }
@@ -163,7 +189,7 @@ export const generateSitemap = async (req: Request, res: Response) => {
     res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=7200'); // Cache por 1h (2h no CDN)
     res.setHeader('X-Robots-Tag', 'noindex'); // Sitemap não deve ser indexado
     res.setHeader('Last-Modified', new Date().toUTCString());
-    
+
     res.send(sitemap);
   } catch (error) {
     console.error('Erro ao gerar sitemap:', error);
@@ -180,15 +206,15 @@ const generateSitemapXML = (urls: SitemapUrl[]): string => {
   urls.forEach(url => {
     xml += '  <url>\n';
     xml += `    <loc><![CDATA[${url.loc}]]></loc>\n`;
-    
+
     if (url.lastmod) {
       xml += `    <lastmod>${url.lastmod}</lastmod>\n`;
     }
-    
+
     if (url.changefreq) {
       xml += `    <changefreq>${url.changefreq}</changefreq>\n`;
     }
-    
+
     if (url.priority !== undefined) {
       xml += `    <priority>${url.priority.toFixed(1)}</priority>\n`;
     }
@@ -198,19 +224,19 @@ const generateSitemapXML = (urls: SitemapUrl[]): string => {
       url.images.forEach(image => {
         xml += '    <image:image>\n';
         xml += `      <image:loc><![CDATA[${image.loc}]]></image:loc>\n`;
-        
+
         if (image.title) {
           xml += `      <image:title><![CDATA[${image.title}]]></image:title>\n`;
         }
-        
+
         if (image.caption) {
           xml += `      <image:caption><![CDATA[${image.caption}]]></image:caption>\n`;
         }
-        
+
         xml += '    </image:image>\n';
       });
     }
-    
+
     xml += '  </url>\n';
   });
 
@@ -223,7 +249,7 @@ export const generateRobotsTxt = (req: Request, res: Response) => {
   try {
     const baseUrl = process.env.VITE_SITE_URL || 'https://aimindset.com.br';
     const isDevelopment = process.env.NODE_ENV === 'development';
-    
+
     let robotsTxt = '';
 
     if (isDevelopment) {
@@ -327,7 +353,7 @@ Host: ${baseUrl.replace('https://', '').replace('http://', '')}`;
     res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=172800'); // Cache 24h (48h no CDN)
     res.setHeader('Last-Modified', new Date().toUTCString());
     res.setHeader('X-Robots-Tag', 'noindex, nofollow'); // robots.txt não deve ser indexado
-    
+
     res.send(robotsTxt);
   } catch (error) {
     console.error('Erro ao gerar robots.txt:', error);

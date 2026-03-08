@@ -17,9 +17,11 @@
     "check-auth": "node scripts/check-auth.js"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.39.0",
     "@types/dompurify": "^3.0.5",
     "@types/nodemailer": "^7.0.3",
+    "browser-image-compression": "^2.0.2",
     "chart.js": "^4.5.1",
     "clsx": "^2.1.1",
     "cors": "^2.8.5",

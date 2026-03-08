@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { SEOMetadata, BreadcrumbItem } from '../components/SEO/SEOManager';
 import { supabaseServiceClient } from '../lib/supabase';
+import { computeReadingTime } from './useReadingTime';
+
+// Importar utilitário Gemini para SEO dinâmico
+import { generateGenericSEO } from '../utils/geminiSEO';
 
 interface SEOData {
   id: string;
@@ -62,27 +66,27 @@ const setDocumentTitle = (title: string) => {
 // Função para extrair keywords automaticamente do conteúdo
 const extractKeywords = (content: string, title: string, category?: string): string[] => {
   const keywords: string[] = [];
-  
+
   // Keywords do título
   const titleWords = title.toLowerCase()
     .replace(/[^\w\s]/g, ' ')
     .split(/\s+/)
     .filter(word => word.length > 3);
-  
+
   keywords.push(...titleWords);
-  
+
   // Keywords da categoria
   if (category) {
     keywords.push(category.toLowerCase());
   }
-  
+
   // Keywords técnicas comuns em IA
   const aiKeywords = [
     'inteligência artificial', 'machine learning', 'deep learning', 'ia', 'ml',
     'automação', 'tecnologia', 'produtividade', 'inovação', 'algoritmo',
     'dados', 'análise', 'otimização', 'eficiência'
   ];
-  
+
   // Verificar se o conteúdo contém keywords técnicas
   const contentLower = content.toLowerCase();
   aiKeywords.forEach(keyword => {
@@ -90,7 +94,7 @@ const extractKeywords = (content: string, title: string, category?: string): str
       keywords.push(keyword);
     }
   });
-  
+
   // Remover duplicatas e limitar a 10 keywords
   return [...new Set(keywords)].slice(0, 10);
 };
@@ -100,17 +104,17 @@ const generateMetaDescription = (content: string, title: string, maxLength: numb
   if (!content) {
     return `Leia sobre ${title} no AIMindset. Descubra insights sobre inteligência artificial, produtividade e tecnologia.`;
   }
-  
+
   // Remover HTML tags e caracteres especiais
   const cleanContent = content
     .replace(/<[^>]*>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  
+
   // Tentar encontrar o primeiro parágrafo significativo
   const sentences = cleanContent.split(/[.!?]+/);
   let description = '';
-  
+
   for (const sentence of sentences) {
     const trimmedSentence = sentence.trim();
     if (trimmedSentence.length > 50) {
@@ -118,12 +122,12 @@ const generateMetaDescription = (content: string, title: string, maxLength: numb
       break;
     }
   }
-  
+
   // Se não encontrou uma boa descrição, usar o início do conteúdo
   if (!description) {
     description = cleanContent.substring(0, maxLength - 20);
   }
-  
+
   // Truncar se necessário e adicionar call-to-action
   if (description.length > maxLength - 20) {
     description = description.substring(0, maxLength - 20).trim();
@@ -133,18 +137,16 @@ const generateMetaDescription = (content: string, title: string, maxLength: numb
       description = description.substring(0, lastSpace);
     }
   }
-  
+
   // Adicionar call-to-action se houver espaço
   const cta = ' Leia mais no AIMindset.';
   if (description.length + cta.length <= maxLength) {
     description += cta;
   }
-  
+
   return description;
 };
 
-// Função para calcular tempo de leitura
-import { computeReadingTime } from './useReadingTime';
 const calculateReadingTime = (content: string): number => {
   return computeReadingTime(content);
 };
@@ -170,7 +172,7 @@ export const useSEO = (options: UseSEOOptions) => {
   useEffect(() => {
     const cacheKey = getCacheKey(pageType, pageSlug);
     const cachedData = seoCache.get(cacheKey);
-    
+
     if (cachedData && isCacheValid(cacheKey)) {
       setSeoData(cachedData);
       setDocumentTitle(cachedData.title);
@@ -181,16 +183,11 @@ export const useSEO = (options: UseSEOOptions) => {
 
   useEffect(() => {
     const fetchSEOData = async () => {
-      console.log('🔍 [useSEO] Iniciando fetchSEOData para:', { pageType, pageSlug });
-      
       if (abortControllerRef.current && !abortControllerRef.current.signal.aborted) {
-        console.log('🔄 [useSEO] Cancelando requisição anterior');
         abortControllerRef.current.abort();
       }
 
       const cacheKey = getCacheKey(pageType, pageSlug);
-      console.log('🗂️ [useSEO] Cache key:', cacheKey);
-      
       if (seoCache.has(cacheKey) && isCacheValid(cacheKey)) {
         const cachedData = seoCache.get(cacheKey)!;
         setSeoData(cachedData);
@@ -207,8 +204,6 @@ export const useSEO = (options: UseSEOOptions) => {
         }
         setError(null);
 
-        console.log('📡 [useSEO] Fazendo requisição para seo_metadata...');
-        
         let query = supabaseServiceClient
           .from('seo_metadata')
           .select('*')
@@ -221,48 +216,31 @@ export const useSEO = (options: UseSEOOptions) => {
           query = query.is('page_slug', null);
         }
 
-        console.log('🔍 [useSEO] Query configurada:', { pageType, pageSlug });
-        
         const { data, error: fetchError } = await query.single();
-        
-        console.log('📊 [useSEO] Resultado da requisição:', { data, error: fetchError });
 
         if (abortController.signal.aborted) {
           return;
         }
 
         if (fetchError) {
-          if (fetchError.code === 'PGRST116') {
-            console.log(`Nenhum metadado SEO encontrado para ${pageType}${pageSlug ? `/${pageSlug}` : ''}, usando fallbacks`);
-            setSeoData(null);
-          } else {
-            console.log(`Erro ao buscar metadados SEO (${fetchError.code}): ${fetchError.message}. Usando fallbacks.`);
-            setSeoData(null);
-          }
+          setSeoData(null);
         } else {
           setSeoData(data);
           setDocumentTitle(data.title);
-          
+
           seoCache.set(cacheKey, data);
           cacheExpiry.set(cacheKey, Date.now() + CACHE_DURATION);
         }
       } catch (err) {
-        if (abortController.signal.aborted) {
-          return;
+        if (!abortController.signal.aborted) {
+          setSeoData(null);
+          setError(null);
         }
-        
-        if (err instanceof Error && err.name === 'AbortError') {
-          return;
-        }
-        
-        console.log(`Erro ao buscar dados SEO: ${err instanceof Error ? err.message : 'Erro desconhecido'}. Usando fallbacks.`);
-        setSeoData(null);
-        setError(null);
       } finally {
         if (!abortController.signal.aborted) {
           setLoading(false);
         }
-        
+
         if (abortControllerRef.current === abortController) {
           abortControllerRef.current = null;
         }
@@ -285,14 +263,10 @@ export const useSEO = (options: UseSEOOptions) => {
     const sanitizeTitle = (rawTitle: string) => {
       if (!rawTitle) return rawTitle;
       let t = rawTitle.trim();
-      // Remover sufixos com ID/UUID: "| AIMindset #<uuid>" ou "#<n>"
       t = t.replace(/\s*\|\s*AIMindset\s*#([a-f0-9-]+|\d+)\s*$/i, '');
-      // Remover padrões de ID em parênteses no final
       t = t.replace(/\s*\((id|uuid):\s*[a-f0-9-]+\)\s*$/i, '');
-      // Garantir sufixo padrão "| AIMindset" uma única vez
       t = t.replace(/\s*\|\s*AIMindset\s*$/i, '');
       t = `${t} | AIMindset`;
-      // Limitar a 60 caracteres com corte inteligente
       const MAX = 60;
       if (t.length > MAX) {
         const base = t.replace(/\s*\|\s*AIMindset\s*$/i, '').trim();
@@ -318,7 +292,7 @@ export const useSEO = (options: UseSEOOptions) => {
       }
       return truncated.endsWith('.') ? truncated : `${truncated}...`;
     };
-    
+
     if (seoData) {
       const sanitizedTitle = sanitizeTitle(seoData.title);
       const descLimit = pageType === 'article' ? 160 : pageType === 'category' ? 140 : 155;
@@ -337,7 +311,6 @@ export const useSEO = (options: UseSEOOptions) => {
       };
     }
 
-    // Fallback metadata melhorado com geração automática
     let canonicalUrl = baseUrl;
     let title = fallbackTitle;
     let description = fallbackDescription;
@@ -345,33 +318,26 @@ export const useSEO = (options: UseSEOOptions) => {
     let ogImage = fallbackImage;
     let type: 'website' | 'article' | 'webpage' = 'website';
     let robots = 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1';
-    
-    // Geração automática para artigos
+
     if (pageType === 'article' && pageSlug) {
       type = 'article';
       canonicalUrl = `${baseUrl}/artigo/${pageSlug}`;
-      
+
       if (articleData) {
         title = sanitizeTitle(articleData.title.includes('|') ? articleData.title : `${articleData.title} | AIMindset`);
-        
-        // Gerar descrição automaticamente
         if (articleData.content) {
           description = generateMetaDescription(articleData.content, articleData.title, 160);
         } else if (articleData.excerpt) {
-          description = articleData.excerpt.length > 160 
+          description = articleData.excerpt.length > 160
             ? articleData.excerpt.substring(0, 157) + '...'
             : articleData.excerpt;
         }
-        
-        // Gerar keywords automaticamente
         if (articleData.content) {
           keywords = extractKeywords(articleData.content, articleData.title, articleData.category);
         } else if (articleData.tags) {
           keywords = [...articleData.tags.split(',').map(tag => tag.trim()), ...fallbackKeywords];
         }
-        
         ogImage = articleData.image_url || `${baseUrl}/api/og?title=${encodeURIComponent(articleData.title)}&type=article`;
-        // Truncar descrição final para garantir limite
         description = smartTruncate(description || fallbackDescription, 160);
       }
     } else if (pageType === 'category' && pageSlug) {
@@ -424,7 +390,6 @@ export const useSEO = (options: UseSEOOptions) => {
     };
   };
 
-  // Função para criar/atualizar metadados SEO
   const updateSEOData = async (metadata: Partial<SEOData>) => {
     try {
       const { data, error } = await supabaseServiceClient
@@ -441,12 +406,11 @@ export const useSEO = (options: UseSEOOptions) => {
 
       setSeoData(data);
       setDocumentTitle(data.title);
-      
-      // Atualizar cache
+
       const cacheKey = getCacheKey(pageType, pageSlug);
       seoCache.set(cacheKey, data);
       cacheExpiry.set(cacheKey, Date.now() + CACHE_DURATION);
-      
+
       return data;
     } catch (err) {
       console.error('Erro ao atualizar dados SEO:', err);
@@ -455,21 +419,10 @@ export const useSEO = (options: UseSEOOptions) => {
     }
   };
 
-  // Função para gerar metadados automaticamente para artigos
-  const generateArticleSEO = async (articleData: {
-    title: string;
-    excerpt?: string;
-    tags?: string;
-    image_url?: string;
-    slug: string;
-    created_at: string;
-    updated_at?: string;
-  }) => {
-    const keywords = articleData.tags 
-      ? articleData.tags.split(',').map(tag => tag.trim())
+  const generateArticleSEO = async (articleData: any) => {
+    const keywords = articleData.tags
+      ? articleData.tags.split(',').map((tag: string) => tag.trim())
       : [];
-    
-    // Adicionar keywords padrão
     const allKeywords = [...keywords, 'inteligência artificial', 'IA', 'produtividade'];
 
     const metadata = {
@@ -484,26 +437,16 @@ export const useSEO = (options: UseSEOOptions) => {
         headline: articleData.title,
         description: articleData.excerpt || '',
         image: articleData.image_url,
-        author: {
-          '@type': 'Organization',
-          name: 'AIMindset',
-          url: 'https://aimindset.com.br'
-        },
+        author: { '@type': 'Organization', name: 'AIMindset', url: 'https://aimindset.com.br' },
         publisher: {
           '@type': 'Organization',
           name: 'AIMindset',
           url: 'https://aimindset.com.br',
-          logo: {
-            '@type': 'ImageObject',
-            url: 'https://aimindset.com.br/logo.png'
-          }
+          logo: { '@type': 'ImageObject', url: 'https://aimindset.com.br/logo.png' }
         },
         datePublished: articleData.created_at,
         dateModified: articleData.updated_at || articleData.created_at,
-        mainEntityOfPage: {
-          '@type': 'WebPage',
-          '@id': `https://aimindset.com.br/artigo/${articleData.slug}`
-        },
+        mainEntityOfPage: { '@type': 'WebPage', '@id': `https://aimindset.com.br/artigo/${articleData.slug}` },
         url: `https://aimindset.com.br/artigo/${articleData.slug}`
       }
     };
@@ -511,15 +454,10 @@ export const useSEO = (options: UseSEOOptions) => {
     return updateSEOData(metadata);
   };
 
-  // Função para gerar metadados automaticamente para categorias
-  const generateCategorySEO = async (categoryData: {
-    name: string;
-    description?: string;
-    slug: string;
-  }) => {
+  const generateCategorySEO = async (categoryData: any) => {
     const metadata = {
       title: `${categoryData.name} | AIMindset`,
-      description: categoryData.description || `Artigos sobre ${categoryData.name} - Descubra conteúdos relacionados a ${categoryData.name}`,
+      description: categoryData.description || `Artigos sobre ${categoryData.name}`,
       keywords: [categoryData.name, 'categoria', 'artigos', 'inteligência artificial'],
       canonical_url: `https://aimindset.com.br/categoria/${categoryData.slug}`,
       schema_data: {
@@ -528,23 +466,16 @@ export const useSEO = (options: UseSEOOptions) => {
         name: categoryData.name,
         description: categoryData.description || '',
         url: `https://aimindset.com.br/categoria/${categoryData.slug}`,
-        mainEntity: {
-          '@type': 'ItemList',
-          name: `Artigos sobre ${categoryData.name}`,
-          description: categoryData.description || ''
-        }
+        mainEntity: { '@type': 'ItemList', name: `Artigos sobre ${categoryData.name}`, description: categoryData.description || '' }
       }
     };
 
     return updateSEOData(metadata);
   };
 
-  // Função para pré-carregar metadados de categorias
-  const preloadCategorySEO = async (categories: Array<{ name: string; slug: string; description?: string }>) => {
+  const preloadCategorySEO = async (categories: any[]) => {
     const promises = categories.map(async (category) => {
       const cacheKey = getCacheKey('category', category.slug);
-      
-      // Só buscar se não estiver em cache ou cache expirado
       if (!seoCache.has(cacheKey) || !isCacheValid(cacheKey)) {
         try {
           const { data } = await supabaseServiceClient
@@ -553,19 +484,37 @@ export const useSEO = (options: UseSEOOptions) => {
             .eq('page_type', 'category')
             .eq('page_slug', category.slug)
             .single();
-
           if (data) {
             seoCache.set(cacheKey, data);
             cacheExpiry.set(cacheKey, Date.now() + CACHE_DURATION);
           }
-        } catch (error) {
-          // Silenciosamente ignorar erros de pré-carregamento
-          console.log(`Pré-carregamento falhou para categoria ${category.slug}`);
-        }
+        } catch (error) { }
       }
     });
-
     await Promise.allSettled(promises);
+  };
+
+  const generateAIOptimizedSEO = async (context?: string) => {
+    try {
+      setLoading(true);
+      const result = await generateGenericSEO(pageType, context || `Página do tipo ${pageType} no blog AIMindset sobre IA e tecnologia.`);
+      if (result) {
+        const metadata: Partial<SEOData> = {
+          title: result.title,
+          description: result.description,
+          keywords: result.keywords,
+          canonical_url: getMetadata().canonicalUrl
+        };
+        await updateSEOData(metadata);
+        return result;
+      }
+      return null;
+    } catch (err) {
+      console.error('Erro ao gerar SEO com IA:', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
   };
 
   return {
@@ -576,6 +525,7 @@ export const useSEO = (options: UseSEOOptions) => {
     updateSEOData,
     generateArticleSEO,
     generateCategorySEO,
-    preloadCategorySEO
+    preloadCategorySEO,
+    generateAIOptimizedSEO
   };
 };

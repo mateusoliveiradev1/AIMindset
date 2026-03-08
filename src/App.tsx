@@ -22,11 +22,11 @@ import { Card } from './components/UI/Card';
 import { Button } from './components/UI/Button';
 import { initWebVitals } from './utils/webVitals';
 import { supabase } from './lib/supabase';
-import { 
-  OptimizedAdminLogs, 
-  OptimizedAdminBackup, 
-  OptimizedAdminNewsletter, 
-  OptimizedAdminFeedback 
+import {
+  OptimizedAdminLogs,
+  OptimizedAdminBackup,
+  OptimizedAdminNewsletter,
+  OptimizedAdminFeedback
 } from './components/Performance/OptimizedLazyLoad';
 
 // Lazy loading otimizado com chunks nomeados
@@ -54,6 +54,7 @@ const AdminLogs = lazy(() => import('./pages/admin/logs'));
 const AdminBackup = lazy(() => import('./pages/admin/backup'));
 const AdminNotifications = lazy(() => import('./pages/admin/notifications'));
 const AdminSettings = lazy(() => import('./pages/admin/settings'));
+const PSEOArticle = lazy(() => import('./pages/PSEOArticle'));
 const AuthCallback = lazy(() => import('./pages/AuthCallback'));
 
 // Loading component otimizado
@@ -70,7 +71,7 @@ const PageLoader = () => (
 function AppContent() {
   // Hook para scroll automático ao topo em mudanças de rota
   useScrollToTop();
-  
+
   // Hook para Service Worker - TEMPORARIAMENTE DESABILITADO PARA PREVIEW
   // const { register, isSupported, isRegistered, hasUpdate, skipWaiting } = useServiceWorker();
 
@@ -132,7 +133,7 @@ function AppContent() {
               const payload2 = JSON.stringify(data.session);
               localStorage.setItem('aimindset_session', payload2);
             }
-          } catch {}
+          } catch { }
         }
       } catch (err: any) {
         console.warn('⚠️ Exceção ao restaurar sessão:', err?.message || err);
@@ -154,12 +155,12 @@ function AppContent() {
               try {
                 localStorage.setItem('aimindset_session', payload);
               } catch {
-                try { sessionStorage.setItem('aimindset_session', payload); } catch {}
+                try { sessionStorage.setItem('aimindset_session', payload); } catch { }
               }
               console.log('🔄 [App] Sessão sincronizada periodicamente no storage.');
             }
           }
-        } catch {}
+        } catch { }
       }, 30000);
     };
     const stopInterval = () => {
@@ -196,52 +197,53 @@ function AppContent() {
     <>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-        {/* Public routes with Layout - usando componentes lazy otimizados */}
-        <Route path="/" element={<Layout><LazyComponents.Home /></Layout>} />
-        <Route path="/categoria" element={<Layout><Categories /></Layout>} />
-        <Route path="/categoria/:slug" element={<Layout><Category /></Layout>} />
-        <Route path="/artigo/:slug" element={<Layout><Article /></Layout>} />
-        <Route path="/artigos" element={<Layout><LazyComponents.AllArticles /></Layout>} />
-        <Route path="/contato" element={<Layout><LazyComponents.Contact /></Layout>} />
-        <Route path="/newsletter" element={<Layout><Newsletter /></Layout>} />
-        <Route path="/sobre" element={<Layout><LazyComponents.About /></Layout>} />
-        <Route path="/faq" element={<Layout><LazyComponents.FAQ /></Layout>} />
-        <Route path="/politica-privacidade" element={<Layout><Privacy /></Layout>} />
-        <Route path="/perfil" element={<Layout><Profile /></Layout>} />
-        
-        {/* Admin routes without Layout */}
-        <Route path="/admin/login" element={<AdminLogin />} />
-        
-        {/* Rota antiga - redirect para nova estrutura */}
-        <Route path="/admin-old" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-        
-        {/* OAuth callback route */}
-        <Route path="/auth/v1/callback" element={<AuthCallback />} />
-        
-        {/* Novas rotas admin modulares com lazy loading otimizado */}
-        <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="articles" element={<AdminArticles />} />
-          <Route path="editor" element={<AdminEditor />} />
-          <Route path="newsletter" element={<OptimizedAdminNewsletter />} />
-          <Route path="users" element={<AdminUsers />} />
-          <Route path="categories" element={<AdminCategories />} />
-          <Route path="feedback" element={<OptimizedAdminFeedback />} />
-          <Route path="seo" element={<AdminSEO />} />
-          <Route path="logs" element={<OptimizedAdminLogs />} />
-          <Route path="backup" element={<OptimizedAdminBackup />} />
-          <Route path="notifications" element={<AdminNotifications />} />
-          <Route path="settings" element={<AdminSettings />} />
-        </Route>
-        
-        {/* Performance Test routes - usando componentes lazy otimizados */}
-        <Route path="/performance-test" element={<Layout><LazyComponents.PerformanceTest /></Layout>} />
-        <Route path="/scalability-test" element={<Layout><LazyComponents.ScalabilityTest /></Layout>} />
-      </Routes>
-    </Suspense>
-    
-    {/* Botão Voltar ao Topo - Global */}
-    <ScrollToTop />
+          {/* Public routes with Layout - usando componentes lazy otimizados */}
+          <Route path="/" element={<Layout><LazyComponents.Home /></Layout>} />
+          <Route path="/categoria" element={<Layout><Categories /></Layout>} />
+          <Route path="/categoria/:slug" element={<Layout><Category /></Layout>} />
+          <Route path="/artigo/:slug" element={<Layout><Article /></Layout>} />
+          <Route path="/pseo/:slug" element={<PSEOArticle />} />
+          <Route path="/artigos" element={<Layout><LazyComponents.AllArticles /></Layout>} />
+          <Route path="/contato" element={<Layout><LazyComponents.Contact /></Layout>} />
+          <Route path="/newsletter" element={<Layout><Newsletter /></Layout>} />
+          <Route path="/sobre" element={<Layout><LazyComponents.About /></Layout>} />
+          <Route path="/faq" element={<Layout><LazyComponents.FAQ /></Layout>} />
+          <Route path="/politica-privacidade" element={<Layout><Privacy /></Layout>} />
+          <Route path="/perfil" element={<Layout><Profile /></Layout>} />
+
+          {/* Admin routes without Layout */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+
+          {/* Rota antiga - redirect para nova estrutura */}
+          <Route path="/admin-old" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+
+          {/* OAuth callback route */}
+          <Route path="/auth/v1/callback" element={<AuthCallback />} />
+
+          {/* Novas rotas admin modulares com lazy loading otimizado */}
+          <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="articles" element={<AdminArticles />} />
+            <Route path="editor" element={<AdminEditor />} />
+            <Route path="newsletter" element={<OptimizedAdminNewsletter />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="categories" element={<AdminCategories />} />
+            <Route path="feedback" element={<OptimizedAdminFeedback />} />
+            <Route path="seo" element={<AdminSEO />} />
+            <Route path="logs" element={<OptimizedAdminLogs />} />
+            <Route path="backup" element={<OptimizedAdminBackup />} />
+            <Route path="notifications" element={<AdminNotifications />} />
+            <Route path="settings" element={<AdminSettings />} />
+          </Route>
+
+          {/* Performance Test routes - usando componentes lazy otimizados */}
+          <Route path="/performance-test" element={<Layout><LazyComponents.PerformanceTest /></Layout>} />
+          <Route path="/scalability-test" element={<Layout><LazyComponents.ScalabilityTest /></Layout>} />
+        </Routes>
+      </Suspense>
+
+      {/* Botão Voltar ao Topo - Global */}
+      <ScrollToTop />
     </>
   );
 }
@@ -266,15 +268,15 @@ function App() {
               cacheStrategy="moderate"
             >
               <AccessibilityManager
-                 enableAutoAria={true}
-                 enableKeyboardNavigation={true}
-                 enableScreenReaderOptimizations={true}
-                 enableFocusManagement={true}
-                 announcePageChanges={true}
-               >
+                enableAutoAria={true}
+                enableKeyboardNavigation={true}
+                enableScreenReaderOptimizations={true}
+                enableFocusManagement={true}
+                announcePageChanges={true}
+              >
                 <Router>
                   <AppContent />
-                  <Toaster 
+                  <Toaster
                     position="top-right"
                     toastOptions={{
                       style: {

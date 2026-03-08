@@ -7,14 +7,14 @@ import { supabase } from '../lib/supabase';
 import { MarkdownLazy } from './Performance/MarkdownLazy';
 // import LazyImage from './Performance/LazyImage';
 import { ArticleScheduling } from './Articles/ArticleScheduling';
-import { 
-  Save, 
-  Eye, 
-  Upload, 
-  Image as ImageIcon, 
-  Bold, 
-  Italic, 
-  Link, 
+import {
+  Save,
+  Eye,
+  Upload,
+  Image as ImageIcon,
+  Bold,
+  Italic,
+  Link,
   List,
   Hash,
   Quote,
@@ -27,12 +27,13 @@ import {
   ZoomOut,
   Move,
   Crop,
-  Shield
+  Shield,
+  Wand2
 } from 'lucide-react';
-import { 
-  sanitizeName, 
-  sanitizeMessage, 
-  validators, 
+import {
+  sanitizeName,
+  sanitizeMessage,
+  validators,
   RateLimiter,
   sanitizeInput,
   sanitizeEmail,
@@ -41,6 +42,9 @@ import {
 } from '../utils/security';
 import { SecurityHeaders } from '../utils/securityHeaders';
 import { logEvent, logError } from '../lib/logging';
+import { optimizeSEOWithGemini } from '../utils/geminiSEO';
+import { optimizeImage, generateSEOFileName } from '../utils/imageOptimizer';
+import { toast } from 'sonner';
 
 interface ArticleData {
   title: string;
@@ -112,6 +116,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [autoSaveMessage, setAutoSaveMessage] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [isOptimizing, setIsOptimizing] = useState(false);
 
   useEffect(() => {
     refreshArticles();
@@ -137,9 +142,9 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
       return;
     }
 
-    // Validar tamanho (máximo 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError('A imagem deve ter no máximo 5MB.');
+    // Validar tamanho (máximo 10MB original)
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('A imagem original deve ter no máximo 10MB.');
       return;
     }
 
@@ -147,36 +152,40 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
     setUploadError(null);
 
     try {
-      // Gerar nome único para o arquivo
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      // 1. Otimizar imagem no cliente (WebP, < 1MB)
+      toast.info('Otimizando imagem (convertendo para WebP)...');
+      const optimizedFile = await optimizeImage(file);
+
+      // 2. Gerar nome SEO amigável
+      const fileName = generateSEOFileName(file.name, title || 'aimindset');
       const filePath = `articles/${fileName}`;
 
-      console.log('📤 INICIANDO UPLOAD PÚBLICO:', {
+      console.log('📤 INICIANDO UPLOAD OTIMIZADO:', {
         fileName,
         filePath,
-        fileSize: file.size,
-        fileType: file.type
+        originalSize: file.size,
+        optimizedSize: optimizedFile.size,
+        fileType: optimizedFile.type
       });
 
-      // Usar cliente singleton existente para evitar múltiplas instâncias GoTrueClient
+      // Usar cliente singleton existente
       const { supabase: publicClient } = await import('../lib/supabase');
 
-      // Upload para o Supabase Storage (bucket público)
+      // 3. Upload para o Supabase Storage
       const { data, error } = await publicClient.storage
         .from('articles')
-        .upload(filePath, file, {
+        .upload(filePath, optimizedFile, {
           cacheControl: '3600',
           upsert: false
         });
 
       if (error) {
         console.error('❌ ERRO NO UPLOAD PÚBLICO:', error);
-        
+
         // Fallback: tentar com cliente autenticado se disponível
         if (isAuthenticated && supabaseUser) {
           console.log('🔄 Tentando upload com autenticação...');
-          
+
           const { data: authData, error: authError } = await supabase.storage
             .from('articles')
             .upload(filePath, file, {
@@ -188,7 +197,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
             console.error('❌ ERRO NO UPLOAD AUTENTICADO:', authError);
             throw authError;
           }
-          
+
           console.log('✅ UPLOAD AUTENTICADO FUNCIONOU:', authData);
         } else {
           throw error;
@@ -208,10 +217,10 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
       setUploadError(null);
     } catch (error: any) {
       console.error('❌ ERRO NO UPLOAD:', error);
-      
+
       // Mensagens de erro mais específicas
       let errorMessage = 'Erro ao fazer upload da imagem.';
-      
+
       if (error.message?.includes('row-level security policy')) {
         errorMessage = 'Erro de permissão no storage. O bucket foi configurado como público, mas ainda há restrições.';
       } else if (error.message?.includes('JWT')) {
@@ -221,7 +230,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       setUploadError(errorMessage);
     } finally {
       setIsUploading(false);
@@ -266,9 +275,9 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
     const end = textarea.selectionEnd;
     const selectedText = content.substring(start, end);
     const newText = content.substring(0, start) + before + selectedText + after + content.substring(end);
-    
+
     setContent(newText);
-    
+
     // Restore cursor position
     setTimeout(() => {
       textarea.focus();
@@ -278,27 +287,27 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
 
   const insertImageWithSettings = () => {
     if (!featuredImage) return;
-    
+
     const sizeClasses = {
       small: 'w-64',
       medium: 'w-96',
       large: 'w-full max-w-4xl',
       full: 'w-full'
     };
-    
+
     const alignmentClasses = {
       left: 'float-left mr-4 mb-4',
       center: 'mx-auto block',
       right: 'float-right ml-4 mb-4'
     };
-    
+
     const imageMarkdown = `
 <div class="image-container ${imageSettings.alignment === 'center' ? 'text-center' : ''}">
   <img src="${featuredImage}" alt="${imageSettings.caption || 'Imagem do artigo'}" class="${sizeClasses[imageSettings.size]} ${alignmentClasses[imageSettings.alignment]} rounded-lg shadow-lg" />
   ${imageSettings.caption ? `<p class="text-sm text-gray-600 mt-2 italic">${imageSettings.caption}</p>` : ''}
 </div>
 `;
-    
+
     insertMarkdown(imageMarkdown);
   };
 
@@ -386,6 +395,36 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
     }
   };
 
+  const handleAIOptimize = async () => {
+    if (!content || content.length < 100) {
+      toast.error('O conteúdo é muito curto para otimização por IA.');
+      return;
+    }
+
+    setIsOptimizing(true);
+    try {
+      toast.info('IA analisando conteúdo e gerando metadados...');
+      const optimized = await optimizeSEOWithGemini(content, title);
+
+      if (optimized) {
+        if (optimized.title) setTitle(optimized.title);
+        if (optimized.description) setExcerpt(optimized.description);
+        if (optimized.keywords && optimized.keywords.length > 0) {
+          setTags(optimized.keywords.join(', '));
+        }
+        toast.success('SEO otimizado com sucesso pelo Gemini!');
+        setHasUnsavedChanges(true);
+      } else {
+        toast.error('Não foi possível otimizar o SEO com Gemini. Verifique a API Key.');
+      }
+    } catch (error) {
+      console.error('Erro na otimização por IA:', error);
+      toast.error('Erro ao conectar com o serviço de IA.');
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
+
   const getImageSizeStyle = () => {
     const sizes = { small: { width: '200px', height: '120px' }, medium: { width: '300px', height: '180px' }, large: { width: '400px', height: '240px' }, full: { width: '100%', height: '300px' } };
     return sizes[imageSettings.size];
@@ -431,6 +470,17 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
             <Save className={`w-4 h-4 ${isSaving ? 'animate-spin' : ''}`} />
             <span className="text-xs sm:text-sm">{isSaving ? 'Salvando...' : 'Salvar'}</span>
           </Button>
+          <Button
+            size="sm"
+            onClick={handleAIOptimize}
+            variant="outline"
+            className="flex items-center justify-center space-x-2 min-h-[44px] border-lime-green/50 text-lime-green hover:bg-lime-green/10"
+            disabled={isOptimizing || !content}
+            aria-busy={isOptimizing}
+          >
+            <Wand2 className={`w-4 h-4 ${isOptimizing ? 'animate-pulse' : ''}`} />
+            <span className="text-xs sm:text-sm">{isOptimizing ? 'Otimizando...' : 'Otimizar SEO'}</span>
+          </Button>
         </div>
       </div>
 
@@ -462,7 +512,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
                   )}
                 </div>
               )}
-              
+
               {/* Article Header */}
               <header className="mb-8 border-b border-neon-purple/20 pb-6">
                 <h1 className="text-5xl font-orbitron font-bold mb-4 leading-tight bg-gradient-to-r from-neon-purple via-lime-green to-neon-purple bg-clip-text text-transparent drop-shadow-2xl">
@@ -481,12 +531,12 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
                   </div>
                 )}
               </header>
-              
+
               {/* Article Content */}
               <div className="prose-content">
-                  <MarkdownLazy
-                    className="text-gray-200 leading-relaxed"
-                    components={{
+                <MarkdownLazy
+                  className="text-gray-200 leading-relaxed"
+                  components={{
                     h1: ({ children }) => (
                       <h1 className="text-3xl font-montserrat font-bold text-white mt-8 mb-4 border-b border-neon-purple/20 pb-2">
                         {children}
@@ -601,18 +651,18 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
                   </p>
                 </div>
 
-                 <div>
-                   <label className="block text-sm font-montserrat font-medium text-white mb-2">
-                     Resumo
-                   </label>
-                   <textarea
-                     value={excerpt}
-                     onChange={(e) => setExcerpt(e.target.value)}
-                     rows={3}
-                     className="w-full px-4 py-3 bg-darker-surface border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 focus:ring-lime-green focus:border-transparent resize-none"
-                     placeholder="Breve descrição do artigo..."
-                   />
-                 </div>
+                <div>
+                  <label className="block text-sm font-montserrat font-medium text-white mb-2">
+                    Resumo
+                  </label>
+                  <textarea
+                    value={excerpt}
+                    onChange={(e) => setExcerpt(e.target.value)}
+                    rows={3}
+                    className="w-full px-4 py-3 bg-darker-surface border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 focus:ring-lime-green focus:border-transparent resize-none"
+                    placeholder="Breve descrição do artigo..."
+                  />
+                </div>
               </div>
             </Card>
 
@@ -677,7 +727,7 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
                 <p className="text-xs text-futuristic-gray">
                   {isPublished ? 'Artigo será publicado' : 'Artigo será salvo como rascunho'}
                 </p>
-                
+
                 {/* Componente de Agendamento */}
                 <ArticleScheduling
                   articleId={initialData?.id || ''}
@@ -744,128 +794,127 @@ const ArticleEditor: React.FC<ArticleEditorProps> = ({ onSave, onCancel, initial
                 Imagem Destacada
               </h4>
               <div className="space-y-4">
-                 <input
-                   type="url"
-                   value={featuredImage}
-                   onChange={(e) => setFeaturedImage(e.target.value)}
-                   className="w-full px-4 py-3 bg-darker-surface border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 focus:ring-lime-green focus:border-transparent"
-                   placeholder="URL da imagem ou use o Pexels"
-                 />
-                 <div className="relative">
-                   <input
-                     type="file"
-                     accept="image/*"
-                     onChange={handleImageUpload}
-                     className="hidden"
-                     id="image-upload"
-                     disabled={isUploading}
-                   />
-                   <Button
-                     variant="outline"
-                     size="sm"
-                     className="w-full flex items-center justify-center space-x-2"
-                     onClick={() => document.getElementById('image-upload')?.click()}
-                     disabled={isUploading}
-                   >
-                     <Upload className={`${isUploading ? 'animate-spin' : ''} w-4 h-4`} />
-                     <span>{isUploading ? 'Fazendo upload...' : 'Upload Direto'}</span>
-                   </Button>
-                 </div>
-                 {uploadError && (
-                   <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                     <p className="text-red-400 text-xs">{uploadError}</p>
-                   </div>
-                 )}
-                 
-                 {/* Image Preview with Controls */}
-                 {featuredImage && (
-                   <div className="space-y-4">
-                     <div className="border border-neon-purple/20 rounded-lg p-4 bg-darker-surface/50">
-                       <div style={getImageAlignmentStyle()}>
-                         <img
-                           src={featuredImage}
-                           alt="Preview"
-                           className="rounded-lg shadow-lg object-cover"
-                           width={400}
-                           height={200}
-                           loading="eager"
-                           crossOrigin={featuredImage?.includes('images.unsplash.com') ? 'anonymous' : undefined}
-                           referrerPolicy={featuredImage?.includes('images.unsplash.com') ? 'no-referrer' : undefined}
-                         />
-                       </div>
-                     </div>
-                     
-                     {/* Image Controls */}
-                     <div className="space-y-3">
-                       <div>
-                         <label className="block text-xs font-medium text-white mb-2">
-                           Alinhamento
-                         </label>
-                         <div className="flex space-x-2">
-                           {[
-                             { value: 'left', icon: AlignLeft, label: 'Esquerda' },
-                             { value: 'center', icon: AlignCenter, label: 'Centro' },
-                             { value: 'right', icon: AlignRight, label: 'Direita' }
-                           ].map(({ value, icon: Icon, label }) => (
-                             <button
-                               key={value}
-                               onClick={() => setImageSettings(prev => ({ ...prev, alignment: value as any }))}
-                               className={`flex-1 p-2 rounded border transition-colors ${
-                                 imageSettings.alignment === value
-                                   ? 'bg-lime-green/20 border-lime-green text-lime-green'
-                                   : 'bg-darker-surface border-neon-purple/20 text-futuristic-gray hover:text-white'
-                               }`}
-                               title={label}
-                             >
-                               <Icon className="w-4 h-4 mx-auto" />
-                             </button>
-                           ))}
-                         </div>
-                       </div>
-                       
-                       <div>
-                         <label className="block text-xs font-medium text-white mb-2">
-                           Tamanho
-                         </label>
-                         <select
-                           value={imageSettings.size}
-                           onChange={(e) => setImageSettings(prev => ({ ...prev, size: e.target.value as any }))}
-                           className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-lime-green"
-                         >
-                           <option value="small">Pequeno (200px)</option>
-                           <option value="medium">Médio (300px)</option>
-                           <option value="large">Grande (400px)</option>
-                           <option value="full">Largura Total</option>
-                         </select>
-                       </div>
-                       
-                       <div>
-                         <label className="block text-xs font-medium text-white mb-2">
-                           Legenda (opcional)
-                         </label>
-                         <input
-                           type="text"
-                           value={imageSettings.caption}
-                           onChange={(e) => setImageSettings(prev => ({ ...prev, caption: e.target.value }))}
-                           className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded text-white text-sm placeholder-futuristic-gray focus:outline-none focus:ring-2 focus:ring-lime-green"
-                           placeholder="Descrição da imagem..."
-                         />
-                       </div>
-                       
-                       <Button
-                         variant="outline"
-                         size="sm"
-                         className="w-full flex items-center justify-center space-x-2"
-                         onClick={insertImageWithSettings}
-                         disabled={!featuredImage}
-                       >
-                         <ImageIcon className="w-4 h-4" />
-                         <span>Inserir no Conteúdo</span>
-                       </Button>
-                     </div>
-                   </div>
-                 )}
-               </div>
+                <input
+                  type="url"
+                  value={featuredImage}
+                  onChange={(e) => setFeaturedImage(e.target.value)}
+                  className="w-full px-4 py-3 bg-darker-surface border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:ring-2 focus:ring-lime-green focus:border-transparent"
+                  placeholder="URL da imagem ou use o Pexels"
+                />
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="image-upload"
+                    disabled={isUploading}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full flex items-center justify-center space-x-2"
+                    onClick={() => document.getElementById('image-upload')?.click()}
+                    disabled={isUploading}
+                  >
+                    <Upload className={`${isUploading ? 'animate-spin' : ''} w-4 h-4`} />
+                    <span>{isUploading ? 'Fazendo upload...' : 'Upload Direto'}</span>
+                  </Button>
+                </div>
+                {uploadError && (
+                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                    <p className="text-red-400 text-xs">{uploadError}</p>
+                  </div>
+                )}
+
+                {/* Image Preview with Controls */}
+                {featuredImage && (
+                  <div className="space-y-4">
+                    <div className="border border-neon-purple/20 rounded-lg p-4 bg-darker-surface/50">
+                      <div style={getImageAlignmentStyle()}>
+                        <img
+                          src={featuredImage}
+                          alt="Preview"
+                          className="rounded-lg shadow-lg object-cover"
+                          width={400}
+                          height={200}
+                          loading="eager"
+                          crossOrigin={featuredImage?.includes('images.unsplash.com') ? 'anonymous' : undefined}
+                          referrerPolicy={featuredImage?.includes('images.unsplash.com') ? 'no-referrer' : undefined}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Image Controls */}
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-medium text-white mb-2">
+                          Alinhamento
+                        </label>
+                        <div className="flex space-x-2">
+                          {[
+                            { value: 'left', icon: AlignLeft, label: 'Esquerda' },
+                            { value: 'center', icon: AlignCenter, label: 'Centro' },
+                            { value: 'right', icon: AlignRight, label: 'Direita' }
+                          ].map(({ value, icon: Icon, label }) => (
+                            <button
+                              key={value}
+                              onClick={() => setImageSettings(prev => ({ ...prev, alignment: value as any }))}
+                              className={`flex-1 p-2 rounded border transition-colors ${imageSettings.alignment === value
+                                ? 'bg-lime-green/20 border-lime-green text-lime-green'
+                                : 'bg-darker-surface border-neon-purple/20 text-futuristic-gray hover:text-white'
+                                }`}
+                              title={label}
+                            >
+                              <Icon className="w-4 h-4 mx-auto" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-white mb-2">
+                          Tamanho
+                        </label>
+                        <select
+                          value={imageSettings.size}
+                          onChange={(e) => setImageSettings(prev => ({ ...prev, size: e.target.value as any }))}
+                          className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded text-white text-sm focus:outline-none focus:ring-2 focus:ring-lime-green"
+                        >
+                          <option value="small">Pequeno (200px)</option>
+                          <option value="medium">Médio (300px)</option>
+                          <option value="large">Grande (400px)</option>
+                          <option value="full">Largura Total</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-white mb-2">
+                          Legenda (opcional)
+                        </label>
+                        <input
+                          type="text"
+                          value={imageSettings.caption}
+                          onChange={(e) => setImageSettings(prev => ({ ...prev, caption: e.target.value }))}
+                          className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded text-white text-sm placeholder-futuristic-gray focus:outline-none focus:ring-2 focus:ring-lime-green"
+                          placeholder="Descrição da imagem..."
+                        />
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full flex items-center justify-center space-x-2"
+                        onClick={insertImageWithSettings}
+                        disabled={!featuredImage}
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                        <span>Inserir no Conteúdo</span>
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </Card>
           </div>
         </div>

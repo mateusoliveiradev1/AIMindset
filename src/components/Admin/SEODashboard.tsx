@@ -5,10 +5,12 @@ import Button from '../UI/Button';
 import { supabase } from '../../lib/supabase';
 import { logEvent, logSystem } from '../../lib/logging';
 import { toast } from 'sonner';
+import { generateGenericSEO } from '../../utils/geminiSEO';
 
 interface SEOData {
   id: string;
   page_type: string;
+  page_slug?: string;
   page_url: string;
   title: string;
   description: string;
@@ -100,10 +102,10 @@ export const SEODashboard: React.FC = () => {
   const [filterType, setFilterType] = useState<'all' | 'optimized' | 'needs-attention' | 'excellent' | 'good' | 'poor'>('all');
   const [selectedPage, setSelectedPage] = useState<SEODataWithAnalysis | null>(null);
   const [activePreviewTab, setActivePreviewTab] = useState<'google' | 'social'>('google');
-  
+
   // Estado para controlar a aba ativa (Dashboard ou Relatórios)
   const [activeTab, setActiveTab] = useState<'dashboard' | 'reports'>('dashboard');
-  
+
   // Estados para bulk operations
   const [selectedPages, setSelectedPages] = useState<Set<string>>(new Set());
   const [bulkOperationInProgress, setBulkOperationInProgress] = useState(false);
@@ -127,9 +129,9 @@ export const SEODashboard: React.FC = () => {
   const [sortBy, setSortBy] = useState<'score-desc' | 'score-asc' | 'updated-desc' | 'updated-asc' | 'type-asc' | 'title-asc'>('score-desc');
 
   // Estados para correções automáticas
-  const [autoFixInProgress, setAutoFixInProgress] = useState<{[key: string]: boolean}>({});
-  const [fixProgress, setFixProgress] = useState<{current: number, total: number, type: string}>({current: 0, total: 0, type: ''});
-  const [fixResults, setFixResults] = useState<{[key: string]: {success: number, failed: number, details: string[]}}>({});
+  const [autoFixInProgress, setAutoFixInProgress] = useState<{ [key: string]: boolean }>({});
+  const [fixProgress, setFixProgress] = useState<{ current: number, total: number, type: string }>({ current: 0, total: 0, type: '' });
+  const [fixResults, setFixResults] = useState<{ [key: string]: { success: number, failed: number, details: string[] } }>({});
 
   // Estados para Relatório de Tendências
   const [trendSnapshots, setTrendSnapshots] = useState<{ date: string; averageScore: number }[]>([]);
@@ -141,7 +143,7 @@ export const SEODashboard: React.FC = () => {
     try {
       setLoading(true);
       setLoadingSkeleton(true);
-      
+
       // Buscar todos os dados SEO
       const { data: seoPages, error } = await supabase
         .from('seo_metadata')
@@ -151,28 +153,28 @@ export const SEODashboard: React.FC = () => {
       if (error) throw error;
 
       setSeoData(seoPages || []);
-      
+
       // Analisar qualidade SEO de cada página
       const analyzedData: SEODataWithAnalysis[] = (seoPages || []).map(page => ({
         ...page,
         analysis: analyzeSEOQuality(page, seoPages || [])
       }));
-      
+
       setSeoDataWithAnalysis(analyzedData);
-      
+
       // Calcular estatísticas
       if (seoPages) {
         const totalPages = seoPages.length;
         const missingDescriptions = seoPages.filter(p => !p.description || (p.description?.length || 0) < 50).length;
         const missingKeywords = seoPages.filter(p => !p.keywords || p.keywords.length === 0).length;
         const missingOgImages = seoPages.filter(p => !p.og_image).length;
-        
+
         const optimizedPages = totalPages - Math.max(missingDescriptions, missingKeywords, missingOgImages);
-        
+
         const avgDescLength = seoPages
           .filter(p => p.description)
           .reduce((acc, p) => acc + (p.description?.length || 0), 0) / seoPages.filter(p => p.description).length || 0;
-          
+
         const avgKeywordsCount = seoPages
           .filter(p => p.keywords && p.keywords.length > 0)
           .reduce((acc, p) => acc + p.keywords.length, 0) / seoPages.filter(p => p.keywords && p.keywords.length > 0).length || 0;
@@ -187,19 +189,19 @@ export const SEODashboard: React.FC = () => {
         // Calcular métricas avançadas
         const titles = seoPages.map(p => p.title?.toLowerCase().trim() || '');
         const duplicatedTitles = titles.length - new Set(titles).size;
-        
+
         const longUrls = seoPages.filter(p => p.page_url?.length > 60).length;
-        
+
         const withoutSchema = seoPages.filter(p => !p.schema_data || Object.keys(p.schema_data).length === 0).length;
-        
+
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         const recentUpdates = seoPages.filter(p => new Date(p.updated_at) > sevenDaysAgo).length;
-        
+
         const shortDescriptions = seoPages.filter(p => p.description && p.description?.length < 120).length;
-        
+
         const withoutKeywords = seoPages.filter(p => !p.keywords || p.keywords.length === 0).length;
-        
+
         const unoptimizedUrls = seoPages.filter(p => {
           const url = p.page_url?.toLowerCase() || '';
           return url.includes('?') || url.includes('&') || url.includes('%') || url.match(/\d{4,}/);
@@ -541,7 +543,7 @@ export const SEODashboard: React.FC = () => {
   const SEOScoreBadge: React.FC<{ analysis: SEOAnalysis }> = ({ analysis }) => {
     const config = getStatusConfig(analysis.status);
     const IconComponent = config.icon;
-    
+
     return (
       <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border ${config.bgColor} ${config.borderColor}`}>
         <IconComponent className={`w-4 h-4 ${config.color}`} />
@@ -558,10 +560,10 @@ export const SEODashboard: React.FC = () => {
   // Componente Barra de Progresso SEO
   const SEOProgressBar: React.FC<{ score: number; status: SEOAnalysis['status'] }> = ({ score, status }) => {
     const config = getStatusConfig(status);
-    
+
     return (
       <div className="w-full bg-darker-surface rounded-full h-2 overflow-hidden">
-        <div 
+        <div
           className={`h-full transition-all duration-500 ${config.bgColor.replace('/20', '')}`}
           style={{ width: `${score}%` }}
         />
@@ -661,9 +663,9 @@ export const SEODashboard: React.FC = () => {
               }}
             />
           ) : null}
-          
+
           {/* Placeholder para imagem ausente */}
-          <div 
+          <div
             className={`w-full h-48 bg-gray-200 flex items-center justify-center ${hasOgImage ? 'hidden' : 'flex'}`}
           >
             <div className="text-center text-gray-500">
@@ -678,11 +680,11 @@ export const SEODashboard: React.FC = () => {
           <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">
             {formatUrl(page.canonical_url)}
           </div>
-          
+
           <h3 className="font-semibold text-gray-900 text-base leading-tight mb-1 line-clamp-2">
             {page.title || 'Título não definido'}
           </h3>
-          
+
           <p className="text-gray-600 text-sm leading-relaxed line-clamp-2">
             {page.description || 'Descrição não definida'}
           </p>
@@ -696,7 +698,7 @@ export const SEODashboard: React.FC = () => {
         </div>
       </div>
     );
-   };
+  };
 
   // Componente PreviewTabs - Sistema de tabs para alternar entre previews
   const PreviewTabs: React.FC<{ page: SEODataWithAnalysis }> = ({ page }) => {
@@ -711,11 +713,10 @@ export const SEODashboard: React.FC = () => {
         <div className="flex space-x-1 mb-4 bg-darker-surface rounded-lg p-1">
           <button
             onClick={() => setActivePreviewTab('google')}
-            className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-              activePreviewTab === 'google'
-                ? 'bg-neon-purple text-white shadow-lg'
-                : 'text-futuristic-gray hover:text-white hover:bg-darker-surface/50'
-            }`}
+            className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${activePreviewTab === 'google'
+              ? 'bg-neon-purple text-white shadow-lg'
+              : 'text-futuristic-gray hover:text-white hover:bg-darker-surface/50'
+              }`}
           >
             <div className="flex items-center justify-center">
               <Search className="w-4 h-4 mr-2" />
@@ -724,11 +725,10 @@ export const SEODashboard: React.FC = () => {
           </button>
           <button
             onClick={() => setActivePreviewTab('social')}
-            className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-              activePreviewTab === 'social'
-                ? 'bg-neon-purple text-white shadow-lg'
-                : 'text-futuristic-gray hover:text-white hover:bg-darker-surface/50'
-            }`}
+            className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all ${activePreviewTab === 'social'
+              ? 'bg-neon-purple text-white shadow-lg'
+              : 'text-futuristic-gray hover:text-white hover:bg-darker-surface/50'
+              }`}
           >
             <div className="flex items-center justify-center">
               <Globe className="w-4 h-4 mr-2" />
@@ -747,7 +747,7 @@ export const SEODashboard: React.FC = () => {
               <GooglePreview page={page} />
             </div>
           )}
-          
+
           {activePreviewTab === 'social' && (
             <div>
               <div className="mb-3 text-sm text-futuristic-gray">
@@ -763,12 +763,70 @@ export const SEODashboard: React.FC = () => {
     );
   };
 
+
+  // Otimizar com IA usando Gemini
+  const optimizeWithAI = async (page: SEODataWithAnalysis) => {
+    try {
+      setLoading(true);
+      toast.info('Consultando Gemini para otimização SEO...');
+
+      let context = `Página: ${page.title}. Tipo: ${page.page_type}.`;
+      if (page.page_type === 'article' && page.page_slug) {
+        const { data: article } = await supabase
+          .from('articles')
+          .select('content, excerpt, title')
+          .eq('slug', page.page_slug)
+          .single();
+        if (article) {
+          context += ` Conteúdo: ${article.content.substring(0, 5000)}... Título original: ${article.title}`;
+        }
+      } else if (page.page_type === 'category' && page.page_slug) {
+        const { data: category } = await supabase
+          .from('categories')
+          .select('name, description')
+          .eq('slug', page.page_slug)
+          .single();
+        if (category) {
+          context += ` Categoria: ${category.name}. Descrição: ${category.description}`;
+        }
+      }
+
+      const result = await generateGenericSEO(page.page_type, context);
+
+      if (result) {
+        const payload = {
+          title: result.title,
+          description: result.description,
+          keywords: result.keywords,
+          updated_at: new Date().toISOString()
+        };
+
+        const { error: updateError } = await supabase
+          .from('seo_metadata')
+          .update(payload)
+          .eq('id', page.id);
+
+        if (updateError) throw updateError;
+
+        toast.success('SEO otimizado com Gemini!');
+        await loadSEOData();
+      } else {
+        toast.error('O Gemini não retornou metadados válidos.');
+      }
+    } catch (error) {
+      console.error('Erro na otimização AI:', error);
+      toast.error('Falha ao otimizar com Gemini.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Regenerar SEO para uma página específica
   const regenerateSEO = async (pageId: string) => {
     try {
       setLoading(true);
       toast.info('Regenerando SEO...');
-      
+
       // Buscar dados da página SEO atual
       const { data: seoPage, error: seoError } = await supabase
         .from('seo_metadata')
@@ -800,7 +858,7 @@ export const SEODashboard: React.FC = () => {
 
         // Regenerar SEO do artigo usando a mesma lógica dos triggers
         const seoTitle = `${article.title} | AIMindset - Inteligência Artificial`;
-        
+
         let seoDescription = '';
         if (article.excerpt && article.excerpt.length > 50) {
           seoDescription = article.excerpt.substring(0, 150);
@@ -812,7 +870,7 @@ export const SEODashboard: React.FC = () => {
             .trim();
           seoDescription = textContent.substring(0, 150);
         }
-        
+
         // Adicionar call-to-action se houver espaço
         if (seoDescription.length < 130) {
           seoDescription += ' Descubra mais sobre IA e tecnologia.';
@@ -821,14 +879,14 @@ export const SEODashboard: React.FC = () => {
         // Gerar keywords baseadas nas tags
         let keywords = ['inteligência artificial', 'IA', 'produtividade'];
         if (article.tags) {
-          const articleTags = Array.isArray(article.tags) 
-            ? article.tags 
+          const articleTags = Array.isArray(article.tags)
+            ? article.tags
             : article.tags.split(',').map(tag => tag.trim());
           keywords = [...keywords, ...articleTags];
         }
 
         const canonicalUrl = `https://aimindset.com.br/artigo/${article.slug}`;
-        
+
         // Schema.org data
         const schemaData = {
           '@context': 'https://schema.org',
@@ -880,9 +938,9 @@ export const SEODashboard: React.FC = () => {
         }
 
         const seoTitle = `${category.name} | AIMindset - Artigos sobre ${category.name}`;
-        const seoDescription = category.description || 
+        const seoDescription = category.description ||
           `Explore artigos sobre ${category.name} no AIMindset. Conteúdo especializado em inteligência artificial e tecnologia.`;
-        
+
         const keywords = [category.name.toLowerCase(), 'inteligência artificial', 'IA', 'artigos', 'tecnologia'];
         const canonicalUrl = `https://aimindset.com.br/categoria/${category.slug}`;
 
@@ -960,31 +1018,31 @@ export const SEODashboard: React.FC = () => {
         }
       }
 
-    // Atualizar os metadados SEO no banco, garantindo persistência
-    const payload = { ...updatedSEOData, updated_at: new Date().toISOString() };
-    let { error: updateError } = await supabase
-      .from('seo_metadata')
-      .update(payload)
-      .eq('id', pageId);
-
-    if (updateError) {
-      // Fallback admin para contornar RLS em ambientes de preview/dev
-      const { supabaseAdmin } = await import('../../lib/supabase-admin');
-      const res = await supabaseAdmin
+      // Atualizar os metadados SEO no banco, garantindo persistência
+      const payload = { ...updatedSEOData, updated_at: new Date().toISOString() };
+      let { error: updateError } = await supabase
         .from('seo_metadata')
         .update(payload)
         .eq('id', pageId);
-      updateError = res.error;
-    }
 
-    if (updateError) {
-      console.error('❌ Erro ao atualizar SEO no banco (após fallback):', updateError);
-      throw updateError;
-    }
+      if (updateError) {
+        // Fallback admin para contornar RLS em ambientes de preview/dev
+        const { supabaseAdmin } = await import('../../lib/supabase-admin');
+        const res = await supabaseAdmin
+          .from('seo_metadata')
+          .update(payload)
+          .eq('id', pageId);
+        updateError = res.error;
+      }
+
+      if (updateError) {
+        console.error('❌ Erro ao atualizar SEO no banco (após fallback):', updateError);
+        throw updateError;
+      }
 
       toast.success('SEO regenerado com sucesso!');
       await loadSEOData();
-      
+
     } catch (error) {
       console.error('Erro ao regenerar SEO:', error);
       toast.error(`Erro ao regenerar SEO: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
@@ -1013,7 +1071,7 @@ export const SEODashboard: React.FC = () => {
       // Usar dados do cache se disponível
       return;
     }
-    
+
     // Cache dos dados filtrados
     if (seoDataWithAnalysis.length > 0) {
       const newCache = new Map(cachedData);
@@ -1063,7 +1121,7 @@ export const SEODashboard: React.FC = () => {
   const parseAdvancedSearch = (searchTerm: string) => {
     const filters: any = {};
     const terms = searchTerm.split(' ');
-    
+
     terms.forEach(term => {
       if (term.includes(':')) {
         const [key, value] = term.split(':');
@@ -1072,7 +1130,7 @@ export const SEODashboard: React.FC = () => {
         filters.text = (filters.text || '') + ' ' + term;
       }
     });
-    
+
     return filters;
   };
 
@@ -1081,7 +1139,7 @@ export const SEODashboard: React.FC = () => {
     // Busca avançada
     if (debouncedSearchTerm.includes(':')) {
       const filters = parseAdvancedSearch(debouncedSearchTerm);
-      
+
       // Filtro por score
       if (filters.score) {
         const scoreFilter = filters.score;
@@ -1096,12 +1154,12 @@ export const SEODashboard: React.FC = () => {
           if (page.analysis.score !== exactScore) return false;
         }
       }
-      
+
       // Filtro por tipo
       if (filters.type && !page.page_type.toLowerCase().includes(filters.type.toLowerCase())) {
         return false;
       }
-      
+
       // Filtro por data
       if (filters.updated) {
         const days = parseInt(filters.updated.replace('d', ''));
@@ -1109,31 +1167,31 @@ export const SEODashboard: React.FC = () => {
         daysAgo.setDate(daysAgo.getDate() - days);
         if (new Date(page.updated_at) < daysAgo) return false;
       }
-      
+
       // Filtro por problemas
       if (filters.problem) {
         const problemType = filters.problem.toLowerCase();
         const alerts = getSEOAlerts(page, seoDataWithAnalysis);
-        const hasSpecificProblem = alerts.some(alert => 
+        const hasSpecificProblem = alerts.some(alert =>
           alert.type.includes(problemType) || alert.message.toLowerCase().includes(problemType)
         );
         if (!hasSpecificProblem) return false;
       }
-      
+
       // Busca textual restante
       if (filters.text) {
         const textMatch = page.title.toLowerCase().includes(filters.text.toLowerCase()) ||
-                         page.page_type.toLowerCase().includes(filters.text.toLowerCase()) ||
-                         page.page_url.toLowerCase().includes(filters.text.toLowerCase());
+          page.page_type.toLowerCase().includes(filters.text.toLowerCase()) ||
+          page.page_url.toLowerCase().includes(filters.text.toLowerCase());
         if (!textMatch) return false;
       }
     } else if (debouncedSearchTerm) {
       // Busca normal por texto
       const matchesSearch = page.title.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-                           page.description?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-                           page.keywords?.some(keyword => keyword.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) ||
-                           page.page_type.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-                           page.page_url.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
+        page.description?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        page.keywords?.some(keyword => keyword.toLowerCase().includes(debouncedSearchTerm.toLowerCase())) ||
+        page.page_type.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        page.page_url.toLowerCase().includes(debouncedSearchTerm.toLowerCase());
       if (!matchesSearch) return false;
     }
 
@@ -1175,7 +1233,7 @@ export const SEODashboard: React.FC = () => {
     if (problemFilter !== 'all') {
       const alerts = getSEOAlerts(page, seoDataWithAnalysis);
       let hasProblem = false;
-      
+
       switch (problemFilter) {
         case 'duplicate-title':
           hasProblem = alerts.some(alert => alert.type.includes('title') && alert.message.includes('duplicado'));
@@ -1196,22 +1254,22 @@ export const SEODashboard: React.FC = () => {
           hasProblem = !page.schema_data || Object.keys(page.schema_data).length === 0;
           break;
       }
-      
+
       if (!hasProblem) return false;
     }
 
     // Aplicar filtros de tipo legados (manter compatibilidade)
     if (filterType === 'all') return true;
-    
+
     // Filtros baseados na análise SEO
     if (filterType === 'excellent') return page.analysis.status === 'excellent';
     if (filterType === 'good') return page.analysis.status === 'good';
     if (filterType === 'poor') return page.analysis.status === 'poor' || page.analysis.status === 'needs-improvement';
-    
+
     // Filtros legados
-    const hasIssues = !page.description || (page.description?.length || 0) < 50 || 
-                     !page.keywords || page.keywords.length === 0 || 
-                     !page.og_image;
+    const hasIssues = !page.description || (page.description?.length || 0) < 50 ||
+      !page.keywords || page.keywords.length === 0 ||
+      !page.og_image;
 
     if (filterType === 'needs-attention') return hasIssues;
     if (filterType === 'optimized') return !hasIssues;
@@ -1279,7 +1337,7 @@ export const SEODashboard: React.FC = () => {
 
   // Função para detectar alertas SEO
   const getSEOAlerts = (page: SEODataWithAnalysis, allPages: SEODataWithAnalysis[]) => {
-    const alerts: Array<{type: string, message: string, severity: 'high' | 'medium' | 'low'}> = [];
+    const alerts: Array<{ type: string, message: string, severity: 'high' | 'medium' | 'low' }> = [];
 
     // Alerta para títulos duplicados
     const duplicateTitle = allPages.filter(p => p.id !== page.id && p.title?.toLowerCase().trim() === page.title?.toLowerCase().trim()).length > 0;
@@ -1382,11 +1440,11 @@ export const SEODashboard: React.FC = () => {
     for (let i = 0; i < selectedPagesArray.length; i++) {
       const pageId = selectedPagesArray[i];
       const page = seoDataWithAnalysis.find(p => p.id === pageId);
-      
-      setBulkProgress({ 
-        current: i + 1, 
-        total: selectedPages.size, 
-        currentPage: page?.title || 'Página desconhecida' 
+
+      setBulkProgress({
+        current: i + 1,
+        total: selectedPages.size,
+        currentPage: page?.title || 'Página desconhecida'
       });
 
       try {
@@ -1429,7 +1487,7 @@ export const SEODashboard: React.FC = () => {
     }
 
     const selectedData = seoDataWithAnalysis.filter(page => selectedPages.has(page.id));
-    
+
     const csvHeaders = [
       'URL',
       'Título',
@@ -1455,19 +1513,19 @@ export const SEODashboard: React.FC = () => {
     ]);
 
     const csvContent = [csvHeaders.join(','), ...csvRows.map(row => row.join(','))].join('\n');
-    
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
+
     link.setAttribute('href', url);
     link.setAttribute('download', `relatorio-seo-${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     toast.success(`📊 Relatório exportado com ${selectedData.length} página(s)`);
   };
 
@@ -1494,13 +1552,13 @@ export const SEODashboard: React.FC = () => {
     for (let i = 0; i < selectedPagesArray.length; i++) {
       const pageId = selectedPagesArray[i];
       const page = seoDataWithAnalysis.find(p => p.id === pageId);
-      
+
       if (!page) continue;
 
-      setBulkProgress({ 
-        current: i + 1, 
-        total: selectedPages.size, 
-        currentPage: page.title || 'Página desconhecida' 
+      setBulkProgress({
+        current: i + 1,
+        total: selectedPages.size,
+        currentPage: page.title || 'Página desconhecida'
       });
 
       try {
@@ -1587,7 +1645,7 @@ export const SEODashboard: React.FC = () => {
 
         // Otimizar keywords: adicionar se ausentes/poucas OU limitar quando excessivas
         const optimizeKeywords = (existing: string[] = [], title: string = '', description: string = '') => {
-          const stopwords = new Set(['de','da','do','das','dos','e','em','para','por','com','sem','um','uma','nos','nas','ao','aos','as','o','a','no','na']);
+          const stopwords = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'em', 'para', 'por', 'com', 'sem', 'um', 'uma', 'nos', 'nas', 'ao', 'aos', 'as', 'o', 'a', 'no', 'na']);
           const titleSet = new Set(title.toLowerCase().split(/\W+/).filter(w => w.length > 3));
           const descSet = new Set(description.toLowerCase().split(/\W+/).filter(w => w.length > 4));
           // Normalizar, tirar duplicatas, remover curtas e stopwords
@@ -1712,9 +1770,9 @@ export const SEODashboard: React.FC = () => {
   // Funções específicas de correção automática
   const fixDuplicateTitles = async () => {
     if (autoFixInProgress['duplicateTitles']) return;
-    
+
     setAutoFixInProgress(prev => ({ ...prev, duplicateTitles: true }));
-    
+
     try {
       // Encontrar páginas com títulos duplicados
       const titleGroups = seoDataWithAnalysis.reduce((acc, page) => {
@@ -1724,7 +1782,7 @@ export const SEODashboard: React.FC = () => {
           acc[title].push(page);
         }
         return acc;
-      }, {} as {[key: string]: SEODataWithAnalysis[]});
+      }, {} as { [key: string]: SEODataWithAnalysis[] });
 
       const duplicateGroups = Object.values(titleGroups).filter(group => group.length > 1);
       const totalPages = duplicateGroups.reduce((sum, group) => sum + group.length - 1, 0);
@@ -1744,7 +1802,7 @@ export const SEODashboard: React.FC = () => {
 
       const suffixes = [
         '- Guia Completo',
-        '- Dicas Essenciais', 
+        '- Dicas Essenciais',
         '- Tutorial Prático',
         '- Estratégias Avançadas',
         '- Passo a Passo',
@@ -1784,7 +1842,7 @@ export const SEODashboard: React.FC = () => {
       }
 
       setFixResults(prev => ({ ...prev, duplicateTitles: results }));
-      
+
       if (results.failed === 0) {
         toast.success(`🔧 ${results.success} títulos duplicados corrigidos com sucesso!`);
       } else {
@@ -1803,11 +1861,11 @@ export const SEODashboard: React.FC = () => {
 
   const fixShortDescriptions = async () => {
     if (autoFixInProgress['shortDescriptions']) return;
-    
+
     setAutoFixInProgress(prev => ({ ...prev, shortDescriptions: true }));
-    
+
     try {
-      const pagesWithShortDesc = seoDataWithAnalysis.filter(page => 
+      const pagesWithShortDesc = seoDataWithAnalysis.filter(page =>
         !page.description || (page.description?.length || 0) < 120
       );
 
@@ -1828,10 +1886,10 @@ export const SEODashboard: React.FC = () => {
 
       for (let i = 0; i < pagesWithShortDesc.length; i++) {
         const page = pagesWithShortDesc[i];
-        
+
         try {
           const baseDesc = page.description || `Descubra tudo sobre ${page.title || 'este tópico importante'}`;
-          const expandedDesc = baseDesc.length < 120 
+          const expandedDesc = baseDesc.length < 120
             ? `${baseDesc}. Aprenda estratégias práticas, dicas essenciais e métodos comprovados para alcançar resultados excepcionais. Transforme seu conhecimento em ação com nosso guia completo e detalhado.`
             : baseDesc;
 
@@ -1854,7 +1912,7 @@ export const SEODashboard: React.FC = () => {
       }
 
       setFixResults(prev => ({ ...prev, shortDescriptions: results }));
-      
+
       if (results.failed === 0) {
         toast.success(`🔧 ${results.success} descrições expandidas com sucesso!`);
       } else {
@@ -1873,11 +1931,11 @@ export const SEODashboard: React.FC = () => {
 
   const fixMissingKeywords = async () => {
     if (autoFixInProgress['missingKeywords']) return;
-    
+
     setAutoFixInProgress(prev => ({ ...prev, missingKeywords: true }));
-    
+
     try {
-      const pagesWithoutKeywords = seoDataWithAnalysis.filter(page => 
+      const pagesWithoutKeywords = seoDataWithAnalysis.filter(page =>
         !page.keywords || page.keywords.length === 0
       );
 
@@ -1898,7 +1956,7 @@ export const SEODashboard: React.FC = () => {
 
       for (let i = 0; i < pagesWithoutKeywords.length; i++) {
         const page = pagesWithoutKeywords[i];
-        
+
         try {
           // Gerar keywords baseadas no título
           const titleWords = (page.title || '').toLowerCase()
@@ -1936,7 +1994,7 @@ export const SEODashboard: React.FC = () => {
       }
 
       setFixResults(prev => ({ ...prev, missingKeywords: results }));
-      
+
       if (results.failed === 0) {
         toast.success(`🔧 Keywords adicionadas em ${results.success} páginas!`);
       } else {
@@ -1955,11 +2013,11 @@ export const SEODashboard: React.FC = () => {
 
   const fixLongUrls = async () => {
     if (autoFixInProgress['longUrls']) return;
-    
+
     setAutoFixInProgress(prev => ({ ...prev, longUrls: true }));
-    
+
     try {
-      const pagesWithLongUrls = seoDataWithAnalysis.filter(page => 
+      const pagesWithLongUrls = seoDataWithAnalysis.filter(page =>
         (page.page_url?.length || 0) > 60
       );
 
@@ -1980,7 +2038,7 @@ export const SEODashboard: React.FC = () => {
 
       for (let i = 0; i < pagesWithLongUrls.length; i++) {
         const page = pagesWithLongUrls[i];
-        
+
         try {
           // Otimizar URL
           const optimizedUrl = (page.page_url || '')
@@ -2010,7 +2068,7 @@ export const SEODashboard: React.FC = () => {
       }
 
       setFixResults(prev => ({ ...prev, longUrls: results }));
-      
+
       if (results.failed === 0) {
         toast.success(`🔧 ${results.success} URLs otimizadas com sucesso!`);
       } else {
@@ -2029,11 +2087,11 @@ export const SEODashboard: React.FC = () => {
 
   const fixMissingSchema = async () => {
     if (autoFixInProgress['missingSchema']) return;
-    
+
     setAutoFixInProgress(prev => ({ ...prev, missingSchema: true }));
-    
+
     try {
-      const pagesWithoutSchema = seoDataWithAnalysis.filter(page => 
+      const pagesWithoutSchema = seoDataWithAnalysis.filter(page =>
         !page.schema_data || Object.keys(page.schema_data).length === 0
       );
 
@@ -2054,7 +2112,7 @@ export const SEODashboard: React.FC = () => {
 
       for (let i = 0; i < pagesWithoutSchema.length; i++) {
         const page = pagesWithoutSchema[i];
-        
+
         try {
           // Gerar schema básico baseado no tipo de página
           const baseSchema = {
@@ -2099,7 +2157,7 @@ export const SEODashboard: React.FC = () => {
       }
 
       setFixResults(prev => ({ ...prev, missingSchema: results }));
-      
+
       if (results.failed === 0) {
         toast.success(`🔧 Schema.org adicionado em ${results.success} páginas!`);
       } else {
@@ -2149,22 +2207,20 @@ export const SEODashboard: React.FC = () => {
       <div className="flex space-x-1 bg-dark-gray/30 p-1 rounded-lg border border-futuristic-gray/20">
         <button
           onClick={() => setActiveTab('dashboard')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${
-            activeTab === 'dashboard'
-              ? 'bg-neon-purple text-white shadow-lg shadow-neon-purple/25'
-              : 'text-futuristic-gray hover:text-white hover:bg-futuristic-gray/10'
-          }`}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${activeTab === 'dashboard'
+            ? 'bg-neon-purple text-white shadow-lg shadow-neon-purple/25'
+            : 'text-futuristic-gray hover:text-white hover:bg-futuristic-gray/10'
+            }`}
         >
           <BarChart3 className="w-4 h-4" />
           Dashboard
         </button>
         <button
           onClick={() => setActiveTab('reports')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${
-            activeTab === 'reports'
-              ? 'bg-neon-purple text-white shadow-lg shadow-neon-purple/25'
-              : 'text-futuristic-gray hover:text-white hover:bg-futuristic-gray/10'
-          }`}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md font-medium transition-all duration-200 ${activeTab === 'reports'
+            ? 'bg-neon-purple text-white shadow-lg shadow-neon-purple/25'
+            : 'text-futuristic-gray hover:text-white hover:bg-futuristic-gray/10'
+            }`}
         >
           <FileText className="w-4 h-4" />
           Relatórios
@@ -2176,932 +2232,938 @@ export const SEODashboard: React.FC = () => {
         <>
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {loadingSkeleton ? (
-          // Loading Skeletons
-          <>
-            {Array.from({ length: 5 }).map((_, index) => (
-              <StatCardSkeleton key={index} />
-            ))}
-          </>
-        ) : stats ? (
-          // Dados reais
-          <>
-          <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)]">
-            <div className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-futuristic-gray font-orbitron text-[11px]">Score Médio</p>
-                  <p className="text-2xl font-orbitron font-bold text-white">
-                    {stats.averageScore}
-                  </p>
-                  <p className="text-xs text-futuristic-gray">
-                    De 100 pontos
-                  </p>
-                </div>
-                <BarChart3 className="w-8 h-8 text-neon-purple" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(34,197,94,0.25)]">
-            <div className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-futuristic-gray font-orbitron text-[11px]">Excelente</p>
-                  <p className="text-2xl font-orbitron font-bold text-green-400">
-                    {stats.excellentPages}
-                  </p>
-                  <p className="text-xs text-futuristic-gray">
-                    90-100 pontos
-                  </p>
-                </div>
-                <CheckCircle className="w-8 h-8 text-green-400" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-lime-green/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(132,204,22,0.25)]">
-            <div className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-futuristic-gray font-orbitron text-[11px]">Bom</p>
-                  <p className="text-2xl font-orbitron font-bold text-lime-green">
-                    {stats.goodPages}
-                  </p>
-                  <p className="text-xs text-futuristic-gray">
-                    70-89 pontos
-                  </p>
-                </div>
-                <Target className="w-8 h-8 text-lime-green" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(250,204,21,0.25)]">
-            <div className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-futuristic-gray font-orbitron text-[11px]">Precisa Melhorar</p>
-                  <p className="text-2xl font-orbitron font-bold text-yellow-400">
-                    {stats.needsImprovementPages}
-                  </p>
-                  <p className="text-xs text-futuristic-gray">
-                    50-69 pontos
-                  </p>
-                </div>
-                <AlertTriangle className="w-8 h-8 text-yellow-400" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(248,113,113,0.25)]">
-            <div className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-futuristic-gray font-orbitron text-[11px]">Ruim</p>
-                  <p className="text-2xl font-orbitron font-bold text-red-400">
-                    {stats.poorPages}
-                  </p>
-                  <p className="text-xs text-futuristic-gray">
-                    0-49 pontos
-                  </p>
-                </div>
-                <AlertTriangle className="w-8 h-8 text-red-400" />
-              </div>
-            </div>
-          </Card>
-          </>
-        ) : null}
-      </div>
-
-      {/* Métricas Avançadas */}
-      {stats && (
-        <>
-        <div className="mt-6">
-          <h3 className="text-lg font-orbitron font-bold text-white mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-neon-purple" />
-            Métricas Avançadas
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(251,146,60,0.25)]">
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-futuristic-gray font-orbitron text-[11px]">Títulos Duplicados</p>
-                    <p className="text-2xl font-orbitron font-bold text-orange-400">
-                      {stats.duplicatedTitles}
-                    </p>
-                    <p className="text-xs text-futuristic-gray">
-                      Páginas afetadas
-                    </p>
+            {loadingSkeleton ? (
+              // Loading Skeletons
+              <>
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <StatCardSkeleton key={index} />
+                ))}
+              </>
+            ) : stats ? (
+              // Dados reais
+              <>
+                <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)]">
+                  <div className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-futuristic-gray font-orbitron text-[11px]">Score Médio</p>
+                        <p className="text-2xl font-orbitron font-bold text-white">
+                          {stats.averageScore}
+                        </p>
+                        <p className="text-xs text-futuristic-gray">
+                          De 100 pontos
+                        </p>
+                      </div>
+                      <BarChart3 className="w-8 h-8 text-neon-purple" />
+                    </div>
                   </div>
-                  <Copy className="w-8 h-8 text-orange-400" />
-                </div>
-              </div>
-            </Card>
+                </Card>
 
-            <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(250,204,21,0.25)]">
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-futuristic-gray font-orbitron text-[11px]">URLs Longas</p>
-                    <p className="text-2xl font-orbitron font-bold text-yellow-400">
-                      {stats.longUrls}
-                    </p>
-                    <p className="text-xs text-futuristic-gray">
-                      Mais de 60 caracteres
-                    </p>
+                <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(34,197,94,0.25)]">
+                  <div className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-futuristic-gray font-orbitron text-[11px]">Excelente</p>
+                        <p className="text-2xl font-orbitron font-bold text-green-400">
+                          {stats.excellentPages}
+                        </p>
+                        <p className="text-xs text-futuristic-gray">
+                          90-100 pontos
+                        </p>
+                      </div>
+                      <CheckCircle className="w-8 h-8 text-green-400" />
+                    </div>
                   </div>
-                  <ExternalLink className="w-8 h-8 text-yellow-400" />
-                </div>
-              </div>
-            </Card>
+                </Card>
 
-            <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(248,113,113,0.25)]">
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-futuristic-gray font-orbitron text-[11px]">Sem Schema.org</p>
-                    <p className="text-2xl font-orbitron font-bold text-red-400">
-                      {stats.withoutSchema}
-                    </p>
-                    <p className="text-xs text-futuristic-gray">
-                      Dados estruturados
-                    </p>
+                <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-lime-green/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(132,204,22,0.25)]">
+                  <div className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-futuristic-gray font-orbitron text-[11px]">Bom</p>
+                        <p className="text-2xl font-orbitron font-bold text-lime-green">
+                          {stats.goodPages}
+                        </p>
+                        <p className="text-xs text-futuristic-gray">
+                          70-89 pontos
+                        </p>
+                      </div>
+                      <Target className="w-8 h-8 text-lime-green" />
+                    </div>
                   </div>
-                  <Database className="w-8 h-8 text-red-400" />
-                </div>
-              </div>
-            </Card>
+                </Card>
 
-            <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(34,197,94,0.25)]">
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-futuristic-gray font-orbitron text-[11px]">Atualizações Recentes</p>
-                    <p className="text-2xl font-orbitron font-bold text-green-400">
-                      {stats.recentUpdates}
-                    </p>
-                    <p className="text-xs text-futuristic-gray">
-                      Últimos 7 dias
-                    </p>
+                <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(250,204,21,0.25)]">
+                  <div className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-futuristic-gray font-orbitron text-[11px]">Precisa Melhorar</p>
+                        <p className="text-2xl font-orbitron font-bold text-yellow-400">
+                          {stats.needsImprovementPages}
+                        </p>
+                        <p className="text-xs text-futuristic-gray">
+                          50-69 pontos
+                        </p>
+                      </div>
+                      <AlertTriangle className="w-8 h-8 text-yellow-400" />
+                    </div>
                   </div>
-                  <Calendar className="w-8 h-8 text-green-400" />
-                </div>
-              </div>
-            </Card>
+                </Card>
+
+                <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(248,113,113,0.25)]">
+                  <div className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-futuristic-gray font-orbitron text-[11px]">Ruim</p>
+                        <p className="text-2xl font-orbitron font-bold text-red-400">
+                          {stats.poorPages}
+                        </p>
+                        <p className="text-xs text-futuristic-gray">
+                          0-49 pontos
+                        </p>
+                      </div>
+                      <AlertTriangle className="w-8 h-8 text-red-400" />
+                    </div>
+                  </div>
+                </Card>
+              </>
+            ) : null}
           </div>
-        </div>
 
-        <div className="mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Ações Prioritárias */}
-            <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 transition-all">
-              <div className="p-4">
-                <h4 className="text-md font-medium text-white mb-4">Ações Prioritárias</h4>
-                <div className="space-y-3">
-                  {(() => {
-                    const actions = [];
-                    
-                    if (stats.duplicatedTitles > 0) {
-                      actions.push({
-                        priority: 'high',
-                        action: `Corrigir ${stats.duplicatedTitles} título(s) duplicado(s)`,
-                        impact: 'Alto impacto no SEO'
-                      });
-                    }
-                    
-                    if (stats.shortDescriptions > 0) {
-                      actions.push({
-                        priority: 'medium',
-                        action: `Expandir ${stats.shortDescriptions} descrição(ões) curta(s)`,
-                        impact: 'Melhora CTR'
-                      });
-                    }
-                    
-                    if (stats.withoutKeywords > 0) {
-                      actions.push({
-                        priority: 'medium',
-                        action: `Adicionar keywords em ${stats.withoutKeywords} página(s)`,
-                        impact: 'Melhora relevância'
-                      });
-                    }
-                    
-                    if (stats.longUrls > 0) {
-                      actions.push({
-                        priority: 'low',
-                        action: `Otimizar ${stats.longUrls} URL(s) longa(s)`,
-                        impact: 'Melhora usabilidade'
-                      });
-                    }
-                    
-                    return actions.slice(0, 4).map((action, index) => (
-                      <div key={index} className="flex items-start gap-3 p-3 bg-darker-surface/50 rounded-lg">
-                        <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
-                          action.priority === 'high' ? 'bg-red-400' :
-                          action.priority === 'medium' ? 'bg-yellow-400' : 'bg-green-400'
-                        }`}></div>
-                        <div className="flex-1">
-                          <p className="text-white text-sm font-medium">{action.action}</p>
-                          <p className="text-futuristic-gray text-xs">{action.impact}</p>
+          {/* Métricas Avançadas */}
+          {stats && (
+            <>
+              <div className="mt-6">
+                <h3 className="text-lg font-orbitron font-bold text-white mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-neon-purple" />
+                  Métricas Avançadas
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-orange-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(251,146,60,0.25)]">
+                    <div className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-futuristic-gray font-orbitron text-[11px]">Títulos Duplicados</p>
+                          <p className="text-2xl font-orbitron font-bold text-orange-400">
+                            {stats.duplicatedTitles}
+                          </p>
+                          <p className="text-xs text-futuristic-gray">
+                            Páginas afetadas
+                          </p>
                         </div>
-                      </div>
-                    ));
-                  })()}
-                  
-                  {stats.duplicatedTitles === 0 && stats.shortDescriptions === 0 && stats.withoutKeywords === 0 && (
-                    <div className="text-center py-4">
-                      <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
-                      <p className="text-green-400 font-medium">Excelente trabalho!</p>
-                      <p className="text-futuristic-gray text-sm">Não há ações prioritárias no momento</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Card>
-          </div>
-        </div>
-        </>
-      )}
-
-      {/* Relatório de Tendências */}
-      <Card className="glass-effect mb-6">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-xl font-orbitron font-bold text-white flex items-center gap-2">
-              <TrendingUp className="w-6 h-6 text-neon-purple" />
-              Relatório de Tendências
-            </h3>
-            <div className="text-sm text-futuristic-gray">
-              Últimos 30 dias
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Gráfico de Evolução */}
-            <div>
-              <h4 className="text-lg font-medium text-white mb-4">Evolução do Score Médio</h4>
-              <div className="bg-darker-surface rounded-lg p-4">
-                {/* Gráfico com dados reais compactados (12 pontos) */}
-                <div className="flex items-end justify-between h-32 gap-2">
-                  {trendSnapshots.map((snap, index) => (
-                    <div key={`${snap.date}-${index}`} className="flex-1 flex flex-col items-center">
-                      <div
-                        className="w-full bg-gradient-to-t from-neon-purple/60 to-neon-purple rounded-t-sm transition-all duration-500"
-                        style={{ height: `${(snap.averageScore / 100) * 100}%` }}
-                        title={`${snap.date}: ${snap.averageScore} pontos`}
-                      ></div>
-                      <div className="text-xs text-futuristic-gray mt-1">
-                        {index % 3 === 0 ? `S${index + 1}` : ''}
+                        <Copy className="w-8 h-8 text-orange-400" />
                       </div>
                     </div>
-                  ))}
-                </div>
-                <div className="flex justify-between text-xs text-futuristic-gray mt-2">
-                  <span>Início</span>
-                  <span>Hoje</span>
-                </div>
-              </div>
-            </div>
+                  </Card>
 
-            {/* Páginas que Melhoraram/Pioraram */}
-            <div>
-              <h4 className="text-lg font-medium text-white mb-4">Mudanças Significativas</h4>
-              <div className="space-y-3">
-                {/* Páginas que melhoraram */}
-                <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="w-4 h-4 text-green-400" />
-                    <span className="text-green-400 font-medium">Melhoraram</span>
-                    <span className="text-green-400 text-sm">+{changesSummary.improvedCount} páginas</span>
-                  </div>
-                  <div className="text-sm text-futuristic-gray">
-                    Principais: {changesSummary.topImprovedTypes.join(', ') || '—'}
-                  </div>
-                </div>
-
-                {/* Páginas que pioraram */}
-                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingDown className="w-4 h-4 text-red-400" />
-                    <span className="text-red-400 font-medium">Pioraram</span>
-                    <span className="text-red-400 text-sm">-{changesSummary.worsenedCount} páginas</span>
-                  </div>
-                  <div className="text-sm text-futuristic-gray">
-                    Principais: {changesSummary.topWorsenedTypes.join(', ') || '—'}
-                  </div>
-                </div>
-
-                {/* Comparação com período anterior */}
-                <div className="bg-neon-purple/10 border border-neon-purple/20 rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-white font-medium">Score Médio</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-futuristic-gray text-sm">{changesSummary.averageScoreCurrent}</span>
-                      {changesSummary.percentChange >= 0 ? (
-                        <TrendingUp className="w-4 h-4 text-green-400" />
-                      ) : (
-                        <TrendingDown className="w-4 h-4 text-red-400" />
-                      )}
-                      <span className={changesSummary.percentChange >= 0 ? 'text-green-400 text-sm' : 'text-red-400 text-sm'}>
-                        {changesSummary.percentChange >= 0 ? `+${changesSummary.percentChange}%` : `${changesSummary.percentChange}%`}
-                      </span>
+                  <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-yellow-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(250,204,21,0.25)]">
+                    <div className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-futuristic-gray font-orbitron text-[11px]">URLs Longas</p>
+                          <p className="text-2xl font-orbitron font-bold text-yellow-400">
+                            {stats.longUrls}
+                          </p>
+                          <p className="text-xs text-futuristic-gray">
+                            Mais de 60 caracteres
+                          </p>
+                        </div>
+                        <ExternalLink className="w-8 h-8 text-yellow-400" />
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-sm text-futuristic-gray">
-                    Comparado com o mês anterior
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+                  </Card>
 
-          {/* Insights e Recomendações */}
-          <div className="mt-6 p-4 bg-neon-purple/5 border border-neon-purple/20 rounded-lg">
-            <div className="flex items-start gap-3">
-              <Lightbulb className="w-5 h-5 text-yellow-400 mt-0.5" />
-              <div>
-                <h5 className="text-white font-medium mb-2">Insights Automáticos</h5>
-                <ul className="text-sm text-futuristic-gray space-y-1">
-                  {insights.map((i, idx) => (
-                    <li key={idx}>• {i}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Filtros */}
-      <Card className="glass-effect">
-        <div className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Busca Avançada */}
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-futuristic-gray w-5 h-5" />
-              <input
-                id="search-input"
-                type="text"
-                placeholder="Buscar páginas... (ex: score:<70, type:article, updated:7d, problem:title)"
-                value={searchTerm}
-                aria-label="Buscar páginas SEO com comandos avançados"
-                aria-describedby="search-help"
-                role="searchbox"
-                autoComplete="off"
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  // Gerar sugestões em tempo real
-                  if (e.target.value.length > 0) {
-                    const suggestions = [
-                      'score:<70',
-                      'score:>80',
-                      'type:article',
-                      'type:home',
-                      'updated:7d',
-                      'updated:30d',
-                      'problem:title',
-                      'problem:description',
-                      'problem:keywords'
-                    ].filter(s => s.includes(e.target.value.toLowerCase()));
-                    setSearchSuggestions(suggestions.slice(0, 5));
-                  } else {
-                    setSearchSuggestions([]);
-                  }
-                }}
-                onFocus={() => setShowAdvancedSearch(true)}
-                onBlur={() => setTimeout(() => setShowAdvancedSearch(false), 200)}
-                className="w-full pl-10 pr-12 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green transition-colors"
-              />
-              <button
-                onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-futuristic-gray hover:text-neon-purple transition-colors"
-              >
-                <Filter className="w-4 h-4" />
-              </button>
-              
-              {/* Sugestões de Busca */}
-              {showAdvancedSearch && searchSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-darker-surface border border-neon-purple/20 rounded-lg shadow-lg z-10">
-                  {searchSuggestions.map((suggestion, index) => (
-                    <button
-                      key={index}
-                      onClick={() => {
-                        setSearchTerm(suggestion);
-                        setShowAdvancedSearch(false);
-                      }}
-                      className="w-full px-3 py-2 text-left text-sm text-futuristic-gray hover:bg-neon-purple/10 hover:text-white transition-colors first:rounded-t-lg last:rounded-b-lg"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Filtro por status */}
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value as any)}
-              className="px-4 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
-            >
-              <option value="all">Todas as páginas</option>
-              <option value="excellent">🟢 Excelente (90-100)</option>
-              <option value="good">🟡 Bom (70-89)</option>
-              <option value="poor">🔴 Precisa Melhorar (0-69)</option>
-              <option value="optimized">Otimizadas (legado)</option>
-              <option value="needs-attention">Precisam atenção (legado)</option>
-            </select>
-          </div>
-
-          {/* Filtros Avançados */}
-          <div className="flex flex-col sm:flex-row gap-4 mt-4 pt-4 border-t border-neon-purple/20">
-            {/* Filtro por Score SEO */}
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-futuristic-gray mb-2">
-                Score SEO
-              </label>
-              <select
-                value={scoreFilter}
-                onChange={(e) => {
-                  console.log('🎯 Score filter changed:', e.target.value);
-                  setScoreFilter(e.target.value as 'all' | 'excellent' | 'good' | 'needs-improvement' | 'poor');
-                }}
-                className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
-              >
-                <option value="all">Todos os Scores</option>
-                <option value="excellent">🟢 Excelente (90-100)</option>
-                <option value="good">🟡 Bom (70-89)</option>
-                <option value="needs-improvement">🟠 Precisa Melhorar (50-69)</option>
-                <option value="poor">🔴 Ruim (0-49)</option>
-              </select>
-            </div>
-
-            {/* Filtro por Tipo de Página */}
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-futuristic-gray mb-2">
-                Tipo de Página
-              </label>
-              <select
-                value={pageTypeFilter}
-                onChange={(e) => {
-                  console.log('📄 Page type filter changed:', e.target.value);
-                  setPageTypeFilter(e.target.value as 'all' | 'article' | 'category' | 'static');
-                }}
-                className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
-              >
-                <option value="all">Todos os Tipos</option>
-                <option value="article">📝 Artigos</option>
-                <option value="category">📂 Categorias</option>
-                <option value="page">📄 Páginas Estáticas</option>
-                <option value="home">🏠 Página Inicial</option>
-              </select>
-            </div>
-
-            {/* Filtro por Problemas Específicos */}
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-futuristic-gray mb-2">
-                Problemas Específicos
-              </label>
-              <select
-                value={problemFilter}
-                onChange={(e) => {
-                  console.log('⚠️ Problem filter changed:', e.target.value);
-                  setProblemFilter(e.target.value as 'all' | 'duplicate-title' | 'short-description' | 'no-keywords' | 'long-url' | 'no-og-image' | 'no-schema');
-                }}
-                className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
-              >
-                <option value="all">Todos os Problemas</option>
-                <option value="duplicate-title">🔄 Título Duplicado</option>
-                <option value="short-description">📏 Descrição Muito Curta</option>
-                <option value="no-keywords">🔑 Sem Keywords</option>
-                <option value="long-url">🔗 URL Muito Longa</option>
-                <option value="no-og-image">🖼️ Sem Imagem OG</option>
-                <option value="no-schema">📋 Sem Schema.org</option>
-              </select>
-            </div>
-
-            {/* Sistema de Ordenação */}
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-futuristic-gray mb-2">
-                Ordenar Por
-              </label>
-              <select
-                value={sortBy}
-                onChange={(e) => {
-                  console.log('🔄 Sort changed:', e.target.value);
-                  setSortBy(e.target.value as 'score-desc' | 'score-asc' | 'updated-desc' | 'updated-asc' | 'type-asc' | 'title-asc');
-                }}
-                className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
-              >
-                <option value="score-desc">📊 Score (Maior → Menor)</option>
-                <option value="score-asc">📊 Score (Menor → Maior)</option>
-                <option value="updated-desc">📅 Mais Recente</option>
-                <option value="updated-asc">📅 Mais Antiga</option>
-                <option value="type-asc">📂 Tipo (A-Z)</option>
-                <option value="title-asc">📝 Título (A-Z)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Resultados e Seleção */}
-          <div className="flex items-center justify-between mt-4 pt-4 border-t border-neon-purple/20">
-            <div className="flex items-center gap-4">
-              <span className="text-futuristic-gray text-sm">
-                {sortedData.length} página{sortedData.length !== 1 ? 's' : ''} encontrada{sortedData.length !== 1 ? 's' : ''}
-              </span>
-              
-              {sortedData.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={toggleSelectAll}
-                    className="flex items-center gap-2 text-sm text-neon-purple hover:text-lime-green transition-colors"
-                  >
-                    {selectedPages.size === sortedData.length ? (
-                      <CheckSquare className="w-4 h-4" />
-                    ) : (
-                      <Square className="w-4 h-4" />
-                    )}
-                    Selecionar Todas
-                  </button>
-                  
-                  {selectedPages.size > 0 && (
-                    <span className="text-xs text-futuristic-gray">
-                      ({selectedPages.size} selecionada{selectedPages.size !== 1 ? 's' : ''})
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Filtros Avançados de Seleção */}
-            {sortedData.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={selectPagesWithIssues}
-                  className="text-xs text-red-400 hover:text-red-300"
-                >
-                  Selecionar com Problemas
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => selectPagesByScore(70)}
-                  className="text-xs text-yellow-400 hover:text-yellow-300"
-                >
-                  Selecionar Score &lt; 70
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      {/* Barra de Ações em Lote */}
-      {selectedPages.size > 0 && (
-        <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)] border-neon-purple/30">
-          <div className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <CheckSquare className="w-5 h-5 text-lime-green" />
-                  <span className="text-white font-medium">
-                    {selectedPages.size} página{selectedPages.size !== 1 ? 's' : ''} selecionada{selectedPages.size !== 1 ? 's' : ''}
-                  </span>
-                </div>
-                
-                {bulkOperationInProgress && (
-                  <div className="flex items-center gap-2 text-sm text-futuristic-gray">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-neon-purple"></div>
-                    <span>
-                      Processando {bulkProgress.current}/{bulkProgress.total}: {bulkProgress.currentPage}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  onClick={bulkRegenerateSEO}
-                  disabled={bulkOperationInProgress}
-                  className="bg-lime-green hover:bg-lime-green/80 text-black"
-                >
-                  <Zap className="w-4 h-4 mr-2" />
-                  Regenerar SEO
-                </Button>
-                
-                <Button
-                  size="sm"
-                  onClick={exportCSVReport}
-                  disabled={bulkOperationInProgress}
-                  className="bg-blue-600 hover:bg-blue-700"
-                  title="Exportar relatório detalhado em CSV"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Exportar CSV
-                </Button>
-                
-                <Button
-                  size="sm"
-                  onClick={autoFixSimpleIssues}
-                  disabled={bulkOperationInProgress}
-                  className="bg-green-600 hover:bg-green-700"
-                  title="Corrigir automaticamente problemas simples como títulos curtos, descrições vazias e keywords ausentes"
-                >
-                  <Wand2 className="w-4 h-4 mr-2" />
-                  Correção Automática
-                </Button>
-                
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={clearSelection}
-                  disabled={bulkOperationInProgress}
-                  className="text-futuristic-gray hover:text-white"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Limpar Seleção
-                </Button>
-              </div>
-            </div>
-
-            {/* Barra de Progresso para Bulk Operations */}
-            {bulkOperationInProgress && (
-              <div className="mt-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-futuristic-gray">Progresso da operação</span>
-                  <span className="text-sm text-white">
-                    {Math.round((bulkProgress.current / bulkProgress.total) * 100)}%
-                  </span>
-                </div>
-                <div className="w-full bg-darker-surface rounded-full h-2">
-                  <div 
-                    className="bg-lime-green h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
-      )}
-
-      {/* Lista de Páginas */}
-      <div className="grid grid-cols-1 gap-4">
-        {paginatedData.map((page) => {
-          return (
-            <Card key={page.id} className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 transition-all hover:border-white/20 hover:ring-white/20 hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)] ${selectedPages.has(page.id) ? 'border-lime-green/50 ring-lime-green/30 bg-lime-green/5' : ''}`}>
-              <div className="p-4">
-                <div className="flex items-start gap-3 mb-3">
-                  {/* Checkbox de Seleção */}
-                  <button
-                    onClick={() => togglePageSelection(page.id)}
-                    className="mt-1 flex-shrink-0 p-1 rounded hover:bg-neon-purple/20 transition-colors"
-                  >
-                    {selectedPages.has(page.id) ? (
-                      <CheckSquare className="w-5 h-5 text-lime-green" />
-                    ) : (
-                      <Square className="w-5 h-5 text-futuristic-gray hover:text-neon-purple" />
-                    )}
-                  </button>
-
-                  {/* Avatar/Iniciais */}
-                  <div className="flex-shrink-0 mt-1">
-                    <div className="w-10 h-10 rounded-full bg-neon-gradient text-white font-orbitron text-sm flex items-center justify-center shadow-lg shadow-neon-purple/20">
-                      {page.title?.[0]?.toUpperCase() || page.page_type?.[0]?.toUpperCase() || 'P'}
+                  <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(248,113,113,0.25)]">
+                    <div className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-futuristic-gray font-orbitron text-[11px]">Sem Schema.org</p>
+                          <p className="text-2xl font-orbitron font-bold text-red-400">
+                            {stats.withoutSchema}
+                          </p>
+                          <p className="text-xs text-futuristic-gray">
+                            Dados estruturados
+                          </p>
+                        </div>
+                        <Database className="w-8 h-8 text-red-400" />
+                      </div>
                     </div>
-                  </div>
+                  </Card>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-lg font-orbitron font-bold text-white truncate">
-                        {page.title}
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        {/* Badges de Alerta */}
+                  <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-green-400/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(34,197,94,0.25)]">
+                    <div className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-futuristic-gray font-orbitron text-[11px]">Atualizações Recentes</p>
+                          <p className="text-2xl font-orbitron font-bold text-green-400">
+                            {stats.recentUpdates}
+                          </p>
+                          <p className="text-xs text-futuristic-gray">
+                            Últimos 7 dias
+                          </p>
+                        </div>
+                        <Calendar className="w-8 h-8 text-green-400" />
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Ações Prioritárias */}
+                  <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 transition-all">
+                    <div className="p-4">
+                      <h4 className="text-md font-medium text-white mb-4">Ações Prioritárias</h4>
+                      <div className="space-y-3">
                         {(() => {
-                          const alerts = getSEOAlerts(page, seoDataWithAnalysis);
-                          return alerts.map((alert, index) => (
-                            <div
-                              key={index}
-                              className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                                alert.severity === 'high' 
-                                  ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
-                                  : alert.severity === 'medium'
-                                  ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                                  : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                              }`}
-                              title={alert.message}
-                            >
-                              <Bell className="w-3 h-3" />
-                              {alert.type === 'duplicate-title' && 'Duplicado'}
-                              {alert.type === 'short-description' && 'Desc. Curta'}
-                              {alert.type === 'no-keywords' && 'Sem Keywords'}
-                              {alert.type === 'unoptimized-url' && 'URL'}
+                          const actions = [];
+
+                          if (stats.duplicatedTitles > 0) {
+                            actions.push({
+                              priority: 'high',
+                              action: `Corrigir ${stats.duplicatedTitles} título(s) duplicado(s)`,
+                              impact: 'Alto impacto no SEO'
+                            });
+                          }
+
+                          if (stats.shortDescriptions > 0) {
+                            actions.push({
+                              priority: 'medium',
+                              action: `Expandir ${stats.shortDescriptions} descrição(ões) curta(s)`,
+                              impact: 'Melhora CTR'
+                            });
+                          }
+
+                          if (stats.withoutKeywords > 0) {
+                            actions.push({
+                              priority: 'medium',
+                              action: `Adicionar keywords em ${stats.withoutKeywords} página(s)`,
+                              impact: 'Melhora relevância'
+                            });
+                          }
+
+                          if (stats.longUrls > 0) {
+                            actions.push({
+                              priority: 'low',
+                              action: `Otimizar ${stats.longUrls} URL(s) longa(s)`,
+                              impact: 'Melhora usabilidade'
+                            });
+                          }
+
+                          return actions.slice(0, 4).map((action, index) => (
+                            <div key={index} className="flex items-start gap-3 p-3 bg-darker-surface/50 rounded-lg">
+                              <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${action.priority === 'high' ? 'bg-red-400' :
+                                action.priority === 'medium' ? 'bg-yellow-400' : 'bg-green-400'
+                                }`}></div>
+                              <div className="flex-1">
+                                <p className="text-white text-sm font-medium">{action.action}</p>
+                                <p className="text-futuristic-gray text-xs">{action.impact}</p>
+                              </div>
                             </div>
                           ));
                         })()}
-                        {/* Status Badge */}
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            page.analysis.status === 'excellent'
-                              ? 'bg-lime-green/20 text-lime-green border border-lime-green/30'
-                              : page.analysis.status === 'good'
-                              ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                              : page.analysis.status === 'needs-improvement'
-                              ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                              : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                          }`}
-                        >
-                          {page.analysis.status === 'excellent'
-                            ? 'Excelente'
-                            : page.analysis.status === 'good'
-                            ? 'Bom'
-                            : page.analysis.status === 'needs-improvement'
-                            ? 'Precisa Melhorar'
-                            : 'Ruim'}
-                        </span>
-                        <SEOScoreBadge analysis={page.analysis} />
-                      </div>
-                    </div>
-                    
-                    {/* Barra de Progresso SEO */}
-                    <div className="mb-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-futuristic-gray">Qualidade SEO</span>
-                        <span className="text-xs text-futuristic-gray">{page.analysis.score}/100</span>
-                      </div>
-                      <SEOProgressBar score={page.analysis.score} status={page.analysis.status} />
-                    </div>
-                    
-                    <div className="flex items-center space-x-4 text-sm text-futuristic-gray mb-2">
-                      <span className="flex items-center">
-                        <FileText className="w-4 h-4 mr-1" />
-                        {formatPageType(page.page_type)}
-                      </span>
-                      <span className="flex items-center truncate max-w-[40%]">
-                        <LinkIcon className="w-4 h-4 mr-1" />
-                        <span className="truncate">{page.page_url}</span>
-                      </span>
-                      <span className="flex items-center">
-                        <Clock className="w-4 h-4 mr-1" />
-                        {new Date(page.updated_at).toLocaleDateString('pt-BR')}
-                      </span>
-                    </div>
 
-                    {page.description && (
-                      <p className="text-sm text-futuristic-gray line-clamp-2 mb-2">
-                        {page.description}
-                      </p>
-                    )}
-
-                    {/* Keywords */}
-                    {page.keywords && page.keywords.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {page.keywords.slice(0, 5).map((keyword, index) => (
-                          <span
-                            key={index}
-                            className="px-2 py-1 bg-neon-purple/20 text-neon-purple text-xs rounded-full border border-neon-purple/30"
-                          >
-                            {keyword}
-                          </span>
-                        ))}
-                        {page.keywords.length > 5 && (
-                          <span className="px-2 py-1 bg-gray-500/20 text-gray-400 text-xs rounded-full border border-white/10">
-                            +{page.keywords.length - 5}
-                          </span>
+                        {stats.duplicatedTitles === 0 && stats.shortDescriptions === 0 && stats.withoutKeywords === 0 && (
+                          <div className="text-center py-4">
+                            <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                            <p className="text-green-400 font-medium">Excelente trabalho!</p>
+                            <p className="text-futuristic-gray text-sm">Não há ações prioritárias no momento</p>
+                          </div>
                         )}
                       </div>
-                    )}
+                    </div>
+                  </Card>
+                </div>
+              </div>
+            </>
+          )}
 
-                    {/* Issues SEO */}
-                    {page.analysis.issues.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {page.analysis.issues.slice(0, 3).map((issue, index) => (
-                          <span
-                            key={index}
-                            className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center border border-red-500/30"
-                          >
-                            <AlertTriangle className="w-3 h-3 mr-1" />
-                            {issue}
-                          </span>
-                        ))}
-                        {page.analysis.issues.length > 3 && (
-                          <span className="px-2 py-1 bg-gray-500/20 text-gray-400 text-xs rounded-full border border-white/10">
-                            +{page.analysis.issues.length - 3} problemas
-                          </span>
-                        )}
-                      </div>
-                    )}
+          {/* Relatório de Tendências */}
+          <Card className="glass-effect mb-6">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-orbitron font-bold text-white flex items-center gap-2">
+                  <TrendingUp className="w-6 h-6 text-neon-purple" />
+                  Relatório de Tendências
+                </h3>
+                <div className="text-sm text-futuristic-gray">
+                  Últimos 30 dias
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Gráfico de Evolução */}
+                <div>
+                  <h4 className="text-lg font-medium text-white mb-4">Evolução do Score Médio</h4>
+                  <div className="bg-darker-surface rounded-lg p-4">
+                    {/* Gráfico com dados reais compactados (12 pontos) */}
+                    <div className="flex items-end justify-between h-32 gap-2">
+                      {trendSnapshots.map((snap, index) => (
+                        <div key={`${snap.date}-${index}`} className="flex-1 flex flex-col items-center">
+                          <div
+                            className="w-full bg-gradient-to-t from-neon-purple/60 to-neon-purple rounded-t-sm transition-all duration-500"
+                            style={{ height: `${(snap.averageScore / 100) * 100}%` }}
+                            title={`${snap.date}: ${snap.averageScore} pontos`}
+                          ></div>
+                          <div className="text-xs text-futuristic-gray mt-1">
+                            {index % 3 === 0 ? `S${index + 1}` : ''}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between text-xs text-futuristic-gray mt-2">
+                      <span>Início</span>
+                      <span>Hoje</span>
+                    </div>
                   </div>
+                </div>
 
-                  
-                  <div className="flex space-x-2 flex-shrink-0 mt-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setSelectedPage(page)}
-                      className="text-blue-400 hover:text-blue-300 transition-transform hover:-translate-y-0.5"
-                      title="Ver detalhes"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={async () => await regenerateSEO(page.id)}
-                      className="text-lime-green hover:text-lime-green/80 transition-transform hover:-translate-y-0.5"
-                      title="Regenerar SEO"
-                      disabled={loading || bulkOperationInProgress}
-                    >
-                      <Zap className="w-4 h-4" />
-                    </Button>
+                {/* Páginas que Melhoraram/Pioraram */}
+                <div>
+                  <h4 className="text-lg font-medium text-white mb-4">Mudanças Significativas</h4>
+                  <div className="space-y-3">
+                    {/* Páginas que melhoraram */}
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp className="w-4 h-4 text-green-400" />
+                        <span className="text-green-400 font-medium">Melhoraram</span>
+                        <span className="text-green-400 text-sm">+{changesSummary.improvedCount} páginas</span>
+                      </div>
+                      <div className="text-sm text-futuristic-gray">
+                        Principais: {changesSummary.topImprovedTypes.join(', ') || '—'}
+                      </div>
+                    </div>
+
+                    {/* Páginas que pioraram */}
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <TrendingDown className="w-4 h-4 text-red-400" />
+                        <span className="text-red-400 font-medium">Pioraram</span>
+                        <span className="text-red-400 text-sm">-{changesSummary.worsenedCount} páginas</span>
+                      </div>
+                      <div className="text-sm text-futuristic-gray">
+                        Principais: {changesSummary.topWorsenedTypes.join(', ') || '—'}
+                      </div>
+                    </div>
+
+                    {/* Comparação com período anterior */}
+                    <div className="bg-neon-purple/10 border border-neon-purple/20 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-white font-medium">Score Médio</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-futuristic-gray text-sm">{changesSummary.averageScoreCurrent}</span>
+                          {changesSummary.percentChange >= 0 ? (
+                            <TrendingUp className="w-4 h-4 text-green-400" />
+                          ) : (
+                            <TrendingDown className="w-4 h-4 text-red-400" />
+                          )}
+                          <span className={changesSummary.percentChange >= 0 ? 'text-green-400 text-sm' : 'text-red-400 text-sm'}>
+                            {changesSummary.percentChange >= 0 ? `+${changesSummary.percentChange}%` : `${changesSummary.percentChange}%`}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-sm text-futuristic-gray">
+                        Comparado com o mês anterior
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </Card>
-          );
-        })}
-      </div>
 
-      {/* Paginação */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-6">
-          <div className="text-sm text-futuristic-gray">
-            Mostrando {startIndex + 1}-{Math.min(endIndex, sortedData.length)} de {sortedData.length} páginas
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="text-futuristic-gray hover:text-white"
-              title="Página anterior (Seta esquerda)"
-            >
-              ←
-            </Button>
-            
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum;
-                if (totalPages <= 5) {
-                  pageNum = i + 1;
-                } else if (currentPage <= 3) {
-                  pageNum = i + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i;
-                } else {
-                  pageNum = currentPage - 2 + i;
-                }
-                
-                return (
-                  <Button
-                    key={pageNum}
-                    size="sm"
-                    variant={currentPage === pageNum ? "primary" : "ghost"}
-                    onClick={() => setCurrentPage(pageNum)}
-                    className={`w-8 h-8 p-0 ${
-                      currentPage === pageNum 
-                        ? 'bg-neon-purple text-white' 
-                        : 'text-futuristic-gray hover:text-white'
-                    }`}
-                  >
-                    {pageNum}
-                  </Button>
-                );
-              })}
+              {/* Insights e Recomendações */}
+              <div className="mt-6 p-4 bg-neon-purple/5 border border-neon-purple/20 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <Lightbulb className="w-5 h-5 text-yellow-400 mt-0.5" />
+                  <div>
+                    <h5 className="text-white font-medium mb-2">Insights Automáticos</h5>
+                    <ul className="text-sm text-futuristic-gray space-y-1">
+                      {insights.map((i, idx) => (
+                        <li key={idx}>• {i}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </div>
-            
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-              className="text-futuristic-gray hover:text-white"
-              title="Próxima página (Seta direita)"
-            >
-              →
-            </Button>
-          </div>
-        </div>
-      )}
+          </Card>
 
-      {sortedData.length === 0 && (
-        <div className="text-center py-12">
-          <BarChart3 className="w-16 h-16 text-futuristic-gray mx-auto mb-4" />
-          <h3 className="text-xl font-orbitron font-bold text-white mb-2">
-            Nenhuma página encontrada
-          </h3>
-          <p className="text-futuristic-gray">
-            Tente ajustar os filtros de busca
-          </p>
-        </div>
-      )}
+          {/* Filtros */}
+          <Card className="glass-effect">
+            <div className="p-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* Busca Avançada */}
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-futuristic-gray w-5 h-5" />
+                  <input
+                    id="search-input"
+                    type="text"
+                    placeholder="Buscar páginas... (ex: score:<70, type:article, updated:7d, problem:title)"
+                    value={searchTerm}
+                    aria-label="Buscar páginas SEO com comandos avançados"
+                    aria-describedby="search-help"
+                    role="searchbox"
+                    autoComplete="off"
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      // Gerar sugestões em tempo real
+                      if (e.target.value.length > 0) {
+                        const suggestions = [
+                          'score:<70',
+                          'score:>80',
+                          'type:article',
+                          'type:home',
+                          'updated:7d',
+                          'updated:30d',
+                          'problem:title',
+                          'problem:description',
+                          'problem:keywords'
+                        ].filter(s => s.includes(e.target.value.toLowerCase()));
+                        setSearchSuggestions(suggestions.slice(0, 5));
+                      } else {
+                        setSearchSuggestions([]);
+                      }
+                    }}
+                    onFocus={() => setShowAdvancedSearch(true)}
+                    onBlur={() => setTimeout(() => setShowAdvancedSearch(false), 200)}
+                    className="w-full pl-10 pr-12 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white placeholder-futuristic-gray focus:outline-none focus:border-lime-green transition-colors"
+                  />
+                  <button
+                    onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-futuristic-gray hover:text-neon-purple transition-colors"
+                  >
+                    <Filter className="w-4 h-4" />
+                  </button>
+
+                  {/* Sugestões de Busca */}
+                  {showAdvancedSearch && searchSuggestions.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-darker-surface border border-neon-purple/20 rounded-lg shadow-lg z-10">
+                      {searchSuggestions.map((suggestion, index) => (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            setSearchTerm(suggestion);
+                            setShowAdvancedSearch(false);
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm text-futuristic-gray hover:bg-neon-purple/10 hover:text-white transition-colors first:rounded-t-lg last:rounded-b-lg"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Filtro por status */}
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value as any)}
+                  className="px-4 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
+                >
+                  <option value="all">Todas as páginas</option>
+                  <option value="excellent">🟢 Excelente (90-100)</option>
+                  <option value="good">🟡 Bom (70-89)</option>
+                  <option value="poor">🔴 Precisa Melhorar (0-69)</option>
+                  <option value="optimized">Otimizadas (legado)</option>
+                  <option value="needs-attention">Precisam atenção (legado)</option>
+                </select>
+              </div>
+
+              {/* Filtros Avançados */}
+              <div className="flex flex-col sm:flex-row gap-4 mt-4 pt-4 border-t border-neon-purple/20">
+                {/* Filtro por Score SEO */}
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-futuristic-gray mb-2">
+                    Score SEO
+                  </label>
+                  <select
+                    value={scoreFilter}
+                    onChange={(e) => {
+                      console.log('🎯 Score filter changed:', e.target.value);
+                      setScoreFilter(e.target.value as 'all' | 'excellent' | 'good' | 'needs-improvement' | 'poor');
+                    }}
+                    className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
+                  >
+                    <option value="all">Todos os Scores</option>
+                    <option value="excellent">🟢 Excelente (90-100)</option>
+                    <option value="good">🟡 Bom (70-89)</option>
+                    <option value="needs-improvement">🟠 Precisa Melhorar (50-69)</option>
+                    <option value="poor">🔴 Ruim (0-49)</option>
+                  </select>
+                </div>
+
+                {/* Filtro por Tipo de Página */}
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-futuristic-gray mb-2">
+                    Tipo de Página
+                  </label>
+                  <select
+                    value={pageTypeFilter}
+                    onChange={(e) => {
+                      console.log('📄 Page type filter changed:', e.target.value);
+                      setPageTypeFilter(e.target.value as 'all' | 'article' | 'category' | 'static');
+                    }}
+                    className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
+                  >
+                    <option value="all">Todos os Tipos</option>
+                    <option value="article">📝 Artigos</option>
+                    <option value="category">📂 Categorias</option>
+                    <option value="page">📄 Páginas Estáticas</option>
+                    <option value="home">🏠 Página Inicial</option>
+                  </select>
+                </div>
+
+                {/* Filtro por Problemas Específicos */}
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-futuristic-gray mb-2">
+                    Problemas Específicos
+                  </label>
+                  <select
+                    value={problemFilter}
+                    onChange={(e) => {
+                      console.log('⚠️ Problem filter changed:', e.target.value);
+                      setProblemFilter(e.target.value as 'all' | 'duplicate-title' | 'short-description' | 'no-keywords' | 'long-url' | 'no-og-image' | 'no-schema');
+                    }}
+                    className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
+                  >
+                    <option value="all">Todos os Problemas</option>
+                    <option value="duplicate-title">🔄 Título Duplicado</option>
+                    <option value="short-description">📏 Descrição Muito Curta</option>
+                    <option value="no-keywords">🔑 Sem Keywords</option>
+                    <option value="long-url">🔗 URL Muito Longa</option>
+                    <option value="no-og-image">🖼️ Sem Imagem OG</option>
+                    <option value="no-schema">📋 Sem Schema.org</option>
+                  </select>
+                </div>
+
+                {/* Sistema de Ordenação */}
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-futuristic-gray mb-2">
+                    Ordenar Por
+                  </label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => {
+                      console.log('🔄 Sort changed:', e.target.value);
+                      setSortBy(e.target.value as 'score-desc' | 'score-asc' | 'updated-desc' | 'updated-asc' | 'type-asc' | 'title-asc');
+                    }}
+                    className="w-full px-3 py-2 bg-darker-surface border border-neon-purple/20 rounded-lg text-white focus:outline-none focus:border-lime-green transition-colors"
+                  >
+                    <option value="score-desc">📊 Score (Maior → Menor)</option>
+                    <option value="score-asc">📊 Score (Menor → Maior)</option>
+                    <option value="updated-desc">📅 Mais Recente</option>
+                    <option value="updated-asc">📅 Mais Antiga</option>
+                    <option value="type-asc">📂 Tipo (A-Z)</option>
+                    <option value="title-asc">📝 Título (A-Z)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Resultados e Seleção */}
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-neon-purple/20">
+                <div className="flex items-center gap-4">
+                  <span className="text-futuristic-gray text-sm">
+                    {sortedData.length} página{sortedData.length !== 1 ? 's' : ''} encontrada{sortedData.length !== 1 ? 's' : ''}
+                  </span>
+
+                  {sortedData.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={toggleSelectAll}
+                        className="flex items-center gap-2 text-sm text-neon-purple hover:text-lime-green transition-colors"
+                      >
+                        {selectedPages.size === sortedData.length ? (
+                          <CheckSquare className="w-4 h-4" />
+                        ) : (
+                          <Square className="w-4 h-4" />
+                        )}
+                        Selecionar Todas
+                      </button>
+
+                      {selectedPages.size > 0 && (
+                        <span className="text-xs text-futuristic-gray">
+                          ({selectedPages.size} selecionada{selectedPages.size !== 1 ? 's' : ''})
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Filtros Avançados de Seleção */}
+                {sortedData.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={selectPagesWithIssues}
+                      className="text-xs text-red-400 hover:text-red-300"
+                    >
+                      Selecionar com Problemas
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => selectPagesByScore(70)}
+                      className="text-xs text-yellow-400 hover:text-yellow-300"
+                    >
+                      Selecionar Score &lt; 70
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+
+          {/* Barra de Ações em Lote */}
+          {selectedPages.size > 0 && (
+            <Card className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 hover:border-white/20 hover:ring-white/20 transition-all hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)] border-neon-purple/30">
+              <div className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <CheckSquare className="w-5 h-5 text-lime-green" />
+                      <span className="text-white font-medium">
+                        {selectedPages.size} página{selectedPages.size !== 1 ? 's' : ''} selecionada{selectedPages.size !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+
+                    {bulkOperationInProgress && (
+                      <div className="flex items-center gap-2 text-sm text-futuristic-gray">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-neon-purple"></div>
+                        <span>
+                          Processando {bulkProgress.current}/{bulkProgress.total}: {bulkProgress.currentPage}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={bulkRegenerateSEO}
+                      disabled={bulkOperationInProgress}
+                      className="bg-lime-green hover:bg-lime-green/80 text-black"
+                    >
+                      <Zap className="w-4 h-4 mr-2" />
+                      Regenerar SEO
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      onClick={exportCSVReport}
+                      disabled={bulkOperationInProgress}
+                      className="bg-blue-600 hover:bg-blue-700"
+                      title="Exportar relatório detalhado em CSV"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Exportar CSV
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      onClick={autoFixSimpleIssues}
+                      disabled={bulkOperationInProgress}
+                      className="bg-green-600 hover:bg-green-700"
+                      title="Corrigir automaticamente problemas simples como títulos curtos, descrições vazias e keywords ausentes"
+                    >
+                      <Wand2 className="w-4 h-4 mr-2" />
+                      Correção Automática
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={clearSelection}
+                      disabled={bulkOperationInProgress}
+                      className="text-futuristic-gray hover:text-white"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Limpar Seleção
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Barra de Progresso para Bulk Operations */}
+                {bulkOperationInProgress && (
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-futuristic-gray">Progresso da operação</span>
+                      <span className="text-sm text-white">
+                        {Math.round((bulkProgress.current / bulkProgress.total) * 100)}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-darker-surface rounded-full h-2">
+                      <div
+                        className="bg-lime-green h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
+          {/* Lista de Páginas */}
+          <div className="grid grid-cols-1 gap-4">
+            {paginatedData.map((page) => {
+              return (
+                <Card key={page.id} className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-neon-purple/10 via-white/5 to-transparent backdrop-blur-sm border border-white/10 ring-1 ring-white/10 transition-all hover:border-white/20 hover:ring-white/20 hover:translate-y-[-1px] hover:shadow-[0_8px_30px_rgba(99,102,241,0.25)] ${selectedPages.has(page.id) ? 'border-lime-green/50 ring-lime-green/30 bg-lime-green/5' : ''}`}>
+                  <div className="p-4">
+                    <div className="flex items-start gap-3 mb-3">
+                      {/* Checkbox de Seleção */}
+                      <button
+                        onClick={() => togglePageSelection(page.id)}
+                        className="mt-1 flex-shrink-0 p-1 rounded hover:bg-neon-purple/20 transition-colors"
+                      >
+                        {selectedPages.has(page.id) ? (
+                          <CheckSquare className="w-5 h-5 text-lime-green" />
+                        ) : (
+                          <Square className="w-5 h-5 text-futuristic-gray hover:text-neon-purple" />
+                        )}
+                      </button>
+
+                      {/* Avatar/Iniciais */}
+                      <div className="flex-shrink-0 mt-1">
+                        <div className="w-10 h-10 rounded-full bg-neon-gradient text-white font-orbitron text-sm flex items-center justify-center shadow-lg shadow-neon-purple/20">
+                          {page.title?.[0]?.toUpperCase() || page.page_type?.[0]?.toUpperCase() || 'P'}
+                        </div>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-lg font-orbitron font-bold text-white truncate">
+                            {page.title}
+                          </h3>
+                          <div className="flex items-center gap-2">
+                            {/* Badges de Alerta */}
+                            {(() => {
+                              const alerts = getSEOAlerts(page, seoDataWithAnalysis);
+                              return alerts.map((alert, index) => (
+                                <div
+                                  key={index}
+                                  className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${alert.severity === 'high'
+                                    ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                    : alert.severity === 'medium'
+                                      ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                                      : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                                    }`}
+                                  title={alert.message}
+                                >
+                                  <Bell className="w-3 h-3" />
+                                  {alert.type === 'duplicate-title' && 'Duplicado'}
+                                  {alert.type === 'short-description' && 'Desc. Curta'}
+                                  {alert.type === 'no-keywords' && 'Sem Keywords'}
+                                  {alert.type === 'unoptimized-url' && 'URL'}
+                                </div>
+                              ));
+                            })()}
+                            {/* Status Badge */}
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${page.analysis.status === 'excellent'
+                                ? 'bg-lime-green/20 text-lime-green border border-lime-green/30'
+                                : page.analysis.status === 'good'
+                                  ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                  : page.analysis.status === 'needs-improvement'
+                                    ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                                    : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                }`}
+                            >
+                              {page.analysis.status === 'excellent'
+                                ? 'Excelente'
+                                : page.analysis.status === 'good'
+                                  ? 'Bom'
+                                  : page.analysis.status === 'needs-improvement'
+                                    ? 'Precisa Melhorar'
+                                    : 'Ruim'}
+                            </span>
+                            <SEOScoreBadge analysis={page.analysis} />
+                          </div>
+                        </div>
+
+                        {/* Barra de Progresso SEO */}
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-futuristic-gray">Qualidade SEO</span>
+                            <span className="text-xs text-futuristic-gray">{page.analysis.score}/100</span>
+                          </div>
+                          <SEOProgressBar score={page.analysis.score} status={page.analysis.status} />
+                        </div>
+
+                        <div className="flex items-center space-x-4 text-sm text-futuristic-gray mb-2">
+                          <span className="flex items-center">
+                            <FileText className="w-4 h-4 mr-1" />
+                            {formatPageType(page.page_type)}
+                          </span>
+                          <span className="flex items-center truncate max-w-[40%]">
+                            <LinkIcon className="w-4 h-4 mr-1" />
+                            <span className="truncate">{page.page_url}</span>
+                          </span>
+                          <span className="flex items-center">
+                            <Clock className="w-4 h-4 mr-1" />
+                            {new Date(page.updated_at).toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
+
+                        {page.description && (
+                          <p className="text-sm text-futuristic-gray line-clamp-2 mb-2">
+                            {page.description}
+                          </p>
+                        )}
+
+                        {/* Keywords */}
+                        {page.keywords && page.keywords.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {page.keywords.slice(0, 5).map((keyword, index) => (
+                              <span
+                                key={index}
+                                className="px-2 py-1 bg-neon-purple/20 text-neon-purple text-xs rounded-full border border-neon-purple/30"
+                              >
+                                {keyword}
+                              </span>
+                            ))}
+                            {page.keywords.length > 5 && (
+                              <span className="px-2 py-1 bg-gray-500/20 text-gray-400 text-xs rounded-full border border-white/10">
+                                +{page.keywords.length - 5}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Issues SEO */}
+                        {page.analysis.issues.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {page.analysis.issues.slice(0, 3).map((issue, index) => (
+                              <span
+                                key={index}
+                                className="px-2 py-1 bg-red-500/20 text-red-400 text-xs rounded-full flex items-center border border-red-500/30"
+                              >
+                                <AlertTriangle className="w-3 h-3 mr-1" />
+                                {issue}
+                              </span>
+                            ))}
+                            {page.analysis.issues.length > 3 && (
+                              <span className="px-2 py-1 bg-gray-500/20 text-gray-400 text-xs rounded-full border border-white/10">
+                                +{page.analysis.issues.length - 3} problemas
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+
+                      <div className="flex space-x-2 flex-shrink-0 mt-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSelectedPage(page)}
+                          className="text-blue-400 hover:text-blue-300 transition-transform hover:-translate-y-0.5"
+                          title="Ver detalhes"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={async () => await optimizeWithAI(page)}
+                          className="text-yellow-400 hover:text-yellow-300 transition-transform hover:-translate-y-0.5"
+                          title="Melhorar com Gemini (IA)"
+                          disabled={loading || bulkOperationInProgress}
+                        >
+                          <Wand2 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={async () => await regenerateSEO(page.id)}
+                          className="text-lime-green hover:text-lime-green/80 transition-transform hover:-translate-y-0.5"
+                          title="Regenerar SEO (Padrão)"
+                          disabled={loading || bulkOperationInProgress}
+                        >
+                          <Zap className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6">
+              <div className="text-sm text-futuristic-gray">
+                Mostrando {startIndex + 1}-{Math.min(endIndex, sortedData.length)} de {sortedData.length} páginas
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="text-futuristic-gray hover:text-white"
+                  title="Página anterior (Seta esquerda)"
+                >
+                  ←
+                </Button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+
+                    return (
+                      <Button
+                        key={pageNum}
+                        size="sm"
+                        variant={currentPage === pageNum ? "primary" : "ghost"}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`w-8 h-8 p-0 ${currentPage === pageNum
+                          ? 'bg-neon-purple text-white'
+                          : 'text-futuristic-gray hover:text-white'
+                          }`}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="text-futuristic-gray hover:text-white"
+                  title="Próxima página (Seta direita)"
+                >
+                  →
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {sortedData.length === 0 && (
+            <div className="text-center py-12">
+              <BarChart3 className="w-16 h-16 text-futuristic-gray mx-auto mb-4" />
+              <h3 className="text-xl font-orbitron font-bold text-white mb-2">
+                Nenhuma página encontrada
+              </h3>
+              <p className="text-futuristic-gray">
+                Tente ajustar os filtros de busca
+              </p>
+            </div>
+          )}
         </>
       )}
 
@@ -3221,7 +3283,7 @@ export const SEODashboard: React.FC = () => {
                   </div>
                 )}
               </div>
-              
+
               {stats && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-3">
@@ -3288,7 +3350,7 @@ export const SEODashboard: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="space-y-3">
                     {/* URLs Longas */}
                     <div className="flex items-center justify-between p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
@@ -3368,7 +3430,7 @@ export const SEODashboard: React.FC = () => {
                     </span>
                   </div>
                   <div className="w-full bg-dark-gray/50 rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-neon-gradient h-2 rounded-full transition-all duration-300"
                       style={{ width: `${(fixProgress.current / fixProgress.total) * 100}%` }}
                     ></div>
@@ -3449,7 +3511,7 @@ export const SEODashboard: React.FC = () => {
                   <BarChart3 className="w-5 h-5 mr-2 text-lime-green" />
                   Análise de Qualidade SEO
                 </h4>
-                
+
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-futuristic-gray">Score Geral</span>
